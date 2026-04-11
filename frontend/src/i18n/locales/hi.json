@@ -1,0 +1,44 @@
+{
+  "app_name": "स्टॉकसेंस",
+  "tagline": "भविष्यवाणी बुद्धिमत्ता",
+  "nav": {
+    "dashboard": "डैशबोर्ड",
+    "forecasting": "पूर्वानुमान",
+    "inventory": "इन्वेंट्री",
+    "products": "उत्पाद",
+    "reorder": "रीऑर्डर",
+    "alerts": "अलर्ट",
+    "settings": "सेटिंग्स",
+    "support": "सहायता",
+    "logout": "लॉगआउट"
+  },
+  "landing": {
+    "hero_title": "नोटबुक से पूर्वानुमान 60 सेकंड में",
+    "hero_subtitle": "भारतीय छोटे व्यवसायों के लिए AI-संचालित इन्वेंट्री प्रबंधन और मांग पूर्वानुमान।",
+    "cta_start": "मुफ्त शुरू करें",
+    "cta_demo": "डेमो देखें"
+  },
+  "onboarding": {
+    "choose_language": "अपनी भाषा चुनें",
+    "choose_language_native": "अपनी भाषा चुनें",
+    "choose_business": "आप किस प्रकार का व्यवसाय चलाते हैं?",
+    "business_desc": "यह हमें आपकी पूर्वानुमान बुद्धिमत्ता को अनुकूलित करने में मदद करता है",
+    "continue": "जारी रखें",
+    "back": "वापस",
+    "complete": "सेटअप पूरा करें",
+    "step": "चरण"
+  },
+  "dashboard": {
+    "overview_title": "संचालन प्रदर्शन",
+    "total_skus": "कुल SKU",
+    "below_reorder": "रीऑर्डर से नीचे",
+    "stockout_risk": "स्टॉकआउट जोखिम",
+    "forecast_accuracy": "पूर्वानुमान सटीकता",
+    "inventory_value": "इन्वेंट्री मूल्य"
+  },
+  "common": {
+    "save": "सहेजें",
+    "cancel": "रद्द करें",
+    "loading": "लोड हो रहा है..."
+  }
+}

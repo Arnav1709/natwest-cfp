@@ -1,0 +1,137 @@
+{
+  "app_name": "StockSense",
+  "tagline": "Predictive Intelligence",
+  "nav": {
+    "dashboard": "Dashboard",
+    "forecasting": "Forecasting",
+    "inventory": "Inventory",
+    "products": "Products",
+    "reorder": "Reorder",
+    "alerts": "Alerts",
+    "settings": "Settings",
+    "support": "Support",
+    "logout": "Logout"
+  },
+  "landing": {
+    "hero_title": "From Notebook to Forecast in 60 Seconds",
+    "hero_subtitle": "AI-Powered Inventory Management & Demand Forecasting for Indian small businesses. Turn your handwritten ledger into intelligent predictions.",
+    "cta_start": "Get Started Free",
+    "cta_demo": "Watch Demo",
+    "feature_ocr": "Handwriting OCR",
+    "feature_ocr_desc": "Take a photo of handwritten sales data. Our AI extracts product names, quantities, and dates — even in mixed Hindi/English.",
+    "feature_disease": "Disease Intelligence",
+    "feature_disease_desc": "For pharmacies: AI-powered seasonal disease intelligence. Receive advance warnings for Dengue, flu, and 15+ conditions.",
+    "feature_whatsapp": "WhatsApp First",
+    "feature_whatsapp_desc": "Manage inventory through WhatsApp commands. Get daily briefings, reorder alerts, and stock updates — no app needed.",
+    "how_title": "Clarity in 4 Steps",
+    "step1": "Upload Data",
+    "step2": "Verify",
+    "step3": "Forecast",
+    "step4": "Act",
+    "testimonials_title": "Trusted across the Supply Chain"
+  },
+  "onboarding": {
+    "choose_language": "Choose your language",
+    "choose_language_native": "अपनी भाषा चुनें",
+    "choose_business": "What type of business do you run?",
+    "business_desc": "This helps us customize your forecasting intelligence",
+    "setup_title": "Setup Your Shop",
+    "setup_desc": "Tell us about your business for regional intelligence",
+    "continue": "Continue",
+    "back": "Back",
+    "complete": "Complete Setup",
+    "step": "Step"
+  },
+  "upload": {
+    "title": "Upload Your Data",
+    "subtitle": "Choose a method to import your sales data",
+    "csv_title": "CSV / Excel Upload",
+    "csv_desc": "Drag and drop your CSV or Excel file here",
+    "image_title": "Handwritten Ledger",
+    "image_desc": "Take a photo of your handwritten notebook",
+    "manual_title": "Manual Entry",
+    "manual_desc": "Enter product data manually one by one"
+  },
+  "verify": {
+    "title": "Verify Extracted Data",
+    "subtitle": "Review and confirm the data before we build your inventory",
+    "confidence": "Confidence",
+    "confirm_label": "I've reviewed and confirmed this data is accurate",
+    "rescan": "Re-scan",
+    "confirm_btn": "Confirm & Build Inventory"
+  },
+  "dashboard": {
+    "overview_title": "Operational Performance",
+    "overview_subtitle": "Intelligent Overview",
+    "total_skus": "Total SKUs",
+    "below_reorder": "Below Reorder",
+    "stockout_risk": "Stockout Risk",
+    "forecast_accuracy": "Forecast Accuracy",
+    "inventory_value": "Inventory Value",
+    "stock_health": "Stock Health",
+    "intelligence_feed": "Intelligence Feed",
+    "view_all_alerts": "View All Alerts",
+    "quick_actions": "Quick Actions",
+    "upload_data": "Upload Data",
+    "view_reorder": "View Reorder List",
+    "run_scenario": "Run Scenario",
+    "stocking_intelligence": "Stocking Intelligence Suggestions"
+  },
+  "forecast": {
+    "title": "Inventory Forecasting",
+    "demand_projection": "Demand Projection",
+    "model_precision": "Model Precision",
+    "drivers_title": "Forecast Drivers & Influencers",
+    "weekly_breakdown": "Weekly Data Breakdown",
+    "test_scenario": "Test a Scenario"
+  },
+  "products": {
+    "title": "Product Catalog",
+    "add_product": "Add Product",
+    "search": "Search products...",
+    "name": "Name",
+    "category": "Category",
+    "stock": "Current Stock",
+    "status": "Status",
+    "reorder_point": "Reorder Point",
+    "days_remaining": "Days Remaining",
+    "supplier": "Supplier",
+    "updated": "Last Updated"
+  },
+  "reorder": {
+    "title": "Smart Reorder",
+    "total_items": "Total Items",
+    "estimated_cost": "Estimated Cost",
+    "most_urgent": "Most Urgent",
+    "export_csv": "Export CSV",
+    "export_pdf": "Export PDF"
+  },
+  "alerts": {
+    "title": "Alert Center",
+    "all": "All",
+    "critical": "Critical",
+    "warning": "Warning",
+    "info": "Info",
+    "dismiss": "Dismiss"
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "notifications": "Notifications",
+    "whatsapp": "WhatsApp Connect"
+  },
+  "status": {
+    "healthy": "Healthy",
+    "low_stock": "Low Stock",
+    "critical": "Critical",
+    "out_of_stock": "Out of Stock"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "no_data": "No data available"
+  }
+}

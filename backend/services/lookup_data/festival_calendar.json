@@ -1,0 +1,122 @@
+[
+  {
+    "name": "Makar Sankranti / Pongal",
+    "month": 1,
+    "day_approx": 14,
+    "affected_categories": ["Sweets", "Til (Sesame)", "Jaggery", "Kites", "Dairy"],
+    "demand_multiplier": 1.4,
+    "region": "all"
+  },
+  {
+    "name": "Republic Day",
+    "month": 1,
+    "day_approx": 26,
+    "affected_categories": ["Flags", "Sweets", "Snacks", "Beverages"],
+    "demand_multiplier": 1.2,
+    "region": "all"
+  },
+  {
+    "name": "Holi",
+    "month": 3,
+    "day_approx": 14,
+    "affected_categories": ["Colors", "Water guns", "Skin cream", "ORS", "Sweets", "Thandai"],
+    "demand_multiplier": 1.8,
+    "region": "north"
+  },
+  {
+    "name": "Ram Navami",
+    "month": 4,
+    "day_approx": 6,
+    "affected_categories": ["Sweets", "Puja items", "Dairy", "Fruits"],
+    "demand_multiplier": 1.5,
+    "region": "all"
+  },
+  {
+    "name": "Eid ul-Fitr",
+    "month": 4,
+    "day_approx": 1,
+    "affected_categories": ["Sweets", "Vermicelli", "Meat", "Dairy", "Perfumes", "Clothing"],
+    "demand_multiplier": 1.7,
+    "region": "all"
+  },
+  {
+    "name": "Exam Season (Board Exams)",
+    "month": 3,
+    "day_approx": 1,
+    "affected_categories": ["Stationery", "Energy drinks", "Snacks", "Glucose", "Eye drops"],
+    "demand_multiplier": 1.4,
+    "region": "all"
+  },
+  {
+    "name": "Raksha Bandhan",
+    "month": 8,
+    "day_approx": 19,
+    "affected_categories": ["Sweets", "Gift items", "Rakhis", "Dry fruits", "Chocolates"],
+    "demand_multiplier": 1.6,
+    "region": "north"
+  },
+  {
+    "name": "Independence Day",
+    "month": 8,
+    "day_approx": 15,
+    "affected_categories": ["Flags", "Sweets", "Snacks", "Beverages"],
+    "demand_multiplier": 1.2,
+    "region": "all"
+  },
+  {
+    "name": "Ganesh Chaturthi",
+    "month": 9,
+    "day_approx": 7,
+    "affected_categories": ["Modak", "Sweets", "Puja items", "Coconut", "Flowers"],
+    "demand_multiplier": 1.6,
+    "region": "west"
+  },
+  {
+    "name": "Navratri / Durga Puja",
+    "month": 10,
+    "day_approx": 3,
+    "affected_categories": ["Fasting foods", "Fruits", "Dairy", "Puja items", "Sabudana"],
+    "demand_multiplier": 1.6,
+    "region": "all"
+  },
+  {
+    "name": "Diwali",
+    "month": 10,
+    "day_approx": 21,
+    "affected_categories": ["Sweets", "Dry fruits", "Gift items", "Diyas", "Crackers", "Cleaning supplies", "Decorations"],
+    "demand_multiplier": 2.0,
+    "region": "all"
+  },
+  {
+    "name": "Wedding Season (Nov-Feb)",
+    "month": 11,
+    "day_approx": 1,
+    "affected_categories": ["Dairy", "Sweets", "Beverages", "Dry fruits", "Decorations", "Gift items"],
+    "demand_multiplier": 1.5,
+    "region": "all"
+  },
+  {
+    "name": "Christmas / New Year",
+    "month": 12,
+    "day_approx": 25,
+    "affected_categories": ["Beverages", "Snacks", "Party items", "Cakes", "Chocolates", "Wine"],
+    "demand_multiplier": 1.6,
+    "region": "all"
+  },
+  {
+    "name": "Exam Season (Semester Exams)",
+    "month": 11,
+    "day_approx": 15,
+    "affected_categories": ["Stationery", "Energy drinks", "Snacks", "Glucose"],
+    "demand_multiplier": 1.3,
+    "region": "all"
+  },
+  {
+    "name": "Onam",
+    "month": 8,
+    "day_approx": 28,
+    "affected_categories": ["Rice", "Banana chips", "Payasam ingredients", "Flowers", "Dairy"],
+    "demand_multiplier": 1.7,
+    "region": "south"
+  }
+]

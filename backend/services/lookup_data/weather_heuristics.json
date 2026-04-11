@@ -1,0 +1,83 @@
+{
+  "seasons": {
+    "summer": {
+      "months": [4, 5, 6],
+      "label": "Summer (Apr–Jun)",
+      "products": [
+        {"name": "Cold drinks", "boost_pct": 40},
+        {"name": "ORS", "boost_pct": 50},
+        {"name": "Ice cream", "boost_pct": 45},
+        {"name": "Sunscreen", "boost_pct": 35},
+        {"name": "Cooling oils", "boost_pct": 30},
+        {"name": "Glucose", "boost_pct": 40},
+        {"name": "Electrolytes", "boost_pct": 45},
+        {"name": "Lemon juice", "boost_pct": 30},
+        {"name": "Buttermilk", "boost_pct": 35},
+        {"name": "Water bottles", "boost_pct": 25}
+      ]
+    },
+    "monsoon": {
+      "months": [7, 8, 9],
+      "label": "Monsoon (Jul–Sep)",
+      "products": [
+        {"name": "Umbrellas", "boost_pct": 60},
+        {"name": "Raincoats", "boost_pct": 50},
+        {"name": "Anti-fungal cream", "boost_pct": 45},
+        {"name": "Mosquito repellent", "boost_pct": 55},
+        {"name": "Mosquito coils", "boost_pct": 40},
+        {"name": "Waterproof bags", "boost_pct": 35},
+        {"name": "Gumboots", "boost_pct": 30},
+        {"name": "Hot beverages", "boost_pct": 20},
+        {"name": "Instant noodles", "boost_pct": 25},
+        {"name": "Pakoda ingredients", "boost_pct": 30}
+      ]
+    },
+    "autumn": {
+      "months": [10],
+      "label": "Post-Monsoon / Autumn (Oct)",
+      "products": [
+        {"name": "Antihistamines", "boost_pct": 25},
+        {"name": "Nasal spray", "boost_pct": 20},
+        {"name": "Cleaning supplies", "boost_pct": 30},
+        {"name": "Disinfectant", "boost_pct": 25}
+      ]
+    },
+    "winter": {
+      "months": [11, 12, 1],
+      "label": "Winter (Nov–Jan)",
+      "products": [
+        {"name": "Hot beverages", "boost_pct": 35},
+        {"name": "Vicks VapoRub", "boost_pct": 40},
+        {"name": "Moisturizers", "boost_pct": 45},
+        {"name": "Woolens", "boost_pct": 50},
+        {"name": "Honey", "boost_pct": 30},
+        {"name": "Ginger", "boost_pct": 25},
+        {"name": "Cough Syrup", "boost_pct": 35},
+        {"name": "Room heaters", "boost_pct": 40},
+        {"name": "Blankets", "boost_pct": 35},
+        {"name": "Soup packets", "boost_pct": 30}
+      ]
+    },
+    "pre_monsoon": {
+      "months": [2, 3],
+      "label": "Pre-Summer / Spring (Feb–Mar)",
+      "products": [
+        {"name": "Skin cream", "boost_pct": 20},
+        {"name": "Antihistamines", "boost_pct": 15},
+        {"name": "Calamine Lotion", "boost_pct": 20}
+      ]
+    }
+  },
+  "regional_adjustments": {
+    "Kerala": {"monsoon_intensity": 1.3, "winter_intensity": 0.5, "notes": "Southwest monsoon is very heavy; mild winters"},
+    "Rajasthan": {"monsoon_intensity": 0.6, "winter_intensity": 1.2, "summer_intensity": 1.4, "notes": "Arid climate; extreme summer heat"},
+    "Punjab": {"monsoon_intensity": 0.8, "winter_intensity": 1.5, "notes": "Cold winters with fog; wedding season is strong"},
+    "Tamil Nadu": {"monsoon_intensity": 1.1, "winter_intensity": 0.3, "notes": "Northeast monsoon Oct-Dec is primary; no real winter"},
+    "West Bengal": {"monsoon_intensity": 1.2, "winter_intensity": 1.0, "notes": "Heavy monsoon; Durga Puja is strongest driver"},
+    "Maharashtra": {"monsoon_intensity": 1.0, "winter_intensity": 0.7, "notes": "Mumbai heavy rain; Ganesh Chaturthi is strongest driver"},
+    "Gujarat": {"monsoon_intensity": 0.7, "winter_intensity": 0.8, "notes": "Navratri/Garba is the dominant seasonal driver"},
+    "Uttar Pradesh": {"monsoon_intensity": 0.9, "winter_intensity": 1.3, "notes": "Cold winters; diverse festival calendar"},
+    "Karnataka": {"monsoon_intensity": 1.0, "winter_intensity": 0.5, "notes": "Bangalore is moderate year-round"},
+    "default": {"monsoon_intensity": 1.0, "winter_intensity": 1.0, "notes": "Default national average"}
+  }
+}

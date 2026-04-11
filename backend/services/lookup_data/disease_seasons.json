@@ -1,0 +1,106 @@
+[
+  {
+    "disease": "Dengue",
+    "start_month": 7,
+    "end_month": 10,
+    "medicines": ["Paracetamol", "ORS", "Platelet support", "Mosquito repellent"],
+    "boost_pct": 40,
+    "description": "Mosquito-borne viral fever peaking during monsoon; drives ORS and antipyretic demand"
+  },
+  {
+    "disease": "Malaria",
+    "start_month": 6,
+    "end_month": 9,
+    "medicines": ["Chloroquine", "Paracetamol", "Artesunate", "Mosquito repellent"],
+    "boost_pct": 35,
+    "description": "Plasmodium parasite transmitted by Anopheles mosquitoes during monsoon"
+  },
+  {
+    "disease": "Flu / Cold / Respiratory",
+    "start_month": 12,
+    "end_month": 2,
+    "medicines": ["Antihistamines", "Cough Syrup", "Vitamin C", "Paracetamol", "Vicks VapoRub"],
+    "boost_pct": 30,
+    "description": "Winter respiratory surge; cold weather drives upper respiratory infections"
+  },
+  {
+    "disease": "Chickenpox",
+    "start_month": 2,
+    "end_month": 5,
+    "medicines": ["Calamine Lotion", "Acyclovir", "ORS", "Paracetamol", "Antihistamines"],
+    "boost_pct": 45,
+    "description": "Varicella-zoster virus peaks in warm dry months before monsoon"
+  },
+  {
+    "disease": "Heat Stroke / Dehydration",
+    "start_month": 4,
+    "end_month": 6,
+    "medicines": ["ORS", "Electrolytes", "Glucose", "Sunscreen", "Cooling oils"],
+    "boost_pct": 50,
+    "description": "Extreme summer heat in North and Central India; dehydration risk peaks"
+  },
+  {
+    "disease": "Conjunctivitis (Pink Eye)",
+    "start_month": 7,
+    "end_month": 9,
+    "medicines": ["Eye drops", "Antihistamines", "Ciprofloxacin eye drops"],
+    "boost_pct": 35,
+    "description": "Adenoviral conjunctivitis outbreaks during humid monsoon months"
+  },
+  {
+    "disease": "Typhoid",
+    "start_month": 5,
+    "end_month": 8,
+    "medicines": ["Antibiotics", "ORS", "Paracetamol", "Probiotics"],
+    "boost_pct": 30,
+    "description": "Waterborne Salmonella typhi; contaminated water sources during pre-monsoon and monsoon"
+  },
+  {
+    "disease": "Chikungunya",
+    "start_month": 7,
+    "end_month": 10,
+    "medicines": ["Paracetamol", "Anti-inflammatory", "Mosquito repellent"],
+    "boost_pct": 30,
+    "description": "Aedes mosquito-borne; joint pain drives anti-inflammatory demand"
+  },
+  {
+    "disease": "Gastroenteritis / Stomach Flu",
+    "start_month": 6,
+    "end_month": 9,
+    "medicines": ["ORS", "Probiotics", "Loperamide", "Electrolytes", "Zinc tablets"],
+    "boost_pct": 35,
+    "description": "Contaminated water and food during monsoon season"
+  },
+  {
+    "disease": "Leptospirosis",
+    "start_month": 7,
+    "end_month": 10,
+    "medicines": ["Doxycycline", "Penicillin", "Paracetamol"],
+    "boost_pct": 25,
+    "description": "Bacterial infection from flood water; urban flooding during heavy monsoon"
+  },
+  {
+    "disease": "Skin Infections / Fungal",
+    "start_month": 7,
+    "end_month": 9,
+    "medicines": ["Anti-fungal cream", "Clotrimazole", "Antifungal powder"],
+    "boost_pct": 40,
+    "description": "High humidity during monsoon promotes fungal skin infections"
+  },
+  {
+    "disease": "Allergic Rhinitis",
+    "start_month": 10,
+    "end_month": 12,
+    "medicines": ["Antihistamines", "Nasal spray", "Montelukast"],
+    "boost_pct": 25,
+    "description": "Post-monsoon pollen and crop burning in North India trigger allergies"
+  },
+  {
+    "disease": "Japanese Encephalitis",
+    "start_month": 6,
+    "end_month": 9,
+    "medicines": ["Paracetamol", "Anti-convulsants", "Mannitol"],
+    "boost_pct": 20,
+    "description": "Mosquito-borne viral encephalitis in rice paddy regions"
+  }
+]

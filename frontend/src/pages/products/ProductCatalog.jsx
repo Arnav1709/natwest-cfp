@@ -1,0 +1,139 @@
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { mockProducts } from '../../mocks/mockData';
+
+const statusConfig = {
+  healthy: { label: 'Healthy', class: 'badge-success' },
+  low_stock: { label: 'Low Stock', class: 'badge-warning' },
+  critical: { label: 'Critical', class: 'badge-danger' },
+  out_of_stock: { label: 'Out of Stock', class: 'badge-danger' },
+};
+
+export default function ProductCatalog() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  const filtered = mockProducts.filter(p => {
+    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
+    const matchCat = category === 'all' || p.category === category;
+    const matchStatus = statusFilter === 'all' || p.status === statusFilter;
+    return matchSearch && matchCat && matchStatus;
+  });
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+        <div>
+          <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700 }}>{t('products.title')}</h1>
+          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+            {filtered.length} products found
+          </p>
+        </div>
+        <button className="btn btn-primary" id="btn-add-product">
+          + {t('products.add_product')}
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="glass-card" style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap', marginBottom: 'var(--space-4)' }}>
+        <div style={{ flex: '1 1 200px', position: 'relative' }}>
+          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: '1rem' }}>🔍</span>
+          <input
+            className="form-input"
+            placeholder={t('products.search')}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ paddingLeft: 36 }}
+            id="product-search"
+          />
+        </div>
+        <select className="form-select" value={category} onChange={(e) => setCategory(e.target.value)} style={{ minWidth: 140 }} id="filter-category">
+          <option value="all">All Categories</option>
+          <option value="medicines">Medicines</option>
+          <option value="supplements">Supplements</option>
+          <option value="supplies">Supplies</option>
+          <option value="equipment">Equipment</option>
+        </select>
+        <select className="form-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ minWidth: 140 }} id="filter-status">
+          <option value="all">All Status</option>
+          <option value="healthy">Healthy</option>
+          <option value="low_stock">Low Stock</option>
+          <option value="critical">Critical</option>
+          <option value="out_of_stock">Out of Stock</option>
+        </select>
+      </div>
+
+      {/* Product Table */}
+      <div className="glass-card" style={{ padding: 0, overflow: 'auto' }}>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>{t('products.name')}</th>
+              <th>{t('products.category')}</th>
+              <th>{t('products.stock')}</th>
+              <th>{t('products.reorder_point')}</th>
+              <th>{t('products.days_remaining')}</th>
+              <th>{t('products.status')}</th>
+              <th>{t('products.supplier')}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((p) => {
+              const sc = statusConfig[p.status];
+              return (
+                <tr key={p.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/products/${p.id}`)}>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                      <div style={{
+                        width: 32, height: 32, borderRadius: 'var(--radius-md)',
+                        background: 'rgba(13,148,136,0.15)', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem'
+                      }}>💊</div>
+                      <span style={{ fontWeight: 600 }}>{p.name}</span>
+                    </div>
+                  </td>
+                  <td style={{ textTransform: 'capitalize' }}>{p.category}</td>
+                  <td>
+                    <span style={{
+                      fontWeight: 700,
+                      color: p.status === 'critical' || p.status === 'out_of_stock' ? 'var(--color-danger)' :
+                             p.status === 'low_stock' ? 'var(--color-warning)' : 'var(--color-text-primary)'
+                    }}>
+                      {p.current_stock}
+                    </span>
+                    <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-xs)' }}> {p.unit}</span>
+                  </td>
+                  <td>{p.reorder_point}</td>
+                  <td>
+                    <span style={{
+                      fontWeight: 600,
+                      color: p.days_remaining < 5 ? 'var(--color-danger)' :
+                             p.days_remaining < 10 ? 'var(--color-warning)' : 'var(--color-success)'
+                    }}>
+                      {p.days_remaining} days
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`badge ${sc.class}`}>{sc.label}</span>
+                  </td>
+                  <td style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+                    {p.supplier_name}
+                  </td>
+                  <td>
+                    <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-primary-light)' }}>→</button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
