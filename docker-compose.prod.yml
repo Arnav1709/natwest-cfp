@@ -1,0 +1,39 @@
+# ─────────────────────────────────────────────────────────────
+# StockSense — Docker Compose Production Override
+# ─────────────────────────────────────────────────────────────
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+#
+# Differences from dev:
+#   - No source volume mounts (code baked into images)
+#   - Backend runs with 4 workers (no --reload)
+#   - Frontend uses multi-stage build (nginx serving static files)
+#   - Named volume for SQLite persistence
+#
+# ─────────────────────────────────────────────────────────────
+
+services:
+  backend:
+    volumes:
+      # Only persist the database — no source mount
+      - db-data:/app/data
+    environment:
+      - DEBUG=false
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    ports:
+      - "3000:80"
+    volumes: []
+
+  nginx:
+    ports:
+      - "80:80"
+
+volumes:
+  db-data:
+    driver: local

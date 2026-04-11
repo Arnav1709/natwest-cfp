@@ -1,0 +1,9 @@
+.git/
+.gitignore
+*.md
+!README.md
+docs/
+design/
+data/
+shared/
+.gemini/

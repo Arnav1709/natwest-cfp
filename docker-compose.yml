@@ -1,0 +1,113 @@
+# ─────────────────────────────────────────────────────────────
+# StockSense — Docker Compose (Development)
+# ─────────────────────────────────────────────────────────────
+#
+# Usage:
+#   docker compose up --build          # Start all services
+#   docker compose up --build backend  # Start backend only
+#   docker compose down                # Stop everything
+#   docker compose logs -f backend     # Tail backend logs
+#
+# Access:
+#   Frontend:  http://localhost:5173
+#   Backend:   http://localhost:8000
+#   API Docs:  http://localhost:8000/docs
+#   WhatsApp:  http://localhost:3001
+#   Unified:   http://localhost:80 (via nginx)
+#
+# ─────────────────────────────────────────────────────────────
+
+services:
+  # ── Backend (FastAPI + SQLAlchemy + Prophet) ──────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: stocksense-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - WHATSAPP_BOT_URL=http://whatsapp-bot:3001
+    volumes:
+      # Persist SQLite database on host
+      - ./backend/stocksense.db:/app/stocksense.db
+      # Dev: mount source for hot reload (uvicorn --reload)
+      - ./backend:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - stocksense-network
+    restart: unless-stopped
+
+  # ── Frontend (React + Vite Dev Server) ───────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: stocksense-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://backend:8000
+    volumes:
+      # Dev: mount source for Vite HMR
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - stocksense-network
+    restart: unless-stopped
+
+  # ── WhatsApp Bot (Node.js + Puppeteer/Chromium) ──────────
+  whatsapp-bot:
+    build:
+      context: ./whatsapp-bot
+      dockerfile: Dockerfile
+    container_name: stocksense-whatsapp
+    ports:
+      - "3001:3001"
+    environment:
+      - BACKEND_URL=http://backend:8000
+    volumes:
+      # Persist WhatsApp session between restarts
+      - wa-auth:/app/.wwebjs_auth
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - stocksense-network
+    restart: unless-stopped
+
+  # ── Nginx Reverse Proxy (Unified Access on :80) ──────────
+  nginx:
+    image: nginx:alpine
+    container_name: stocksense-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - stocksense-network
+    restart: unless-stopped
+
+# ── Named Volumes ───────────────────────────────────────────
+volumes:
+  wa-auth:
+    driver: local
+
+# ── Network ─────────────────────────────────────────────────
+networks:
+  stocksense-network:
+    driver: bridge

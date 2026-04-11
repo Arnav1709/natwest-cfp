@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+stocksense.db
+stocksense.db-shm
+stocksense.db-wal
+.git/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
