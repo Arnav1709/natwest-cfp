@@ -528,6 +528,7 @@ MIT License — build something great with it.
 | 💻 **Member** | Gaurav Kumar |
 
 **SupplySense** — *"From notebook to forecast in 60 seconds."*
+---
 [![NatWest Hackathon 2026](https://img.shields.io/badge/NatWest%20Hackathon-2026-6366F1?style=for-the-badge)](https://natwest.com)
 
 </div>
