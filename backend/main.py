@@ -4,6 +4,7 @@ StockSense Backend — FastAPI Application Entry Point.
 Run with: uvicorn main:app --reload --port 8000
 """
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -11,6 +12,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 from database import init_db
+
+# ── Logging setup ─────────────────────────────────────────────
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
+# Suppress noisy SQLAlchemy logs (keep only WARNING+)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
 # Import all routers
 from routers import auth, upload, inventory, forecast, anomalies, reorder, alerts, settings as settings_router, whatsapp, sales
@@ -76,3 +82,10 @@ def root():
 def health_check():
     """API health check endpoint."""
     return {"status": "healthy", "app": settings.APP_NAME}
+
+
+@app.get("/api/ai-status")
+def ai_status():
+    """Check AI provider availability (Ollama → Gemini → OpenRouter)."""
+    from services.ai_client import get_provider_status
+    return get_provider_status()

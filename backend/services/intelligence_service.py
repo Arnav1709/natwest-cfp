@@ -1,18 +1,19 @@
 """
-Intelligence Service — Gemini NLP integration for forecast explanations,
+Intelligence Service — AI NLP integration for forecast explanations,
 combined stocking intelligence, and translation.
 
 Includes:
 - Disease season, festival, and weather factor queries (from DB + lookup files)
-- Gemini API for natural language generation
-- OpenRouter fallback when Gemini is unavailable
-- Template-based final fallback when both fail
+- AI text generation for natural language reports
+- Template-based final fallback when AI is unavailable
+
+Uses the unified AI client (services/ai_client.py) which falls back through:
+Ollama (local gemma4) → Gemini (cloud) → OpenRouter (cloud)
 """
 
 import json
 import logging
 import os
-import time
 from datetime import date, datetime, timedelta
 from typing import List, Optional
 
@@ -21,6 +22,7 @@ from sqlalchemy.orm import Session
 from models.product import Product
 from models.user import User
 from models.lookup import DiseaseSeason, FestivalCalendar
+from services.ai_client import call_llm
 
 logger = logging.getLogger(__name__)
 
@@ -47,139 +49,6 @@ def _get_weather_data():
     if _WEATHER_DATA is None:
         _WEATHER_DATA = _load_json("weather_heuristics.json")
     return _WEATHER_DATA
-
-
-# ---------------------------------------------------------------------------
-# Gemini API setup with resilience
-# ---------------------------------------------------------------------------
-
-_gemini_client = None
-_gemini_available = None  # None = not tested, True/False = tested
-_using_new_sdk = False  # Track which SDK we're using
-
-
-def _init_gemini():
-    """Initialize Gemini client; returns client object or None."""
-    global _gemini_client, _gemini_available, _using_new_sdk
-
-    if _gemini_available is False:
-        return None
-    if _gemini_client is not None:
-        return _gemini_client
-
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        logger.warning("GEMINI_API_KEY not set — Gemini NLP unavailable")
-        _gemini_available = False
-        return None
-
-    # Try new google.genai SDK first
-    try:
-        from google import genai
-        _gemini_client = genai.Client(api_key=api_key)
-        _gemini_available = True
-        _using_new_sdk = True
-        return _gemini_client
-    except ImportError:
-        pass
-    except Exception as e:
-        logger.warning("New google.genai SDK failed: %s — trying legacy SDK", e)
-
-    # Fallback to deprecated google.generativeai
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        _gemini_client = genai.GenerativeModel("gemini-2.0-flash")
-        _gemini_available = True
-        _using_new_sdk = False
-        return _gemini_client
-    except Exception as e:
-        logger.error("Failed to initialize Gemini: %s", e)
-        _gemini_available = False
-        return None
-
-
-def _call_gemini(prompt: str, max_retries: int = 3) -> Optional[str]:
-    """
-    Call Gemini API with exponential backoff retry.
-    Returns the response text or None on failure.
-    """
-    client = _init_gemini()
-    if client is None:
-        return None
-
-    for attempt in range(max_retries):
-        try:
-            if _using_new_sdk:
-                response = client.models.generate_content(
-                    model="gemini-2.0-flash",
-                    contents=prompt,
-                )
-                return response.text
-            else:
-                response = client.generate_content(prompt)
-                return response.text
-        except Exception as e:
-            wait = 2 ** attempt  # 1s, 2s, 4s
-            logger.warning(
-                "Gemini API call failed (attempt %d/%d): %s. Retrying in %ds...",
-                attempt + 1, max_retries, e, wait,
-            )
-            time.sleep(wait)
-
-    return None
-
-
-def _call_openrouter(prompt: str) -> Optional[str]:
-    """
-    Fallback: call OpenRouter free tier (Llama 3 8B Instruct).
-    Returns the response text or None on failure.
-    """
-    api_key = os.getenv("OPENROUTER_API_KEY")
-    if not api_key:
-        return None
-
-    try:
-        import requests
-        response = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": "meta-llama/llama-3-8b-instruct:free",
-                "messages": [{"role": "user", "content": prompt}],
-            },
-            timeout=30,
-        )
-        if response.status_code == 200:
-            return response.json()["choices"][0]["message"]["content"]
-        else:
-            logger.warning("OpenRouter returned %d: %s", response.status_code, response.text[:200])
-            return None
-    except Exception as e:
-        logger.error("OpenRouter call failed: %s", e)
-        return None
-
-
-def _call_llm(prompt: str) -> str:
-    """
-    Try Gemini → OpenRouter → template fallback.
-    Always returns a string (never None).
-    """
-    # 1. Try Gemini
-    result = _call_gemini(prompt)
-    if result:
-        return result
-
-    # 2. Try OpenRouter
-    result = _call_openrouter(prompt)
-    if result:
-        return result
-
-    # 3. Template fallback
-    return ""
 
 
 # ---------------------------------------------------------------------------
@@ -375,7 +244,7 @@ def generate_forecast_explanation(
     language: str = "en",
 ) -> str:
     """
-    Generate a plain-language explanation of forecast drivers using Gemini.
+    Generate a plain-language explanation of forecast drivers using AI.
 
     Args:
         product_name: Name of the product
@@ -406,7 +275,7 @@ Write the explanation in {lang_name}. Keep it under 3 sentences. Be actionable.
 Use simple language a shopkeeper would understand. Include specific numbers.
 Do NOT use markdown formatting or bullet points — just plain text."""
 
-    result = _call_llm(prompt)
+    result = call_llm(prompt)
 
     if not result:
         # Template fallback
@@ -425,7 +294,7 @@ def compose_stocking_intelligence(
     language: str = "en",
 ) -> str:
     """
-    Generate a combined weekly stocking recommendation using Gemini.
+    Generate a combined weekly stocking recommendation using AI.
 
     Args:
         db: Database session
@@ -469,7 +338,7 @@ Start with "📋 **This week's stocking intelligence**"
 List each product recommendation on its own line starting with "- **Product Name** —"
 Keep it practical and actionable. Max 6 bullet points."""
 
-    result = _call_llm(prompt)
+    result = call_llm(prompt)
 
     if not result:
         # Template fallback
@@ -498,7 +367,7 @@ def translate_text(
     target_language: str,
 ) -> str:
     """
-    Translate text to target language using Gemini.
+    Translate text to target language using AI.
 
     Args:
         text: Text to translate
@@ -523,7 +392,7 @@ Return ONLY the translation, nothing else.
 Text to translate:
 {text}"""
 
-    result = _call_llm(prompt)
+    result = call_llm(prompt)
     return result.strip() if result else text
 
 
@@ -540,7 +409,7 @@ def generate_combined_intelligence(
     2. Fetch upcoming festivals/events
     3. Fetch weather triggers
     4. Fetch historical anomaly memory (same week last year)
-    5. Combine all factors into a single Gemini NLP prompt
+    5. Combine all factors into a single AI prompt
     6. Generate plain-language recommendation in user's language
     7. Return formatted intelligence text
 

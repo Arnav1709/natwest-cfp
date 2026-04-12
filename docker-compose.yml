@@ -36,6 +36,9 @@ services:
     environment:
       # WhatsApp internal Docker URL
       - WHATSAPP_BOT_URL=http://whatsapp-bot:3001
+    extra_hosts:
+      # Allow container to reach Ollama running on host machine
+      - "host.docker.internal:host-gateway"
     volumes:
       # Dev: mount source for hot reload (uvicorn --reload)
       - ./backend:/app

@@ -12,6 +12,7 @@ class ParsedProduct(BaseModel):
     date: Optional[str] = None
     quantity: Optional[float] = None
     price: Optional[float] = None
+    category: Optional[str] = None
     confidence: float = 1.0
 
 

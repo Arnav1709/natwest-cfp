@@ -31,7 +31,7 @@ export default function Upload() {
   // Add new product state
   const [showAddForm, setShowAddForm] = useState(false);
   const [newProduct, setNewProduct] = useState({
-    name: '', category: 'medicines', unit: 'units',
+    name: '', category: 'Medicines', unit: 'units',
     current_stock: 0, reorder_point: 10, safety_stock: 5,
     unit_cost: 0, supplier_name: '', supplier_contact: '',
     lead_time_days: 3, expiry_date: '',
@@ -104,7 +104,7 @@ export default function Upload() {
           date: item.date || '',
           quantity: item.quantity || 0,
           price: item.price || 0,
-          category: 'medicines',
+          category: item.category || 'Other',
           confidence: item.confidence || 0.5,
         }));
 
@@ -133,7 +133,7 @@ export default function Upload() {
           date: item.date || '',
           quantity: item.quantity || 0,
           price: item.price || 0,
-          category: 'medicines',
+          category: item.category || 'Other',
           confidence: item.confidence || 1.0,
         }));
 
@@ -197,7 +197,7 @@ export default function Upload() {
       const result = await inventoryApi.create(newProduct);
       setProducts(prev => [...prev, result]);
       setNewProduct({
-        name: '', category: 'medicines', unit: 'units',
+        name: '', category: 'Medicines', unit: 'units',
         current_stock: 0, reorder_point: 10, safety_stock: 5,
         unit_cost: 0, supplier_name: '', supplier_contact: '',
         lead_time_days: 3, expiry_date: '',
@@ -556,12 +556,12 @@ export default function Upload() {
                       onChange={e => setNewProduct(p => ({ ...p, category: e.target.value }))}
                       style={inputStyle} id="input-category"
                     >
-                      <option value="medicines">Medicines</option>
-                      <option value="supplies">Medical Supplies</option>
-                      <option value="equipment">Equipment</option>
-                      <option value="personal_care">Personal Care</option>
-                      <option value="grocery">Grocery</option>
-                      <option value="other">Other</option>
+                      <option value="Medicines">Medicines</option>
+                      <option value="Supplies">Medical Supplies</option>
+                      <option value="Equipment">Equipment</option>
+                      <option value="Supplements">Supplements</option>
+                      <option value="Grocery">Grocery</option>
+                      <option value="Other">Other</option>
                     </select>
                   </div>
 

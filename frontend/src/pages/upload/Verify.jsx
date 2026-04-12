@@ -43,7 +43,7 @@ export default function Verify() {
       date: new Date().toISOString().split('T')[0],
       quantity: 0,
       price: 0,
-      category: 'medicines',
+      category: 'Other',
       confidence: 1.0,
     }]);
   };
@@ -243,12 +243,12 @@ export default function Verify() {
                         value={row.category}
                         onChange={(e) => updateRow(row.id, 'category', e.target.value)}
                       >
-                        <option value="medicines">Medicines</option>
-                        <option value="supplements">Supplements</option>
-                        <option value="supplies">Supplies</option>
-                        <option value="equipment">Equipment</option>
-                        <option value="grocery">Grocery</option>
-                        <option value="other">Other</option>
+                        <option value="Medicines">Medicines</option>
+                        <option value="Supplements">Supplements</option>
+                        <option value="Supplies">Supplies</option>
+                        <option value="Equipment">Equipment</option>
+                        <option value="Grocery">Grocery</option>
+                        <option value="Other">Other</option>
                       </select>
                     </td>
                     {source === 'image' && (

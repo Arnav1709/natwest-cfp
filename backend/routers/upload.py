@@ -72,7 +72,7 @@ async def upload_image(
 ):
     """
     Upload an image of a sales register or handwritten ledger for OCR extraction.
-    Uses Google Gemini Vision API to extract product entries.
+    Uses AI vision (Ollama local → Gemini → OpenRouter fallback) to extract product entries.
     Returns extracted data for user verification before database insertion.
     """
     # Validate image type

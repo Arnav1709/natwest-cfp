@@ -19,10 +19,16 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
 
     # Gemini API
-    GEMINI_API_KEY: Optional[str] = None
+    GEMINI_API_KEY: Optional[str] = "AIzaSyBvF_2sWz3P7-hxXDSiAvL2QF7dxEP2uyw"
 
     # OpenRouter Fallback
     OPENROUTER_API_KEY: Optional[str] = None
+
+    # Ollama (Local AI — primary provider)
+    OLLAMA_BASE_URL: str = "http://host.docker.internal:11434"
+    OLLAMA_MODEL: str = "gemma3:4b"
+    OLLAMA_TIMEOUT: int = 300  # seconds for text generation
+    OLLAMA_VISION_TIMEOUT: int = 600  # seconds for image/vision (much slower)
 
     # WhatsApp Bot Sidecar
     WHATSAPP_BOT_URL: str = "http://localhost:3001"
