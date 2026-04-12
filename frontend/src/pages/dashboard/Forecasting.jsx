@@ -7,7 +7,7 @@ import { useApi } from '../../hooks/useApi';
 export default function Forecasting() {
   const { t } = useTranslation();
 
-  const { data: rawProducts } = useApi(() => inventoryApi.list(), []);
+  const { data: rawProducts, loading: pLoading } = useApi(() => inventoryApi.list(), []);
   const products = Array.isArray(rawProducts) ? rawProducts : (rawProducts?.products || []);
 
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -32,6 +32,17 @@ export default function Forecasting() {
       .catch(err => { setFcError(err.message); setFc(null); })
       .finally(() => setFcLoading(false));
   }, [selectedProduct]);
+
+  if (pLoading && products.length === 0) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', marginBottom: 'var(--space-3)', animation: 'pulse 1.5s ease-in-out infinite' }}>📈</div>
+          <p style={{ color: 'var(--color-text-muted)' }}>Loading forecast data...</p>
+        </div>
+      </div>
+    );
+  }
 
   const hasForecast = fc && fc.forecast && fc.forecast.length > 0;
 

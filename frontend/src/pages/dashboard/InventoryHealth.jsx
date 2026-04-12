@@ -4,15 +4,18 @@ import { inventoryApi } from '../../services/api';
 
 export default function InventoryHealth() {
   const { data: healthData, loading: hLoading } = useApi(() => inventoryApi.health(), []);
-  const { data: rawProducts } = useApi(() => inventoryApi.list(), []);
+  const { data: rawProducts, loading: pLoading } = useApi(() => inventoryApi.list(), []);
 
   const products = Array.isArray(rawProducts) ? rawProducts : (rawProducts?.products || []);
   const h = healthData || {};
 
-  if (hLoading) {
+  if (hLoading || pLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-        <p style={{ color: 'var(--color-text-muted)' }}>Loading inventory health...</p>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', marginBottom: 'var(--space-3)', animation: 'pulse 1.5s ease-in-out infinite' }}>📊</div>
+          <p style={{ color: 'var(--color-text-muted)' }}>Loading inventory health...</p>
+        </div>
       </div>
     );
   }

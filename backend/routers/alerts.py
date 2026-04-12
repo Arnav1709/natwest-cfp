@@ -13,6 +13,7 @@ from models.alert import Alert
 from models.product import Product
 from utils.auth import get_current_user
 from schemas.alert import AlertResponse, AlertCounts, AlertListResponse
+from cache import cache_get, cache_set, cache_invalidate
 
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
 
@@ -26,6 +27,15 @@ def list_alerts(
     db: Session = Depends(get_db),
 ):
     """List alerts for the current user, with optional severity/dismissed filters."""
+    cache_params = dict(
+        severity=severity or "",
+        dismissed=str(dismissed) if dismissed is not None else "",
+        limit=limit,
+    )
+    cached = cache_get(current_user.id, "alerts", **cache_params)
+    if cached is not None:
+        return cached
+
     query = db.query(Alert).filter(Alert.user_id == current_user.id)
 
     if severity:
@@ -71,7 +81,10 @@ def list_alerts(
         total=len(all_alerts),
     )
 
-    return AlertListResponse(alerts=alert_responses, counts=counts)
+    result = AlertListResponse(alerts=alert_responses, counts=counts)
+
+    cache_set(current_user.id, "alerts", result, **cache_params)
+    return result
 
 
 @router.put("/{alert_id}/dismiss")
@@ -91,5 +104,8 @@ def dismiss_alert(
 
     alert.dismissed = True
     db.commit()
+
+    # Invalidate alerts cache
+    cache_invalidate(current_user.id, "alerts")
 
     return {"dismissed": True}
