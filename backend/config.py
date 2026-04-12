@@ -24,11 +24,14 @@ class Settings(BaseSettings):
     # OpenRouter Fallback
     OPENROUTER_API_KEY: Optional[str] = None
 
-    # Ollama (Local AI — primary provider)
+    # Ollama (Local AI — fallback provider)
     OLLAMA_BASE_URL: str = "http://host.docker.internal:11434"
     OLLAMA_MODEL: str = "gemma3:4b"
     OLLAMA_TIMEOUT: int = 300  # seconds for text generation
     OLLAMA_VISION_TIMEOUT: int = 600  # seconds for image/vision (much slower)
+
+    # Serper Web Search (for intelligence layer)
+    SERPER_API_KEY: Optional[str] = None
 
     # WhatsApp Bot Sidecar
     WHATSAPP_BOT_URL: str = "http://localhost:3001"
