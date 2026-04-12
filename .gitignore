@@ -96,3 +96,5 @@ Desktop.ini
 .tmp/
 *.bak
 *.orig
+# Added by code-review-graph
+.code-review-graph/
