@@ -337,30 +337,125 @@ def generate_forecast(
     model_used = "prophet"
     data_quality = "sufficient"
     forecast_rows = []
+    driver_strings_extra = []  # Extra drivers from embedding similarity
 
     if num_weeks_data == 0:
-        # No data at all → return empty with message
-        return ForecastResponse(
-            product_id=product_id,
-            product_name=product_name,
-            forecast=[],
-            baseline=[],
-            drivers="No sales history available. Upload data to generate forecast.",
-            data_quality="insufficient",
-            model_used="none",
-        )
+        # ── Cold Start: No data → try embedding similarity ──────
+        from services.embedding_service import find_similar_products, get_proxy_sales
+        similar = find_similar_products(db, product, product.user_id, top_k=3)
+
+        if similar:
+            # Found similar products — use their sales as proxy
+            proxy_sales = get_proxy_sales(db, similar, weeks=WINDOW_WEEKS)
+            if proxy_sales:
+                proxy_df = pd.DataFrame([
+                    {"ds": pd.Timestamp(r["date"]), "y": float(r["quantity"])}
+                    for r in proxy_sales
+                ])
+                proxy_df = proxy_df.set_index("ds").resample("W-MON").sum().reset_index()
+                proxy_df.columns = ["ds", "y"]
+                proxy_df["y"] = proxy_df["y"].fillna(0)
+
+                if len(proxy_df) >= MIN_WEEKS_FOR_PROPHET:
+                    # Enough proxy data for Prophet
+                    try:
+                        prophet_result = _fit_prophet(proxy_df, weeks)
+                        if not prophet_result.empty:
+                            forecast_rows = prophet_result.to_dict("records")
+                            model_used = "prophet+embeddings"
+                            data_quality = "proxy_from_similar"
+                            similar_names = [f"{p.name} ({s:.0%})" for p, s in similar]
+                            driver_strings_extra = [f"Based on similar: {', '.join(similar_names)}"]
+                        else:
+                            forecast_rows = _sma_forecast(proxy_df, weeks)
+                            model_used = "sma+embeddings"
+                            data_quality = "proxy_from_similar"
+                    except Exception as e:
+                        logger.error("Prophet on proxy data failed: %s", e)
+                        forecast_rows = _sma_forecast(proxy_df, weeks)
+                        model_used = "sma+embeddings"
+                        data_quality = "proxy_from_similar"
+                else:
+                    forecast_rows = _sma_forecast(proxy_df, weeks)
+                    model_used = "sma+embeddings"
+                    data_quality = "proxy_from_similar"
+
+                # Use proxy data for baseline too
+                df = proxy_df
+                num_weeks_data = len(df)
+            else:
+                # Proxy sales empty — return empty
+                return ForecastResponse(
+                    product_id=product_id,
+                    product_name=product_name,
+                    forecast=[],
+                    baseline=[],
+                    drivers="No sales history. Upload data to generate forecast.",
+                    data_quality="insufficient",
+                    model_used="none",
+                )
+        else:
+            # No similar products found — return empty
+            return ForecastResponse(
+                product_id=product_id,
+                product_name=product_name,
+                forecast=[],
+                baseline=[],
+                drivers="No sales history available. Upload data to generate forecast.",
+                data_quality="insufficient",
+                model_used="none",
+            )
     elif num_weeks_data < MIN_WEEKS_FOR_PROPHET:
-        # Insufficient for Prophet → SMA fallback
-        model_used = "sma"
-        data_quality = "limited_data"
-        sma_results = _sma_forecast(df, weeks)
-        forecast_rows = sma_results
+        # ── Partial data: try embedding to supplement ───────────
+        from services.embedding_service import find_similar_products, get_proxy_sales
+        similar = find_similar_products(db, product, product.user_id, top_k=2)
+
+        if similar:
+            proxy_sales = get_proxy_sales(db, similar, weeks=WINDOW_WEEKS)
+            if proxy_sales:
+                # Merge: own data (weighted 70%) + proxy data (weighted 30%)
+                proxy_df = pd.DataFrame([
+                    {"ds": pd.Timestamp(r["date"]), "y": float(r["quantity"]) * 0.3}
+                    for r in proxy_sales
+                ])
+                own_df = df.copy()
+                own_df["y"] = own_df["y"] * 0.7
+                merged = pd.concat([own_df, proxy_df]).groupby("ds").sum().reset_index()
+                merged.columns = ["ds", "y"]
+
+                if len(merged) >= MIN_WEEKS_FOR_PROPHET:
+                    try:
+                        prophet_result = _fit_prophet(merged, weeks)
+                        if not prophet_result.empty:
+                            forecast_rows = prophet_result.to_dict("records")
+                            model_used = "prophet+embeddings"
+                            data_quality = "supplemented"
+                        else:
+                            forecast_rows = _sma_forecast(df, weeks)
+                            model_used = "sma"
+                            data_quality = "limited_data"
+                    except Exception:
+                        forecast_rows = _sma_forecast(df, weeks)
+                        model_used = "sma"
+                        data_quality = "limited_data"
+                else:
+                    forecast_rows = _sma_forecast(df, weeks)
+                    model_used = "sma"
+                    data_quality = "limited_data"
+            else:
+                model_used = "sma"
+                data_quality = "limited_data"
+                forecast_rows = _sma_forecast(df, weeks)
+        else:
+            # No similar products → plain SMA
+            model_used = "sma"
+            data_quality = "limited_data"
+            forecast_rows = _sma_forecast(df, weeks)
     else:
-        # Enough data → fit Prophet
+        # ── Sufficient data → fit Prophet ──────────────────────
         try:
             prophet_result = _fit_prophet(df, weeks)
             if prophet_result.empty:
-                # Prophet import failed → SMA fallback
                 model_used = "sma"
                 data_quality = "limited_data"
                 forecast_rows = _sma_forecast(df, weeks)
@@ -382,6 +477,9 @@ def generate_forecast(
     boost_multiplier, driver_strings, driver_details = get_external_factors(
         product_name, category, city, state, business_type
     )
+
+    # Add embedding-based driver info if applicable
+    driver_strings = list(driver_strings) + driver_strings_extra
 
     # Determine trend from data
     if num_weeks_data >= 4:
