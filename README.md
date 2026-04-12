@@ -518,10 +518,16 @@ MIT License — build something great with it.
 
 <div align="center">
 
+### Team Zypher
+
+| Role | Name |
+|:---|:---|
+| 💻 **Team Leader** | Ayush Kumar |
+| 💻 **Member** | Arnav Kumar |
+| 💻 **Member** | Yash Agarwal |
+| 💻 **Member** | Gaurav Kumar |
+
 **SupplySense** — *"From notebook to forecast in 60 seconds."*
-
-Built with ❤️ for India's 12M+ small businesses
-
 [![NatWest Hackathon 2026](https://img.shields.io/badge/NatWest%20Hackathon-2026-6366F1?style=for-the-badge)](https://natwest.com)
 
 </div>
