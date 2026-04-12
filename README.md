@@ -2,9 +2,9 @@
 
 # 🧠 StockSense
 
-### AI-Powered Inventory Management & Demand Forecasting
+### AI-Powered Predictive Demand Forecasting & Intelligent Inventory Management
 
-**From notebook to forecast in 60 seconds.**
+**The forecasting engine that knows about dengue season before your supplier does.**
 
 [![NatWest Hackathon](https://img.shields.io/badge/NatWest-AI%20Predictive%20Forecasting-6366F1?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0xMiAyTDEgMTJoM3Y5aDZ2LTZoNHY2aDZ2LTloM0wxMiAyeiIvPjwvc3ZnPg==)](https://natwest.com)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
@@ -16,110 +16,255 @@
 
 <br/>
 
-> **60% of India's 12M+ kirana stores still track inventory on paper notebooks.**
-> StockSense bridges the gap between handwritten ledgers and AI-powered demand intelligence — via the interface they already use every day: **WhatsApp**.
+> **StockSense doesn't just forecast demand — it understands *why* demand changes.**
+> Festival season? Disease outbreak? Monsoon week? Our AI automatically detects real-world signals and adjusts your forecasts before you even notice the trend.
 
 <br/>
 
-[🚀 Quick Start](#-quick-start) · [✨ Features](#-features) · [🏗️ Architecture](#️-system-architecture) · [📊 AI Pipeline](#-ai--ml-pipeline) · [📱 WhatsApp Bot](#-whatsapp-first-interface) · [🎨 Design](#-design-system) · [📖 API Reference](#-api-reference)
+[🔮 Forecasting Engine](#-the-forecasting-engine--our-core) · [⚡ Core Features](#-core-features-at-a-glance) · [📖 Ramesh's Story](#-ramesh-s-story) · [🏗️ Architecture](#️-system-architecture) · [📊 AI Pipeline](#-ai--ml-pipeline) · [🚀 Quick Start](#-quick-start)
 
 </div>
 
 ---
 
-## 🎯 The Problem
+## 📖 Ramesh's Story
 
-Small Indian businesses — pharmacies, kirana stores, distributors — face a brutal reality:
+> *Meet **Ramesh**. He runs a small pharmacy in Nagpur. Every evening, he writes the day's sales in a notebook — "Paracetamol 12, ORS 8, Cough Syrup 5." He's done this for 15 years.*
+>
+> *Last monsoon, dengue hit his area hard. Paracetamol sold out in 2 days. By the time he called his distributor, the entire city was scrambling for stock. He lost ₹15,000 in sales that week alone.*
+>
+> *This year, Ramesh uses **StockSense**.*
+>
+> *He photographs his notebook. AI reads his handwriting — even the Hindi numerals and messy dates. In 60 seconds, his 15 years of paper records become a digital dataset.*
+>
+> *Three weeks before monsoon peak, StockSense detects rising dengue reports in Nagpur via live web search. It automatically boosts Paracetamol's forecast by 25%, sends Ramesh a WhatsApp alert in Hindi:*
+>
+> **"⚠️ डेंगू का मौसम शुरू हो रहा है। पेरासिटामोल का स्टॉक 3 दिन में खत्म हो जाएगा। अभी 200 यूनिट ऑर्डर करें।"**
+>
+> *This time, Ramesh is ready. He replies "REORDER" on WhatsApp, gets a sorted procurement list grouped by supplier, and places his order — all without opening a single app.*
 
-| Pain Point | Impact |
-|:---|:---|
-| 📓 **Paper-based tracking** | No visibility into stock levels until it's too late |
-| 📉 **Stockouts during disease outbreaks** | Lost revenue during peak demand (dengue, monsoon) |
-| 🔮 **Zero demand forecasting** | Over-ordering perishables → waste; under-ordering essentials → lost sales |
-| 💬 **No proactive alerts** | Owner discovers stockout when customer walks away empty-handed |
-| 🌐 **Language barriers** | Most tools are English-only; shopkeepers need Hindi, Tamil, Telugu |
-
-**StockSense solves all of this** — with AI that speaks your language, reads your handwriting, and alerts you via WhatsApp before problems happen.
+**That's StockSense.** From notebook → to dataset → to AI forecast → to WhatsApp alert — in the language you speak, for the reality you live.
 
 ---
 
-## 🏆 Key Differentiators
+## 🔮 The Forecasting Engine — Our Core
 
 <div align="center">
 
-| | Feature | Description |
-|:---:|:---|:---|
-| 📷 | **Handwriting OCR** | Photograph your ledger → AI extracts product data in Hindi/English/Tamil |
-| 🦠 | **Disease Intelligence** | Real-time outbreak tracking → auto-boost medicine forecasts |
-| 📱 | **WhatsApp-First** | Daily briefings, reorder commands, alerts — no app install needed |
-| 🎯 | **Explainable AI** | "Paracetamol demand +25% because dengue season is active" |
-| 🆓 | **100% Free Stack** | Prophet + Gemini Flash + SQLite — ₹0 infrastructure cost |
-| 🌍 | **7 Indian Languages** | English, हिंदी, தமிழ், తెలుగు, मराठी, বাংলা, ગુજરાતી |
+**StockSense is, at its heart, a context-aware demand forecasting engine.**
+
+*It doesn't just look at your sales history. It looks at the world around you.*
+
+</div>
+
+<br/>
+
+Traditional forecasting says *"you sold 100 Paracetamol last week, so you'll probably sell 100 next week."*
+
+**StockSense forecasting says** *"you sold 100 Paracetamol last week, BUT dengue cases are spiking in your city, Navratri is in 10 days, and monsoon rainfall is 30% above average — so you'll need **250 units** next week."*
+
+### How Our Forecasts Stay Ahead of Reality
+
+```mermaid
+graph LR
+    SALES["📊 Sales History<br/>(8+ weeks)"] --> PROPHET["📈 Facebook Prophet<br/>Base Forecast"]
+    PROPHET --> MERGE["🧠 Context-Aware<br/>Forecast Engine"]
+
+    DISEASE["🦠 Disease Outbreaks<br/>Live Serper Search"] --> INTEL["🔍 Intelligence<br/>Service"]
+    FESTIVAL["🎪 Festival Calendar<br/>Diwali · Holi · Navratri · Eid"] --> INTEL
+    WEATHER["🌧️ Weather Patterns<br/>Monsoon · Heatwave · Cold Wave"] --> INTEL
+    DEMAND["📈 Demand Surges<br/>Bulk Orders · Competitor Stockouts"] --> INTEL
+
+    INTEL --> GEMINI["☁️ Gemini AI<br/>Impact Analysis"]
+    GEMINI --> BOOST["📊 Boost Multiplier<br/>e.g. +25% for dengue"]
+    BOOST --> MERGE
+
+    MERGE --> FORECAST["🎯 Final Forecast<br/>Low · Likely · High<br/>+ Plain-English Explanation"]
+    MERGE --> ANOMALY["🔍 Anomaly Detection<br/>Spike · Drop · Pattern"]
+    MERGE --> REORDER["📦 Smart Reorder<br/>Urgency-Ranked List"]
+
+    classDef core fill:#6366F1,stroke:#4F46E5,color:#fff
+    classDef signal fill:#F59E0B,stroke:#D97706,color:#000
+    classDef output fill:#10B981,stroke:#059669,color:#fff
+
+    class PROPHET,MERGE,GEMINI,INTEL core
+    class DISEASE,FESTIVAL,WEATHER,DEMAND signal
+    class FORECAST,ANOMALY,REORDER,BOOST output
+```
+
+### Real-World Signals We Track
+
+| Signal | Source | Impact on Forecast | Example |
+|:---|:---|:---|:---|
+| 🦠 **Disease Outbreaks** | Live web search (Serper API) | Auto-boost medicine categories | *"Dengue cases rising in Nagpur → Paracetamol +25%"* |
+| 🎪 **Festival Seasons** | Curated calendar (30+ festivals) | Category-wide demand multiplier | *"Diwali in 2 weeks → Sweets & dry fruits +40%"* |
+| 🌧️ **Monsoon / Weather** | Weather heuristics + search | Seasonal category adjustments | *"Heavy rainfall week → Umbrellas +60%, ORS +30%"* |
+| 🏥 **Epidemic Alerts** | Real-time Gemini analysis | Emergency stock recommendations | *"Malaria spike in Maharashtra → Chloroquine flagged"* |
+| 📈 **Demand Surges** | Z-score anomaly detection | Structural shift identification | *"3 consecutive weeks above forecast → reforecast needed"* |
+| 📉 **Demand Drops** | Pattern anomaly detection | Competitive/seasonal insights | *"Sales dropped 40% → check competitor pricing"* |
+
+> **Why this matters for the NatWest track**: Most forecasting tools treat demand as a math problem. StockSense treats it as a *real-world context problem* — incorporating live signals that actually drive demand in Indian small businesses.
+
+---
+
+## ⚡ Core Features at a Glance
+
+<div align="center">
+
+| | Feature | What It Does | Why It's Special |
+|:---:|:---|:---|:---|
+| 🔮 | **[Context-Aware Forecasting](#-prophet-powered-demand-forecasting)** | 6-week demand prediction with confidence bands | Incorporates festivals, diseases, weather — not just history |
+| 🔍 | **[Anomaly Detection](#-z-score-anomaly-detection)** | Catches demand spikes, drops, and structural shifts | Z-score analysis with plain-English explanations |
+| 📷 | **[Handwriting OCR](#-handwriting-ocr--notebook-to-database)** | Photograph notebook → instant digital dataset | Reads Hindi numerals, mixed scripts, messy dates |
+| 🦠 | **[Disease Intelligence](#-real-time-disease-intelligence)** | Live outbreak tracking → auto-adjusted forecasts | 3-stage pipeline: Web Search → AI Analysis → Boost |
+| 📱 | **[WhatsApp Alerts](#-whatsapp-first-interface)** | Daily briefings + 2-way commands, zero install | The interface 800M+ Indians already use daily |
+| 🌍 | **[7 Indian Languages](#-multilingual-support--7-indian-languages)** | Full UI + OCR in हिंदी, தமிழ், తెలుగు, मराठी + more | Designed for shopkeepers, not Silicon Valley |
+| 📦 | **[Smart Reorder](#-smart-reorder-engine)** | AI-ranked procurement lists grouped by supplier | One-tap order via WhatsApp |
+| 🎯 | **[Explainable AI](#-explainable-ai--every-forecast-tells-a-story)** | Every prediction comes with a *why* | "Paracetamol +25% because dengue season is active" |
 
 </div>
 
 ---
 
-## ✨ Features
+## ✨ Feature Deep-Dive
 
-### 📷 Handwriting OCR — "Notebook to Database in 60 Seconds"
-Upload a photo of your handwritten sales register. StockSense's AI vision pipeline:
-- Reads **mixed Hindi/English** text using Gemini 2.5 Flash multimodal
-- Converts **Hindi numerals** (१, २, ३ → 1, 2, 3) and number words (बारह → 12)
-- Parses **20+ date formats** (12 Jan, 12/3, १२-०३-२०२६)
-- Assigns **per-cell confidence scores** (0.0–1.0)
-- Routes through a mandatory **verification step** before any data enters the forecast engine
+### 🔮 Prophet-Powered Demand Forecasting
 
-### 📈 Prophet-Powered Demand Forecasting
-6-week rolling demand forecasts using Facebook Prophet with external factor overlays:
-- **Confidence bands** (low / likely / high) with 80% interval width
-- **Baseline comparison** — naive "same as last period" dotted line
-- **Sliding window training** — last 8 weeks for fresh, responsive models
-- **SMA fallback** — Simple Moving Average when < 8 weeks of data
-- **Scenario planning** — "What if I run a 20% discount?" / "What if supplier delays 5 days?"
+<div align="center">
 
-### 🦠 Real-Time Disease Intelligence
-A 3-stage intelligence pipeline powers context-aware forecasts:
-1. **Serper Web Search** → live disease outbreak data for your city/state
-2. **Gemini Analysis** → structured demand impact assessment
-3. **Hardcoded Fallback** → curated JSON lookup tables (disease seasons, festivals, weather)
+**The beating heart of StockSense.** Every feature — anomaly detection, reorder lists, WhatsApp alerts — flows from this engine.
 
-Covered signals: **dengue, malaria, monsoon flu, Diwali/Holi buying patterns, heat waves, cold waves**
+</div>
+
+6-week rolling demand forecasts using **Facebook Prophet** with **real-world context overlays**:
+
+- **Confidence bands** — Low / Likely / High predictions with 80% interval width
+- **External factor integration** — Festivals, disease outbreaks, monsoon patterns are *baked into the forecast*, not afterthoughts
+- **Baseline comparison** — Naive "same as last period" dotted line so users can see how much smarter the forecast is
+- **Sliding window training** — Retrains on the last 8 weeks, so forecasts stay fresh and responsive
+- **SMA fallback** — Graceful degradation to Simple Moving Average when < 8 weeks of data
+- **Scenario planning** — "What if I run a 20% discount?" / "What if my supplier delays by 5 days?"
+- **Trend detection** — Automatic identification of upward/downward sales trends with percentage change
+
+> 💡 **What makes this different**: Most forecasting tools give you `ŷ = f(history)`. StockSense gives you `ŷ = f(history, diseases, festivals, weather, anomalies)`. That's the difference between "you'll sell 100" and "you'll sell 250 because dengue season just started."
 
 ### 🔍 Z-Score Anomaly Detection
-Statistical anomaly detection on forecast residuals:
-- **Spike detection**: Z > 2.0 → "Demand is 3× normal this week — possible outbreak"
-- **Drop detection**: Z < -2.0 → "Sales dropped 40% — check competitor pricing"
-- **Pattern detection**: 3+ consecutive weeks of same-direction deviation → structural shift alert
-- Plain-language explanations generated per anomaly
+
+Anomalies aren't just noise — they're **signals that the world changed**. StockSense uses statistical anomaly detection on forecast residuals to catch what traditional inventory tools miss:
+
+| Detection Type | Trigger | What It Means | User Sees |
+|:---|:---|:---|:---|
+| 🔺 **Spike** | Z > 2.0 | Actual demand >> predicted | *"Demand is 3× normal — possible outbreak or bulk purchase"* |
+| 🔻 **Drop** | Z < -2.0 | Actual demand << predicted | *"Sales dropped 40% — check competitor pricing or supply issues"* |
+| 🔄 **Pattern** | 3+ consecutive weeks, same direction | Structural demand shift | *"Consistent above-forecast for 3 weeks — reforecast recommended"* |
+
+Every anomaly comes with:
+- **Plain-language explanation** (not just a Z-score number)
+- **Actionable recommendation** (restock, reforecast, investigate)
+- **Automatic alert** pushed to WhatsApp if critical
+
+### 📷 Handwriting OCR — "Notebook to Database"
+
+<div align="center">
+
+**StockSense's superpower for India: turning 15 years of paper notebooks into AI-ready data in 60 seconds.**
+
+</div>
+
+Here's what happens when a shopkeeper photographs their ledger:
+
+1. 📸 **Upload** — Photo is sent to Gemini 2.5 Flash multimodal vision
+2. 🔤 **Extraction** — AI reads product names, quantities, prices, dates — in **mixed Hindi/English** text
+3. 🔢 **Hindi Numeral Conversion** — `१, २, ३` → `1, 2, 3` · number words like `बारह` → `12`
+4. 📅 **Date Normalization** — Handles **20+ formats**: `12 Jan`, `12/3`, `१२-०३-२०२६`, `12 March 2026`
+5. 🎯 **Confidence Scoring** — Every cell gets a confidence score (0.0–1.0); low-confidence cells are highlighted for review
+6. ✅ **Verification** — Mandatory human review step before data enters the forecast pipeline — **trust layer, not blind automation**
+7. 🚀 **Forecast Trigger** — Verified data automatically kicks off Prophet forecast generation
+
+> 🔐 **Trust Layer**: No OCR-extracted data touches the forecast engine without human verification. This is a deliberate design choice — we don't sacrifice accuracy for automation.
+
+### 🦠 Real-Time Disease Intelligence
+
+A **3-stage intelligence pipeline** that makes StockSense forecasts context-aware:
+
+```
+Stage 1: SEARCH    → Serper API queries "dengue outbreak {user's city} {current month}"
+Stage 2: ANALYZE   → Gemini 2.5 Flash analyzes search results for demand impact
+Stage 3: FALLBACK  → If APIs fail, curated JSON lookup tables kick in
+```
+
+**What it covers:**
+
+| Category | Signals Tracked | Medicines Boosted |
+|:---|:---|:---|
+| 🦟 **Dengue** | Jul–Nov peak, live outbreak reports | Paracetamol, ORS, Platelet supplements |
+| 🦠 **Malaria** | Monsoon season, state-level alerts | Chloroquine, Artemisinin, Mosquito repellents |
+| 🤧 **Monsoon Flu** | Jun–Sep, weather correlation | Cold medicine, Antibiotics, Vitamin C |
+| 🥵 **Heat Waves** | Apr–Jun, temperature anomalies | ORS, Electrolytes, Sunscreen |
+| ❄️ **Cold Waves** | Dec–Feb, north India | Cough syrup, Vaporub, Hot water bags |
+| 🎪 **Festivals** | Diwali, Holi, Navratri, Eid, Pongal | Category-specific boosts (sweets, gifts, health) |
+
+### 🎯 Explainable AI — Every Forecast Tells a Story
+
+StockSense doesn't just give you numbers. **Every prediction comes with a plain-language explanation** of *why* the forecast looks the way it does:
+
+```
+📈 Paracetamol: 250 units/week (↑ 25% vs last period)
+   ├── 🦟 Dengue season active in Nagpur (Jul–Nov)
+   ├── 🌧️ Above-average rainfall this week
+   └── 📊 Consistent upward trend for 3 weeks
+```
+
+This isn't just a UX feature — it's **what makes the forecast trustworthy**. A shopkeeper who understands *why* the AI says "order 250" is far more likely to actually act on it.
 
 ### 📦 Smart Reorder Engine
-AI-calculated reorder lists ranked by urgency:
+
+AI-calculated reorder lists **ranked by urgency**, powered by forecasts:
+
 ```
 reorder_qty = (forecast_demand × lead_time_days) + safety_stock − current_stock
 ```
-- **Urgency tiers**: 🔴 High (< 3 days) · 🟡 Medium (3–7 days) · 🟢 Low (7+ days)
-- **Supplier grouping**: Orders batched by supplier for efficient procurement
-- **Export**: CSV and PDF download for WhatsApp/email forwarding
-- **Days-to-stockout**: Real-time countdown per product
+
+| Feature | Description |
+|:---|:---|
+| 🔴🟡🟢 **Urgency tiers** | High (< 3 days to stockout) · Medium (3–7 days) · Low (7+ days) |
+| 🏭 **Supplier grouping** | Orders batched by supplier for efficient procurement |
+| 📊 **Days-to-stockout** | Real-time countdown per product |
+| 📄 **Export** | CSV and PDF download for WhatsApp/email forwarding |
+| 💰 **Cost estimation** | `unit_cost × reorder_qty` for budget planning |
 
 ### 📱 WhatsApp-First Interface
-Zero-install voice of the system — daily briefings and two-way commands:
 
-| Command | Response |
+**800 million Indians use WhatsApp daily.** StockSense meets them where they are — no app download, no new login, no learning curve:
+
+| Command | What Happens |
 |:---|:---|
-| *(automatic 8 AM)* | 📊 Daily briefing: stock health, top alerts, reorder reminders |
-| `REORDER` | 📦 Full reorder list with quantities, suppliers, urgency |
-| `LIST` | 📋 Top 5 low-stock items with days remaining |
-| `REPORT` | 📈 Weekly performance summary |
-| `STATUS` | 🔄 Connection and system health check |
-| `HELP` | 📖 List all available commands |
+| *(automatic, 8 AM daily)* | 📊 Morning briefing: stock health, top alerts, reorder reminders |
+| `REORDER` | 📦 Full AI reorder list with quantities, suppliers, urgency tiers |
+| `LIST` | 📋 Top 5 low-stock items with days-to-stockout |
+| `REPORT` | 📈 Weekly performance summary with forecast accuracy |
+| `STATUS` | 🔄 System health check |
+| `HELP` | 📖 All available commands |
 
-### 🌐 Multilingual Support
-Full i18n with `react-i18next` across all 16 screens:
-- **7 languages**: English, Hindi, Tamil, Telugu, Marathi, Bengali, Gujarati
-- **Bilingual onboarding**: Language selection with native script display
-- **OCR language hints**: AI adapts extraction based on user's language preference
+### 🌍 Multilingual Support — 7 Indian Languages
+
+Full i18n with `react-i18next` across **all 16 screens** + OCR language adaptation:
+
+<div align="center">
+
+| Language | Script | Coverage |
+|:---|:---|:---|
+| English | English | Full UI + OCR + WhatsApp |
+| हिंदी | Hindi | Full UI + OCR + WhatsApp |
+| தமிழ் | Tamil | Full UI + OCR |
+| తెలుగు | Telugu | Full UI + OCR |
+| मराठी | Marathi | Full UI + OCR |
+| বাংলা | Bengali | Full UI + OCR |
+| ગુજરાતી | Gujarati | Full UI + OCR |
+
+</div>
+
+> 🌐 **Why this matters**: The shopkeeper in Nagpur writes in Hindi. The pharmacist in Chennai thinks in Tamil. The distributor in Ahmedabad speaks Gujarati. StockSense doesn't ask them to switch to English — it comes to them.
 
 ---
 
@@ -197,64 +342,6 @@ graph TB
     class PROPHET,ANOMALY,OCR,INTEL,REORDER ai
     class GEMINI,OLLAMA,OPENROUTER,SERPER external
     class DB,LOOKUP data
-```
-
-### Logical Architecture — Modular Monolith
-
-```mermaid
-graph LR
-    subgraph "FastAPI Backend"
-        direction TB
-
-        subgraph "Routers (API Layer)"
-            R_AUTH["auth.py"]
-            R_UPLOAD["upload.py"]
-            R_INV["inventory.py"]
-            R_FC["forecast.py"]
-            R_ANOM["anomalies.py"]
-            R_REORD["reorder.py"]
-            R_ALERT["alerts.py"]
-            R_SET["settings.py"]
-            R_WA["whatsapp.py"]
-            R_SALES["sales.py"]
-        end
-
-        subgraph "Services (Business Logic)"
-            S_FC["forecast_service.py<br/>Prophet + SMA"]
-            S_ANOM["anomaly_service.py<br/>Z-Score Engine"]
-            S_INTEL["intelligence_service.py<br/>Serper + Gemini"]
-            S_OCR["ocr_service.py<br/>Vision OCR"]
-            S_REORD["reorder_service.py<br/>Smart Procurement"]
-            S_AI["ai_client.py<br/>Unified AI Gateway"]
-        end
-
-        subgraph "Models (SQLAlchemy ORM)"
-            M_USER["User"]
-            M_PROD["Product"]
-            M_SALES["SalesHistory"]
-            M_FC["Forecast"]
-            M_ANOM["Anomaly"]
-            M_ALERT["Alert"]
-        end
-    end
-
-    R_FC --> S_FC
-    R_ANOM --> S_ANOM
-    R_UPLOAD --> S_OCR
-    S_FC --> S_INTEL
-    S_OCR --> S_AI
-    S_INTEL --> S_AI
-    S_FC --> M_FC
-    S_ANOM --> M_ANOM
-    S_REORD --> M_PROD
-
-    classDef router fill:#0D9488,stroke:#0F766E,color:#fff
-    classDef service fill:#6366F1,stroke:#4F46E5,color:#fff
-    classDef model fill:#1E293B,stroke:#334155,color:#F8FAFC
-
-    class R_AUTH,R_UPLOAD,R_INV,R_FC,R_ANOM,R_REORD,R_ALERT,R_SET,R_WA,R_SALES router
-    class S_FC,S_ANOM,S_INTEL,S_OCR,S_REORD,S_AI service
-    class M_USER,M_PROD,M_SALES,M_FC,M_ANOM,M_ALERT model
 ```
 
 ---
@@ -372,522 +459,25 @@ sequenceDiagram
 
 ---
 
-## 📱 WhatsApp-First Interface
-
-### Architecture
-
-```mermaid
-graph LR
-    subgraph "User's Phone"
-        WA_APP["📱 WhatsApp App"]
-    end
-
-    subgraph "StockSense — Node.js Sidecar"
-        EXPRESS["Express :3001"]
-        WWEBJS["whatsapp-web.js<br/>(Puppeteer + Chromium)"]
-        HANDLER["Message Handler<br/>Command Parser"]
-        TEMPLATES["Message Templates<br/>Formatted Responses"]
-    end
-
-    subgraph "StockSense — Python Backend"
-        API["FastAPI :8000"]
-        WEBHOOK["/api/whatsapp/webhook"]
-    end
-
-    WA_APP <-->|"WhatsApp Web Protocol"| WWEBJS
-    WWEBJS --> HANDLER
-    HANDLER --> TEMPLATES
-    HANDLER -->|"POST command"| WEBHOOK
-    WEBHOOK -->|"reply text"| HANDLER
-    API -->|"POST /send-message"| EXPRESS
-    EXPRESS --> WWEBJS
-
-    classDef phone fill:#25D366,stroke:#128C7E,color:#fff
-    classDef node fill:#68A063,stroke:#3C873A,color:#fff
-    classDef python fill:#0D9488,stroke:#0F766E,color:#fff
-
-    class WA_APP phone
-    class EXPRESS,WWEBJS,HANDLER,TEMPLATES node
-    class API,WEBHOOK python
-```
-
-### Supported Commands
-
-| Command | Description | Example Response |
-|:---|:---|:---|
-| `REORDER` | Full AI reorder list | 📦 **Reorder List (8 items)**<br/>1. Paracetamol — 200 units (🔴 HIGH)<br/>2. ORS Sachets — 150 units (🟡 MED) |
-| `LIST` | Top 5 low-stock items | 📋 **Low Stock Alert**<br/>⚠️ Paracetamol: 15 left (1.5 days) |
-| `REPORT` | Weekly performance | 📊 **Weekly Report**<br/>Sales: ₹24,500 · Accuracy: 89% |
-| `FULL` | Detailed report | Extended version with charts |
-| `STATUS` | System health | ✅ All systems operational |
-| `STOP` | Pause notifications | 🔕 Notifications paused |
-| `HELP` | Command reference | 📖 Available commands list |
-
----
-
-## 🎨 Design System
-
-### Brand Identity
-
-| Token | Value | Usage |
-|:---|:---|:---|
-| **Primary** | `#0D9488` → `#10B981` | CTAs, active states, healthy stock |
-| **Warning** | `#F59E0B` (Amber) | Low stock, approaching reorder |
-| **Danger** | `#EF4444` (Red) | Critical alerts, stockouts, expiry |
-| **Info** | `#3B82F6` (Blue) | Informational badges, tips |
-| **Background** | `#0F172A` → `#1E293B` | Dark mode default (deep navy) |
-| **Surface** | `rgba(255,255,255,0.05)` | Glassmorphism cards |
-| **Typography** | Inter (Google Fonts) | Clean, modern, highly legible |
-| **Border Radius** | `12px` cards · `8px` inputs · `24px` buttons | Rounded, friendly aesthetic |
-
-### Design Principles
-
-| Principle | Implementation |
-|:---|:---|
-| **Mobile-first** | Every screen designed at 360px first, scales up |
-| **Minimal cognitive load** | Max 3 actions per screen, plain language |
-| **Visual-first** | Charts, color-coding, icons over text tables |
-| **Dark mode default** | Deep navy background with high-contrast text |
-| **Accessibility** | WCAG 2.1 AA, 44px touch targets, high contrast |
-
-### Screen Inventory — 16 Screens
-
-| # | Screen | Route | Purpose |
-|:---:|:---|:---|:---|
-| 1 | Landing Page | `/` | Hero, value prop, CTAs |
-| 2 | Language Selection | `/onboarding/language` | Choose from 7 languages |
-| 3 | Business Type | `/onboarding/business-type` | Pharmacy / Kirana / Retail / Other |
-| 4 | Shop Setup | `/onboarding/setup` | Name, city, state, phone |
-| 5 | Data Upload | `/upload` | CSV / Image / Manual entry |
-| 6 | Data Verification | `/upload/verify` | OCR trust layer — edit & confirm |
-| 7 | Overview Dashboard | `/dashboard/overview` | KPIs, health donut, alert feed |
-| 8 | Forecasting Dashboard | `/dashboard/forecasting` | Per-product forecast with confidence bands |
-| 9 | Inventory Health | `/dashboard/inventory` | Heatmap, expiry timeline, slow-movers |
-| 10 | Scenario Planning | `/dashboard/scenarios` | What-if simulations (discount, surge, delay) |
-| 11 | Product Catalog | `/products` | Full inventory listing with filters |
-| 12 | Product Detail | `/products/:id` | Single product deep-dive + forecast |
-| 13 | Smart Reorder | `/reorder` | AI reorder list grouped by supplier |
-| 14 | Alert Center | `/alerts` | Severity-filtered active alerts |
-| 15 | Settings | `/settings` | Profile, notifications, WhatsApp |
-| 16 | WhatsApp Demo | *(mobile mockup)* | Bot interaction showcase |
-
----
-
-## 🗄️ Database Schema
-
-```mermaid
-erDiagram
-    users ||--o{ products : "owns"
-    users ||--o{ alerts : "receives"
-    users ||--|| notification_preferences : "configures"
-    products ||--o{ sales_history : "tracks"
-    products ||--o{ forecasts : "generates"
-    products ||--o{ anomalies : "detects"
-    products ||--o{ stock_movements : "logs"
-    products ||--o{ forecast_accuracy : "measures"
-
-    users {
-        int id PK
-        text shop_name
-        text business_type
-        text city
-        text state
-        text language
-        text phone
-        text password_hash
-    }
-
-    products {
-        int id PK
-        int user_id FK
-        text name
-        text category
-        real current_stock
-        real reorder_point
-        real safety_stock
-        real unit_cost
-        text supplier_name
-        int lead_time_days
-        date expiry_date
-    }
-
-    sales_history {
-        int id PK
-        int product_id FK
-        date date
-        real quantity
-        real revenue
-    }
-
-    forecasts {
-        int id PK
-        int product_id FK
-        date week_start
-        real low
-        real likely
-        real high
-        real baseline
-        text drivers
-    }
-
-    anomalies {
-        int id PK
-        int product_id FK
-        date date
-        text type
-        real z_score
-        text explanation
-        bool dismissed
-    }
-
-    alerts {
-        int id PK
-        int user_id FK
-        int product_id FK
-        text type
-        text severity
-        text title
-        text message
-        bool sent_whatsapp
-    }
-
-    disease_seasons {
-        int id PK
-        text disease
-        int start_month
-        int end_month
-        text medicines
-        real boost_pct
-    }
-
-    festival_calendar {
-        int id PK
-        text name
-        int month
-        text affected_categories
-        real demand_multiplier
-    }
-```
-
----
-
 ## 🛠️ Tech Stack
 
 <div align="center">
 
 | Layer | Technology | Purpose |
 |:---|:---|:---|
-| **Frontend** | React 18 + Vite | SPA with HMR, fast builds |
-| **Charts** | Plotly.js / react-plotly.js | Interactive forecast visualization |
-| **i18n** | react-i18next | 7-language multilingual support |
-| **Routing** | react-router-dom v6 | Client-side navigation |
-| **Backend** | FastAPI (Python 3.11) | Async REST API with auto-docs |
-| **ORM** | SQLAlchemy 2.0 | Database models + migrations |
-| **Validation** | Pydantic v2 | Request/response schema validation |
-| **Auth** | python-jose + passlib | JWT tokens + bcrypt password hashing |
-| **Forecasting** | Facebook Prophet | Time-series demand prediction |
-| **Intelligence** | Google Gemini 2.5 Flash | OCR, NLP analysis, demand factors |
-| **Web Search** | Serper API | Real-time disease/festival/weather data |
-| **Anomaly Detection** | NumPy / SciPy (Z-score) | Statistical outlier detection |
-| **WhatsApp** | whatsapp-web.js + Express | Node.js sidecar for messaging |
-| **Database** | SQLite (dev) / PostgreSQL (prod) | Zero-config local, scalable cloud |
-| **Reverse Proxy** | Nginx | Unified access on port 80 |
-| **Containerization** | Docker Compose | One-command deployment |
-| **Local AI** | Ollama (Gemma 4) | Privacy-first local inference fallback |
+| **Forecasting** | Facebook Prophet | Time-series demand prediction with confidence bands |
+| **Intelligence** | Google Gemini 2.5 Flash | OCR, NLP analysis, demand factor analysis |
+| **Web Search** | Serper API | Real-time disease/festival/weather signals |
+| **Anomaly Detection** | NumPy (Z-score) | Statistical spike/drop/pattern detection |
+| **Backend** | FastAPI (Python 3.11) | Async REST API with auto-generated docs |
+| **Frontend** | React 18 + Vite + Plotly.js | Interactive forecasting dashboards |
+| **WhatsApp** | whatsapp-web.js + Express | Node.js sidecar for 2-way messaging |
+| **Database** | SQLAlchemy + SQLite | Zero-config with PostgreSQL-ready ORM |
+| **i18n** | react-i18next | 7 Indian languages across 16 screens |
+| **Deployment** | Docker Compose + Nginx | One-command full-stack launch |
+| **AI Fallback** | Ollama (Gemma 4) + OpenRouter | 3-provider chain for zero-downtime AI |
 
 </div>
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-| Tool | Version | Check |
-|:---|:---|:---|
-| Docker & Docker Compose | v24+ | `docker --version` |
-| Node.js *(optional, for local dev)* | v18+ | `node --version` |
-| Python *(optional, for local dev)* | 3.11+ | `python3 --version` |
-
-### Option 1: Docker Compose (Recommended)
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/your-org/stocksense.git
-cd stocksense
-
-# 2. Configure environment
-cp .env.example backend/.env
-# Edit backend/.env with your API keys (see below)
-
-# 3. Launch everything
-chmod +x start.sh
-./start.sh
-```
-
-**That's it.** Access the app:
-
-| Service | URL |
-|:---|:---|
-| 🖥️ Frontend | http://localhost:5173 |
-| ⚙️ Backend API | http://localhost:8000 |
-| 📖 API Docs (Swagger) | http://localhost:8000/docs |
-| 📱 WhatsApp Bot | http://localhost:3001 |
-| 🌐 Unified (Nginx) | http://localhost:80 |
-
-### Option 2: Local Development
-
-```bash
-# Backend
-cd backend
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python seed_data.py          # Seed demo data
-uvicorn main:app --reload --port 8000
-
-# Frontend (separate terminal)
-cd frontend
-npm install
-npm run dev                  # → http://localhost:5173
-
-# WhatsApp Bot (separate terminal)
-cd whatsapp-bot
-npm install
-node index.js                # → http://localhost:3001
-```
-
-### Environment Variables
-
-```bash
-# ─── Required ──────────────────────────────────────────────
-GEMINI_API_KEY=your-gemini-api-key      # Primary AI (free: aistudio.google.com)
-SECRET_KEY=your-jwt-secret              # JWT signing key
-
-# ─── Optional — Enhanced Intelligence ─────────────────────
-SERPER_API_KEY=your-serper-key          # Web search for live disease data
-OPENROUTER_API_KEY=your-openrouter-key  # Cloud AI fallback
-
-# ─── Optional — Local AI ──────────────────────────────────
-OLLAMA_BASE_URL=http://localhost:11434  # Local Ollama instance
-OLLAMA_MODEL=gemma4:latest             # Model for local inference
-```
-
-> **💡 Minimum viable setup**: Only `GEMINI_API_KEY` is required. Everything else has sensible defaults or graceful fallbacks.
-
----
-
-## 📖 API Reference
-
-### Authentication
-
-| Method | Endpoint | Description |
-|:---|:---|:---|
-| `POST` | `/api/auth/register` | Create account (shop_name, business_type, phone, password) |
-| `POST` | `/api/auth/login` | Login → JWT token |
-
-### Data Ingestion
-
-| Method | Endpoint | Description |
-|:---|:---|:---|
-| `POST` | `/api/upload/csv` | Upload CSV/Excel sales data |
-| `POST` | `/api/upload/image` | Upload ledger photo → OCR extraction |
-| `POST` | `/api/upload/verify` | Confirm verified data → trigger forecast |
-
-### Inventory
-
-| Method | Endpoint | Description |
-|:---|:---|:---|
-| `GET` | `/api/inventory` | List products (filter by category, status) |
-| `GET` | `/api/inventory/:id` | Single product details |
-| `POST` | `/api/inventory` | Create product |
-| `PUT` | `/api/inventory/:id` | Update stock + record movement |
-| `GET` | `/api/inventory/health` | Health summary (total SKUs, below reorder, stockout risk) |
-| `GET` | `/api/inventory/expiring?days=7` | Products expiring within N days |
-
-### Forecasting
-
-| Method | Endpoint | Description |
-|:---|:---|:---|
-| `GET` | `/api/forecast/:product_id` | 6-week forecast with confidence bands + drivers |
-| `GET` | `/api/forecast/all` | Summary for all products |
-| `POST` | `/api/forecast/scenario` | What-if simulation (discount, surge, delay) |
-
-### Anomalies & Alerts
-
-| Method | Endpoint | Description |
-|:---|:---|:---|
-| `GET` | `/api/anomalies` | Active anomalies (filter by severity) |
-| `GET` | `/api/alerts` | Alert feed (critical/warning/info) |
-| `PUT` | `/api/alerts/:id/dismiss` | Dismiss an alert |
-
-### Reorder
-
-| Method | Endpoint | Description |
-|:---|:---|:---|
-| `GET` | `/api/reorder` | AI reorder list (ranked by urgency, grouped by supplier) |
-| `GET` | `/api/reorder/export?format=csv` | Export as CSV |
-| `GET` | `/api/reorder/export?format=pdf` | Export as PDF |
-
-### System
-
-| Method | Endpoint | Description |
-|:---|:---|:---|
-| `GET` | `/api/health` | Backend health check |
-| `GET` | `/api/ai-status` | AI provider availability (Gemini/Ollama/OpenRouter) |
-
-> 📖 **Full interactive docs**: Visit `http://localhost:8000/docs` for Swagger UI with request/response schemas.
-
----
-
-## 📁 Project Structure
-
-```
-stocksense/
-├── 📄 AGENTS.md                   # Multi-agent coordination protocol
-├── 📄 PRD.md                      # Product requirements document
-├── 📄 docker-compose.yml          # One-command deployment
-├── 📄 start.sh                    # Launch script
-├── 📄 .env.example                # Environment variable template
-│
-├── 📁 docs/                       # Architecture documentation
-│   ├── HLD.md                     # High-level design document
-│   ├── HLD_mermaid.md             # Mermaid architecture diagrams
-│   ├── sequence_diagrams.md       # Interaction flow specs
-│   └── sequence_diagrams_mermaid.md
-│
-├── 📁 design/                     # UI/UX specifications
-│   ├── DESIGN_DOC.md              # 16-screen design document
-│   └── screens/                   # PNG mockups (16 screens)
-│
-├── 📁 shared/                     # Cross-agent contracts
-│   ├── api-contracts.md           # REST API specifications
-│   ├── schema.sql                 # Database DDL
-│   └── design-tokens.css          # CSS custom properties
-│
-├── 📁 data/                       # Sample datasets
-│   ├── sales_8weeks.csv           # 8-week sales history (pharmacy)
-│   └── inventory.png              # Sample handwritten ledger
-│
-├── 📁 backend/                    # ⚙️ Python FastAPI
-│   ├── main.py                    # App entry point + CORS + routers
-│   ├── config.py                  # Environment configuration
-│   ├── database.py                # SQLAlchemy engine + sessions
-│   ├── seed_data.py               # Demo data seeder
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── routers/                   # API endpoint handlers
-│   │   ├── auth.py                # JWT authentication
-│   │   ├── upload.py              # CSV + OCR upload
-│   │   ├── inventory.py           # CRUD + health + expiry
-│   │   ├── forecast.py            # Prophet forecasting
-│   │   ├── anomalies.py           # Z-score detection
-│   │   ├── reorder.py             # Smart procurement
-│   │   ├── alerts.py              # Alert management
-│   │   ├── sales.py               # Sales recording
-│   │   ├── settings.py            # User preferences
-│   │   └── whatsapp.py            # Bot webhook
-│   ├── models/                    # SQLAlchemy ORM models
-│   │   ├── user.py
-│   │   ├── product.py
-│   │   ├── sales.py
-│   │   ├── forecast.py
-│   │   ├── anomaly.py
-│   │   ├── alert.py
-│   │   ├── stock_movement.py
-│   │   ├── notification.py
-│   │   └── lookup.py
-│   ├── schemas/                   # Pydantic request/response models
-│   └── services/                  # Business logic + AI
-│       ├── ai_client.py           # Unified AI gateway (3-provider fallback)
-│       ├── forecast_service.py    # Prophet + SMA + external factors
-│       ├── anomaly_service.py     # Z-score anomaly detection
-│       ├── intelligence_service.py # Serper + Gemini intelligence
-│       ├── ocr_service.py         # Handwriting OCR pipeline
-│       ├── reorder_service.py     # Smart reorder calculation
-│       └── lookup_data/           # Curated intelligence JSONs
-│           ├── disease_seasons.json
-│           ├── festival_calendar.json
-│           └── weather_heuristics.json
-│
-├── 📁 frontend/                   # 🖥️ React + Vite
-│   ├── src/
-│   │   ├── App.jsx                # Router + layout
-│   │   ├── pages/                 # 16 page components
-│   │   │   ├── Landing.jsx
-│   │   │   ├── onboarding/        # Language, BusinessType, ShopSetup
-│   │   │   ├── upload/            # Upload, Verify
-│   │   │   ├── dashboard/         # Overview, Forecasting, InventoryHealth, Scenarios
-│   │   │   ├── products/          # ProductCatalog, ProductDetail
-│   │   │   ├── sales/             # RecordSales
-│   │   │   ├── Reorder.jsx
-│   │   │   ├── Alerts.jsx
-│   │   │   └── Settings.jsx
-│   │   ├── components/            # Reusable UI components
-│   │   │   ├── Layout/            # Sidebar, Header, Footer
-│   │   │   └── PlotChart.jsx      # Plotly.js wrapper
-│   │   ├── services/              # API client layer
-│   │   ├── hooks/                 # Custom React hooks
-│   │   ├── i18n/                  # Translation JSON files (7 languages)
-│   │   ├── styles/                # CSS files
-│   │   └── utils/                 # Helper functions
-│   ├── Dockerfile
-│   └── vite.config.js
-│
-├── 📁 whatsapp-bot/               # 📱 Node.js Sidecar
-│   ├── index.js                   # Express + WWebJS setup
-│   ├── whatsapp-client.js         # Connection + QR management
-│   ├── message-handler.js         # Command routing
-│   ├── message-templates.js       # Formatted response builders
-│   ├── config.js                  # Environment configuration
-│   ├── Dockerfile
-│   └── package.json
-│
-└── 📁 nginx/                      # 🌐 Reverse Proxy
-    └── nginx.conf                 # Route :80 → frontend/backend
-```
-
----
-
-## 🔮 Roadmap
-
-### Phase 1 — Foundation ✅
-- [x] Backend API (FastAPI + SQLAlchemy + JWT auth)
-- [x] Frontend SPA (React 18 + Vite + Plotly.js)
-- [x] Database schema + seed data
-- [x] 16-screen UI implementation
-- [x] Docker Compose deployment
-
-### Phase 2 — AI Core ✅
-- [x] Prophet-based demand forecasting
-- [x] Z-score anomaly detection (spike/drop/pattern)
-- [x] Handwriting OCR (Gemini Vision + Hindi support)
-- [x] Intelligence service (Serper + Gemini + JSON fallback)
-- [x] Smart reorder engine
-- [x] 3-provider AI fallback (Gemini → Ollama → OpenRouter)
-
-### Phase 3 — WhatsApp Integration ✅
-- [x] Node.js sidecar with whatsapp-web.js
-- [x] Daily briefing templates
-- [x] Two-way command handling (REORDER, LIST, REPORT)
-- [x] Backend webhook integration
-
-### Phase 4 — Intelligence Layer ✅
-- [x] Real-time web search (Serper API)
-- [x] Gemini-powered demand analysis with web context
-- [x] Disease season boost (dengue, malaria, monsoon flu)
-- [x] Festival calendar integration (Diwali, Holi, regional)
-- [x] Weather heuristics (monsoon, heat wave, cold wave)
-
-### Phase 5 — Future Enhancements 🔜
-- [ ] Meta Business API migration (production WhatsApp)
-- [ ] PostgreSQL + Redis (production data layer)
-- [ ] Voice input via WhatsApp audio messages
-- [ ] Supplier marketplace integration
-- [ ] Multi-store chain management
-- [ ] Barcode/QR scanning for inventory
-- [ ] Push notifications (PWA)
-- [ ] Automated purchase order generation
 
 ---
 
@@ -917,21 +507,6 @@ stocksense/
 | 📦 **Vikram** | Distributor, Delhi | Manages 50+ retailer orders | WhatsApp briefings + bulk reorder exports |
 
 </div>
-
----
-
-## 🤝 Contributing
-
-This project was built as a multi-agent system with strict directory ownership:
-
-| Agent | Workspace | Responsibility |
-|:---|:---|:---|
-| Agent 1 | `frontend/**` | React UI, pages, components, i18n |
-| Agent 2 | `backend/**` (structure) | Routers, models, schemas, config |
-| Agent 3 | `backend/services/**` | AI/ML service implementations |
-| Agent 4 | `whatsapp-bot/**` | Node.js WhatsApp sidecar |
-
-> See [AGENTS.md](AGENTS.md) for the complete multi-agent coordination protocol.
 
 ---
 
