@@ -161,6 +161,12 @@ export const salesApi = {
     formData.append('file', file);
     return request('/sales/upload-csv', { method: 'POST', body: formData, headers: {} });
   },
+  uploadImage: (image) => {
+    const formData = new FormData();
+    formData.append('image', image);
+    // Reuses the OCR endpoint — returns { extracted_data, overall_confidence }
+    return request('/upload/image', { method: 'POST', body: formData, headers: {} });
+  },
   record: (sales) => request('/sales/record', { method: 'POST', body: JSON.stringify({ sales }) }),
   history: (params = {}) => {
     const query = new URLSearchParams(params).toString();
