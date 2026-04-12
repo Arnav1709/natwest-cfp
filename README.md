@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🧠 StockSense
+# 🧠 SupplySense
 
 ### AI-Powered Predictive Demand Forecasting & Intelligent Inventory Management
 
@@ -16,7 +16,7 @@
 
 <br/>
 
-> **StockSense doesn't just forecast demand — it understands *why* demand changes.**
+> **SupplySense doesn't just forecast demand — it understands *why* demand changes.**
 > Festival season? Disease outbreak? Monsoon week? Our AI automatically detects real-world signals and adjusts your forecasts before you even notice the trend.
 
 <br/>
@@ -33,17 +33,17 @@
 >
 > *Last monsoon, dengue hit his area hard. Paracetamol sold out in 2 days. By the time he called his distributor, the entire city was scrambling for stock. He lost ₹15,000 in sales that week alone.*
 >
-> *This year, Ramesh uses **StockSense**.*
+> *This year, Ramesh uses **SupplySense**.*
 >
 > *He photographs his notebook. AI reads his handwriting — even the Hindi numerals and messy dates. In 60 seconds, his 15 years of paper records become a digital dataset.*
 >
-> *Three weeks before monsoon peak, StockSense detects rising dengue reports in Nagpur via live web search. It automatically boosts Paracetamol's forecast by 25%, sends Ramesh a WhatsApp alert in Hindi:*
+> *Three weeks before monsoon peak, SupplySense detects rising dengue reports in Nagpur via live web search. It automatically boosts Paracetamol's forecast by 25%, sends Ramesh a WhatsApp alert in Hindi:*
 >
 > **"⚠️ डेंगू का मौसम शुरू हो रहा है। पेरासिटामोल का स्टॉक 3 दिन में खत्म हो जाएगा। अभी 200 यूनिट ऑर्डर करें।"**
 >
 > *This time, Ramesh is ready. He replies "REORDER" on WhatsApp, gets a sorted procurement list grouped by supplier, and places his order — all without opening a single app.*
 
-**That's StockSense.** From notebook → to dataset → to AI forecast → to WhatsApp alert — in the language you speak, for the reality you live.
+**That's SupplySense.** From notebook → to dataset → to AI forecast → to WhatsApp alert — in the language you speak, for the reality you live.
 
 ---
 
@@ -51,7 +51,7 @@
 
 <div align="center">
 
-**StockSense is, at its heart, a context-aware demand forecasting engine.**
+**SupplySense is, at its heart, a context-aware demand forecasting engine.**
 
 *It doesn't just look at your sales history. It looks at the world around you.*
 
@@ -61,7 +61,7 @@
 
 Traditional forecasting says *"you sold 100 Paracetamol last week, so you'll probably sell 100 next week."*
 
-**StockSense forecasting says** *"you sold 100 Paracetamol last week, BUT dengue cases are spiking in your city, Navratri is in 10 days, and monsoon rainfall is 30% above average — so you'll need **250 units** next week."*
+**SupplySense forecasting says** *"you sold 100 Paracetamol last week, BUT dengue cases are spiking in your city, Navratri is in 10 days, and monsoon rainfall is 30% above average — so you'll need **250 units** next week."*
 
 ### How Our Forecasts Stay Ahead of Reality
 
@@ -103,7 +103,7 @@ graph LR
 | 📈 **Demand Surges** | Z-score anomaly detection | Structural shift identification | *"3 consecutive weeks above forecast → reforecast needed"* |
 | 📉 **Demand Drops** | Pattern anomaly detection | Competitive/seasonal insights | *"Sales dropped 40% → check competitor pricing"* |
 
-> **Why this matters for the NatWest track**: Most forecasting tools treat demand as a math problem. StockSense treats it as a *real-world context problem* — incorporating live signals that actually drive demand in Indian small businesses.
+> **Why this matters for the NatWest track**: Most forecasting tools treat demand as a math problem. SupplySense treats it as a *real-world context problem* — incorporating live signals that actually drive demand in Indian small businesses.
 
 ---
 
@@ -132,7 +132,7 @@ graph LR
 
 <div align="center">
 
-**The beating heart of StockSense.** Every feature — anomaly detection, reorder lists, WhatsApp alerts — flows from this engine.
+**The beating heart of SupplySense.** Every feature — anomaly detection, reorder lists, WhatsApp alerts — flows from this engine.
 
 </div>
 
@@ -146,11 +146,11 @@ graph LR
 - **Scenario planning** — "What if I run a 20% discount?" / "What if my supplier delays by 5 days?"
 - **Trend detection** — Automatic identification of upward/downward sales trends with percentage change
 
-> 💡 **What makes this different**: Most forecasting tools give you `ŷ = f(history)`. StockSense gives you `ŷ = f(history, diseases, festivals, weather, anomalies)`. That's the difference between "you'll sell 100" and "you'll sell 250 because dengue season just started."
+> 💡 **What makes this different**: Most forecasting tools give you `ŷ = f(history)`. SupplySense gives you `ŷ = f(history, diseases, festivals, weather, anomalies)`. That's the difference between "you'll sell 100" and "you'll sell 250 because dengue season just started."
 
 ### 🔍 Z-Score Anomaly Detection
 
-Anomalies aren't just noise — they're **signals that the world changed**. StockSense uses statistical anomaly detection on forecast residuals to catch what traditional inventory tools miss:
+Anomalies aren't just noise — they're **signals that the world changed**. SupplySense uses statistical anomaly detection on forecast residuals to catch what traditional inventory tools miss:
 
 | Detection Type | Trigger | What It Means | User Sees |
 |:---|:---|:---|:---|
@@ -167,7 +167,7 @@ Every anomaly comes with:
 
 <div align="center">
 
-**StockSense's superpower for India: turning 15 years of paper notebooks into AI-ready data in 60 seconds.**
+**SupplySense's superpower for India: turning 15 years of paper notebooks into AI-ready data in 60 seconds.**
 
 </div>
 
@@ -185,7 +185,7 @@ Here's what happens when a shopkeeper photographs their ledger:
 
 ### 🦠 Real-Time Disease Intelligence
 
-A **3-stage intelligence pipeline** that makes StockSense forecasts context-aware:
+A **3-stage intelligence pipeline** that makes SupplySense forecasts context-aware:
 
 ```
 Stage 1: SEARCH    → Serper API queries "dengue outbreak {user's city} {current month}"
@@ -206,7 +206,7 @@ Stage 3: FALLBACK  → If APIs fail, curated JSON lookup tables kick in
 
 ### 🎯 Explainable AI — Every Forecast Tells a Story
 
-StockSense doesn't just give you numbers. **Every prediction comes with a plain-language explanation** of *why* the forecast looks the way it does:
+SupplySense doesn't just give you numbers. **Every prediction comes with a plain-language explanation** of *why* the forecast looks the way it does:
 
 ```
 📈 Paracetamol: 250 units/week (↑ 25% vs last period)
@@ -235,7 +235,7 @@ reorder_qty = (forecast_demand × lead_time_days) + safety_stock − current_sto
 
 ### 📱 WhatsApp-First Interface
 
-**800 million Indians use WhatsApp daily.** StockSense meets them where they are — no app download, no new login, no learning curve:
+**800 million Indians use WhatsApp daily.** SupplySense meets them where they are — no app download, no new login, no learning curve:
 
 | Command | What Happens |
 |:---|:---|
@@ -264,7 +264,7 @@ Full i18n with `react-i18next` across **all 16 screens** + OCR language adaptati
 
 </div>
 
-> 🌐 **Why this matters**: The shopkeeper in Nagpur writes in Hindi. The pharmacist in Chennai thinks in Tamil. The distributor in Ahmedabad speaks Gujarati. StockSense doesn't ask them to switch to English — it comes to them.
+> 🌐 **Why this matters**: The shopkeeper in Nagpur writes in Hindi. The pharmacist in Chennai thinks in Tamil. The distributor in Ahmedabad speaks Gujarati. SupplySense doesn't ask them to switch to English — it comes to them.
 
 ---
 
@@ -307,7 +307,7 @@ graph TB
     end
 
     subgraph "Data Layer"
-        DB[("💾 SQLite<br/>stocksense.db")]
+        DB[("💾 SQLite<br/>supplysense.db")]
         LOOKUP["📁 Lookup JSONs<br/>diseases · festivals · weather"]
     end
 
@@ -483,7 +483,7 @@ sequenceDiagram
 
 ## 🏆 Hackathon Criteria Alignment
 
-| NatWest Criteria | StockSense Implementation |
+| NatWest Criteria | SupplySense Implementation |
 |:---|:---|
 | **AI-powered forecasting** | Prophet + external factor overlays (disease, festival, weather) |
 | **Uncertainty quantification** | Confidence bands (low/likely/high) with 80% interval |
@@ -500,7 +500,7 @@ sequenceDiagram
 
 <div align="center">
 
-| Persona | Business | Pain Point | StockSense Solution |
+| Persona | Business | Pain Point | SupplySense Solution |
 |:---|:---|:---|:---|
 | 🏪 **Ramesh** | Kirana Store, Mumbai | Tracks 200 SKUs in a notebook | OCR → instant digital inventory |
 | 🏥 **Dr. Priya** | Pharmacy, Chennai | Misses dengue-season medicine spikes | Disease intelligence auto-boosts forecasts |
@@ -518,7 +518,7 @@ MIT License — build something great with it.
 
 <div align="center">
 
-**StockSense** — *"From notebook to forecast in 60 seconds."*
+**SupplySense** — *"From notebook to forecast in 60 seconds."*
 
 Built with ❤️ for India's 12M+ small businesses
 
