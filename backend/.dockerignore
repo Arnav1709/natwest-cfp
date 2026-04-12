@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 *.pyo
 .env
+data/
 stocksense.db
 stocksense.db-shm
 stocksense.db-wal
@@ -11,3 +12,4 @@ stocksense.db-wal
 *.egg-info/
 dist/
 build/
+

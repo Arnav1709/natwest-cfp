@@ -23,6 +23,7 @@ venv/
 *.db-shm
 *.db-wal
 *.db-journal
+backend/data/
 
 # Environment variables
 .env

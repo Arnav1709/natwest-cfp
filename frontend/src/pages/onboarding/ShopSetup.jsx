@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { indianStates } from '../../mocks/mockData';
+import { indianStates } from '../../utils/constants';
 
 export default function ShopSetup() {
   const { t } = useTranslation();

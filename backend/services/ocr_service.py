@@ -1,8 +1,10 @@
 """
-OCR Service — Handwritten ledger image processing using Gemini Vision API.
+OCR Service — Handwritten ledger image processing using Google Gemini Vision API.
 
-Extracts product entries from photographs of handwritten ledgers,
+Extracts product entries from photographs of handwritten sales registers / ledgers,
 handling mixed Hindi/English text, Hindi numerals, and varied date formats.
+
+Requires: GEMINI_API_KEY environment variable (free tier at https://aistudio.google.com/).
 """
 
 import json
@@ -36,8 +38,8 @@ def _init_gemini_vision():
         return _gemini_client
 
     api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        logger.warning("GEMINI_API_KEY not set — OCR service unavailable")
+    if not api_key or api_key in ("your-gemini-api-key-here", ""):
+        logger.warning("GEMINI_API_KEY not set or placeholder — OCR service unavailable")
         _gemini_available = False
         return None
 
@@ -47,6 +49,7 @@ def _init_gemini_vision():
         _gemini_client = genai.Client(api_key=api_key)
         _gemini_available = True
         _using_new_sdk = True
+        logger.info("Gemini Vision initialized (google.genai SDK)")
         return _gemini_client
     except ImportError:
         pass
@@ -60,6 +63,7 @@ def _init_gemini_vision():
         _gemini_client = genai.GenerativeModel("gemini-2.0-flash")
         _gemini_available = True
         _using_new_sdk = False
+        logger.info("Gemini Vision initialized (legacy google.generativeai SDK)")
         return _gemini_client
     except Exception as e:
         logger.error("Failed to initialize Gemini Vision: %s", e)
@@ -76,12 +80,6 @@ def _call_gemini_vision(image_bytes: bytes, prompt: str, max_retries: int = 3) -
     if client is None:
         return None
 
-    # Create image part
-    image_part = {
-        "mime_type": "image/jpeg",
-        "data": image_bytes,
-    }
-
     for attempt in range(max_retries):
         try:
             if _using_new_sdk:
@@ -92,6 +90,10 @@ def _call_gemini_vision(image_bytes: bytes, prompt: str, max_retries: int = 3) -
                 )
                 return response.text
             else:
+                image_part = {
+                    "mime_type": "image/jpeg",
+                    "data": image_bytes,
+                }
                 response = client.generate_content([prompt, image_part])
                 return response.text
         except Exception as e:
@@ -217,6 +219,8 @@ def _extract_json_from_response(text: str) -> Optional[list]:
             return data["entries"]
         if isinstance(data, dict) and "products" in data:
             return data["products"]
+        if isinstance(data, dict) and "items" in data:
+            return data["items"]
     except json.JSONDecodeError:
         pass
 
@@ -241,10 +245,10 @@ def _extract_json_from_response(text: str) -> Optional[list]:
 
 def _parse_gemini_entry(entry: dict) -> ParsedProduct:
     """Convert a single Gemini response entry into a ParsedProduct."""
-    name = entry.get("name", entry.get("product", entry.get("item", "")))
-    date_str = entry.get("date", entry.get("Date", ""))
-    quantity = entry.get("quantity", entry.get("qty", entry.get("Quantity", 0)))
-    price = entry.get("price", entry.get("unit_price", entry.get("Price", 0)))
+    name = entry.get("name", entry.get("product", entry.get("item", entry.get("product_name", ""))))
+    date_str = entry.get("date", entry.get("Date", entry.get("sale_date", "")))
+    quantity = entry.get("quantity", entry.get("qty", entry.get("Quantity", entry.get("units_sold", 0))))
+    price = entry.get("price", entry.get("unit_price", entry.get("Price", entry.get("amount", 0))))
     confidence = entry.get("confidence", entry.get("Confidence", 0.8))
 
     # Handle Hindi number words in quantity
@@ -291,7 +295,7 @@ def _parse_gemini_entry(entry: dict) -> ParsedProduct:
 
 
 # ---------------------------------------------------------------------------
-# Public API — matches Agent 2 stub signatures exactly
+# Public API
 # ---------------------------------------------------------------------------
 
 def process_ledger_image(
@@ -299,7 +303,7 @@ def process_ledger_image(
     language: str = "en",
 ) -> dict:
     """
-    Process a handwritten ledger image using Gemini Vision API.
+    Process a sales register / handwritten ledger image using Google Gemini Vision API.
 
     Steps:
     1. Send image to Gemini Vision with OCR prompt
@@ -318,34 +322,60 @@ def process_ledger_image(
         Dict with keys:
         - extracted_data: List[ParsedProduct] — extracted rows
         - overall_confidence: float — average confidence across all cells
+        - error: Optional[str] — error message if OCR failed
     """
-    prompt = """You are an expert OCR system specialized in reading handwritten business ledgers from India.
 
-Analyze this image of a handwritten ledger page and extract ALL product entries you can find.
+    # ── Validate Gemini availability ──
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key or api_key in ("your-gemini-api-key-here", ""):
+        logger.error("OCR failed: GEMINI_API_KEY not configured")
+        return {
+            "extracted_data": [],
+            "overall_confidence": 0.0,
+            "error": "GEMINI_API_KEY not configured. Please set your Google Gemini API key in backend/.env to enable AI OCR.",
+        }
+
+    # ── Build the OCR prompt ──
+    lang_hint = ""
+    if language == "hi":
+        lang_hint = "\nThe ledger is likely in Hindi (Devanagari script). Pay close attention to Hindi text and numerals."
+    elif language != "en":
+        lang_hint = f"\nThe ledger may contain {language} text. Extract carefully."
+
+    prompt = f"""You are an expert OCR system specialized in reading handwritten and printed sales registers, ledgers, and invoices from Indian businesses.
+
+Analyze this image carefully and extract ALL product/sales entries you can find.{lang_hint}
 
 Return a JSON array where each entry has these fields:
-{
-  "name": "product name (preserve original language, transliterate if needed)",
-  "date": "date of entry (normalize to YYYY-MM-DD if possible)",
-  "quantity": numeric quantity (convert Hindi numerals: बारह=12, पांच=5, etc.),
-  "price": numeric unit price (remove ₹ symbol),
+{{
+  "name": "product name (preserve original language, transliterate Hindi to English if mixed)",
+  "date": "date of sale/entry in YYYY-MM-DD format (if visible)",
+  "quantity": numeric quantity sold or in stock (convert Hindi numerals if needed),
+  "price": numeric unit price or total amount (remove ₹ symbol),
   "confidence": your confidence in this extraction from 0.0 to 1.0
-}
+}}
 
-Important rules:
-- Handle mixed Hindi/English text. Keep product names in their original language.
-- Convert Hindi numerals (Devanagari digits ०-९) to Arabic digits (0-9).
-- Convert Hindi number words to digits: एक=1, दो=2, तीन=3, चार=4, पांच=5, छह=6, सात=7, आठ=8, नौ=9, दस=10, बारह=12, बीस=20, तीस=30, पचास=50, सौ=100
-- Normalize ALL dates to ISO format YYYY-MM-DD.
+Critical rules:
+- Extract EVERY row/entry visible in the image, even partially readable ones.
+- Handle mixed Hindi/English text. Keep product names readable.
+- Convert Hindi/Devanagari numerals (०-९) to Arabic digits (0-9).
+- Convert Hindi number words to digits: एक=1, दो=2, तीन=3, चार=4, पांच=5, छह=6, सात=7, आठ=8, नौ=9, दस=10, बारह=12, बीस=20, पचास=50, सौ=100
+- Normalize ALL dates to ISO format YYYY-MM-DD. If only day/month visible, use current year.
 - If handwriting is unclear, set confidence lower (0.3-0.6).
-- If you're very confident, set 0.9-1.0.
-- Return ONLY the JSON array, no other text.
+- If you're very confident, set 0.8-1.0.
+- If the image shows a printed receipt/invoice, extract line items.
+- If the image shows a handwritten register, extract each row.
+- Return ONLY the JSON array, no other text or markdown formatting.
 - If you cannot read the image at all, return an empty array [].
 """
 
+    logger.info("Sending image to Google Gemini Vision for OCR extraction...")
     response_text = _call_gemini_vision(image_bytes, prompt)
 
     if response_text:
+        logger.info("Gemini Vision response received (%d chars)", len(response_text))
+        logger.debug("Raw Gemini response: %s", response_text[:500])
+
         entries = _extract_json_from_response(response_text)
         if entries:
             extracted_data = [_parse_gemini_entry(entry) for entry in entries]
@@ -357,17 +387,97 @@ Important rules:
                 if extracted_data else 0.0
             )
 
+            logger.info(
+                "OCR extraction complete: %d items extracted, avg confidence %.2f",
+                len(extracted_data), overall,
+            )
+
             return {
                 "extracted_data": extracted_data,
                 "overall_confidence": round(overall, 2),
             }
+        else:
+            logger.warning("Gemini returned text but no parseable JSON: %s", response_text[:200])
 
-    # Fallback: return empty result with message
-    logger.warning("Gemini Vision OCR failed or returned no parseable data")
+    # ── Fallback: try OpenRouter with a vision-capable model ──
+    logger.warning("Gemini Vision OCR failed — trying OpenRouter fallback...")
+    fallback_result = _try_openrouter_vision_ocr(image_bytes, language)
+    if fallback_result:
+        return fallback_result
+
+    logger.error("All OCR methods failed for this image")
     return {
         "extracted_data": [],
         "overall_confidence": 0.0,
+        "error": "Could not extract data from this image. Please try a clearer photo with better lighting.",
     }
+
+
+def _try_openrouter_vision_ocr(image_bytes: bytes, language: str = "en") -> Optional[dict]:
+    """
+    Fallback OCR using OpenRouter's free vision-capable models.
+    Uses base64 image encoding for the API.
+    """
+    import base64
+
+    openrouter_key = os.getenv("OPENROUTER_API_KEY")
+    if not openrouter_key or openrouter_key in ("your-openrouter-key-here", ""):
+        return None
+
+    try:
+        import requests
+
+        b64_image = base64.b64encode(image_bytes).decode("utf-8")
+
+        prompt = """Extract ALL product/sales entries from this image of a sales register or ledger.
+Return a JSON array where each entry has: name, date (YYYY-MM-DD), quantity, price, confidence (0-1).
+Return ONLY the JSON array, no other text."""
+
+        resp = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={"Authorization": f"Bearer {openrouter_key}"},
+            json={
+                "model": "google/gemini-2.0-flash-exp:free",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{b64_image}",
+                                },
+                            },
+                        ],
+                    }
+                ],
+            },
+            timeout=60,
+        )
+
+        if resp.status_code == 200:
+            text = resp.json()["choices"][0]["message"]["content"]
+            entries = _extract_json_from_response(text)
+            if entries:
+                extracted_data = [_parse_gemini_entry(entry) for entry in entries]
+                extracted_data = [p for p in extracted_data if p.name.strip()]
+                overall = (
+                    sum(p.confidence for p in extracted_data) / len(extracted_data)
+                    if extracted_data else 0.0
+                )
+                logger.info("OpenRouter fallback OCR extracted %d items", len(extracted_data))
+                return {
+                    "extracted_data": extracted_data,
+                    "overall_confidence": round(overall, 2),
+                }
+        else:
+            logger.warning("OpenRouter OCR returned status %d: %s", resp.status_code, resp.text[:200])
+
+    except Exception as e:
+        logger.error("OpenRouter vision OCR fallback failed: %s", e)
+
+    return None
 
 
 def enhance_ocr_with_context(
@@ -457,7 +567,7 @@ Return ONLY the JSON array."""
     # Try OpenRouter fallback
     try:
         openrouter_key = os.getenv("OPENROUTER_API_KEY")
-        if openrouter_key:
+        if openrouter_key and openrouter_key not in ("your-openrouter-key-here", ""):
             import requests
             resp = requests.post(
                 "https://openrouter.ai/api/v1/chat/completions",

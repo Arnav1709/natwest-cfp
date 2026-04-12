@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { mockReorder } from '../mocks/mockData';
+import { useApi } from '../hooks/useApi';
+import { reorderApi } from '../services/api';
 
 const urgencyConfig = {
   high: { label: 'Urgent', class: 'badge-danger', icon: '🔴' },
@@ -9,7 +10,21 @@ const urgencyConfig = {
 
 export default function Reorder() {
   const { t } = useTranslation();
-  const { summary, reorder_list, grouped_by_supplier } = mockReorder;
+
+  const { data: rawData, loading, error } = useApi(() => reorderApi.list(), []);
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <p style={{ color: 'var(--color-text-muted)' }}>Loading reorder recommendations...</p>
+      </div>
+    );
+  }
+
+  const reorderData = rawData || {};
+  const summary = reorderData.summary || { total_items: 0, estimated_total_cost: 0, most_urgent_product: '—', most_urgent_days_remaining: 0 };
+  const reorder_list = reorderData.reorder_list || [];
+  const grouped_by_supplier = reorderData.grouped_by_supplier || {};
 
   return (
     <div>
@@ -22,10 +37,16 @@ export default function Reorder() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-          <button className="btn btn-secondary" id="btn-export-csv">📥 {t('reorder.export_csv')}</button>
-          <button className="btn btn-secondary" id="btn-export-pdf">📄 {t('reorder.export_pdf')}</button>
+          <a href={reorderApi.exportCsv()} className="btn btn-secondary" id="btn-export-csv">📥 {t('reorder.export_csv')}</a>
+          <a href={reorderApi.exportPdf()} className="btn btn-secondary" id="btn-export-pdf">📄 {t('reorder.export_pdf')}</a>
         </div>
       </div>
+
+      {error && (
+        <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)', marginBottom: 'var(--space-4)', color: 'var(--color-warning)', fontSize: 'var(--font-size-sm)' }}>
+          ⚠️ {error}
+        </div>
+      )}
 
       {/* Summary KPIs */}
       <div className="grid-4" style={{ marginBottom: 'var(--space-6)' }}>
@@ -35,12 +56,14 @@ export default function Reorder() {
         </div>
         <div className="kpi-card">
           <div className="kpi-card-label">{t('reorder.estimated_cost')}</div>
-          <div className="kpi-card-value">₹{summary.estimated_total_cost.toLocaleString()}</div>
+          <div className="kpi-card-value">₹{(summary.estimated_total_cost || 0).toLocaleString()}</div>
         </div>
         <div className="kpi-card">
           <div className="kpi-card-label">{t('reorder.most_urgent')}</div>
           <div className="kpi-card-value" style={{ fontSize: 'var(--font-size-base)' }}>{summary.most_urgent_product}</div>
-          <div className="kpi-card-change negative">⚡ {summary.most_urgent_days_remaining} days left</div>
+          {summary.most_urgent_days_remaining != null && (
+            <div className="kpi-card-change negative">⚡ {summary.most_urgent_days_remaining} days left</div>
+          )}
         </div>
         <div className="kpi-card">
           <div className="kpi-card-label">Suppliers Involved</div>
@@ -53,83 +76,94 @@ export default function Reorder() {
         <div style={{ padding: 'var(--space-4) var(--space-4) var(--space-2)' }}>
           <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600 }}>Reorder List</h3>
         </div>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th>Current Stock</th>
-              <th>Forecast Demand</th>
-              <th>Reorder Qty</th>
-              <th>Days to Stockout</th>
-              <th>Urgency</th>
-              <th>Supplier</th>
-              <th>Est. Cost</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reorder_list.map((item) => {
-              const uc = urgencyConfig[item.urgency];
-              return (
-                <tr key={item.product_id}>
-                  <td style={{ fontWeight: 600 }}>{item.product_name}</td>
-                  <td>{item.current_stock}</td>
-                  <td>{item.forecast_demand}/week</td>
-                  <td style={{ fontWeight: 700, color: 'var(--color-primary-light)' }}>{item.reorder_qty}</td>
-                  <td>
-                    <span style={{
-                      fontWeight: 600,
-                      color: item.days_to_stockout <= 2 ? 'var(--color-danger)' :
-                             item.days_to_stockout <= 7 ? 'var(--color-warning)' : 'var(--color-text-primary)'
-                    }}>
-                      {item.days_to_stockout === 0 ? 'NOW' : `${item.days_to_stockout} days`}
-                    </span>
-                  </td>
-                  <td><span className={`badge ${uc.class}`}>{uc.icon} {uc.label}</span></td>
-                  <td style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>{item.supplier_name}</td>
-                  <td style={{ fontWeight: 600 }}>₹{item.estimated_cost.toLocaleString()}</td>
-                  <td>
-                    <button className="btn btn-primary btn-sm">Order</button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {reorder_list.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--color-text-muted)' }}>
+            <div style={{ fontSize: '2rem', marginBottom: 'var(--space-2)' }}>✅</div>
+            <p>No reorders needed — all stock levels are healthy!</p>
+          </div>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Current Stock</th>
+                <th>Forecast Demand</th>
+                <th>Reorder Qty</th>
+                <th>Days to Stockout</th>
+                <th>Urgency</th>
+                <th>Supplier</th>
+                <th>Est. Cost</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reorder_list.map((item) => {
+                const uc = urgencyConfig[item.urgency] || urgencyConfig.low;
+                return (
+                  <tr key={item.product_id}>
+                    <td style={{ fontWeight: 600 }}>{item.product_name}</td>
+                    <td>{item.current_stock}</td>
+                    <td>{item.forecast_demand}/week</td>
+                    <td style={{ fontWeight: 700, color: 'var(--color-primary-light)' }}>{item.reorder_qty}</td>
+                    <td>
+                      <span style={{
+                        fontWeight: 600,
+                        color: (item.days_to_stockout || 0) <= 2 ? 'var(--color-danger)' :
+                               (item.days_to_stockout || 0) <= 7 ? 'var(--color-warning)' : 'var(--color-text-primary)'
+                      }}>
+                        {item.days_to_stockout === 0 ? 'NOW' : `${item.days_to_stockout} days`}
+                      </span>
+                    </td>
+                    <td><span className={`badge ${uc.class}`}>{uc.icon} {uc.label}</span></td>
+                    <td style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>{item.supplier_name}</td>
+                    <td style={{ fontWeight: 600 }}>₹{(item.estimated_cost || 0).toLocaleString()}</td>
+                    <td>
+                      <button className="btn btn-primary btn-sm">Order</button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Grouped by Supplier */}
-      <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, marginBottom: 'var(--space-3)' }}>
-        📦 Grouped by Supplier
-      </h3>
-      <div className="grid-2">
-        {Object.entries(grouped_by_supplier).map(([supplier, items]) => {
-          const total = items.reduce((sum, item) => sum + item.estimated_cost, 0);
-          return (
-            <div className="glass-card" key={supplier}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
-                <h4 style={{ fontWeight: 600, fontSize: 'var(--font-size-base)' }}>{supplier}</h4>
-                <span className="badge badge-muted">₹{total.toLocaleString()}</span>
-              </div>
-              {items.map((item) => (
-                <div key={item.product_id} style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: 'var(--space-2) 0',
-                  borderBottom: '1px solid var(--color-border)'
-                }}>
-                  <span style={{ fontSize: 'var(--font-size-sm)' }}>{item.product_name}</span>
-                  <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-primary-light)' }}>
-                    {item.reorder_qty} units
-                  </span>
+      {Object.keys(grouped_by_supplier).length > 0 && (
+        <>
+          <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, marginBottom: 'var(--space-3)' }}>
+            📦 Grouped by Supplier
+          </h3>
+          <div className="grid-2">
+            {Object.entries(grouped_by_supplier).map(([supplier, items]) => {
+              const total = items.reduce((sum, item) => sum + (item.estimated_cost || 0), 0);
+              return (
+                <div className="glass-card" key={supplier}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+                    <h4 style={{ fontWeight: 600, fontSize: 'var(--font-size-base)' }}>{supplier}</h4>
+                    <span className="badge badge-muted">₹{total.toLocaleString()}</span>
+                  </div>
+                  {items.map((item) => (
+                    <div key={item.product_id} style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: 'var(--space-2) 0',
+                      borderBottom: '1px solid var(--color-border)'
+                    }}>
+                      <span style={{ fontSize: 'var(--font-size-sm)' }}>{item.product_name}</span>
+                      <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-primary-light)' }}>
+                        {item.reorder_qty} units
+                      </span>
+                    </div>
+                  ))}
+                  <button className="btn btn-secondary btn-sm" style={{ width: '100%', marginTop: 'var(--space-3)' }}>
+                    📧 Send Order to {supplier}
+                  </button>
                 </div>
-              ))}
-              <button className="btn btn-secondary btn-sm" style={{ width: '100%', marginTop: 'var(--space-3)' }}>
-                📧 Send Order to {supplier}
-              </button>
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }

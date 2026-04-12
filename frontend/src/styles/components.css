@@ -281,6 +281,23 @@
   box-shadow: 0 0 0 3px var(--color-primary-glow);
 }
 
+/* Dropdown option styling — browsers render <option> with OS defaults.
+   Explicit background/color ensures visibility on dark themes (Windows). */
+.form-select option,
+select option {
+  background: #1E293B;
+  color: #F8FAFC;
+  padding: 8px 12px;
+}
+
+.form-select option:hover,
+select option:hover,
+.form-select option:checked,
+select option:checked {
+  background: #0D9488;
+  color: #ffffff;
+}
+
 /* Floating Label */
 .floating-label-group {
   position: relative;

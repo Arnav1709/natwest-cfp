@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { mockNotificationSettings } from '../mocks/mockData';
+import { useApi } from '../hooks/useApi';
+import { settingsApi } from '../services/api';
 
 export default function Settings() {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState('profile');
-  const [notifs, setNotifs] = useState(mockNotificationSettings);
+  const { data: rawNotifs, loading, setData: setRawNotifs } = useApi(() => settingsApi.getNotifications(), []);
+  
+  const notifs = rawNotifs || {};
+  
   const [profile, setProfile] = useState({
     name: 'Priya Admin',
     email: 'priya@stocksense.in',
@@ -21,8 +25,15 @@ export default function Settings() {
     { key: 'whatsapp',      label: t('settings.whatsapp'),        icon: '💬' },
   ];
 
-  const toggleNotif = (key) => {
-    setNotifs(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleNotif = async (key) => {
+    const newValue = !notifs[key];
+    setRawNotifs({ ...notifs, [key]: newValue });
+    try {
+      await settingsApi.updateNotifications({ [key]: newValue });
+    } catch (e) {
+      console.error(e);
+      setRawNotifs({ ...notifs, [key]: !newValue });
+    }
   };
 
   return (

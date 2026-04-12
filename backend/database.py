@@ -46,6 +46,16 @@ def init_db():
     Create all database tables.
     Called on application startup.
     """
+    # Ensure the data directory exists (for both local and Docker)
+    import os
+    db_url = settings.DATABASE_URL
+    if db_url.startswith("sqlite"):
+        # Extract path from sqlite:///./data/stocksense.db
+        db_path = db_url.replace("sqlite:///", "")
+        db_dir = os.path.dirname(db_path)
+        if db_dir:
+            os.makedirs(db_dir, exist_ok=True)
+
     # Import all models so they register with Base.metadata
     import models  # noqa: F401
     Base.metadata.create_all(bind=engine)

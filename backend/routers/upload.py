@@ -71,11 +71,9 @@ async def upload_image(
     db: Session = Depends(get_db),
 ):
     """
-    Upload an image of a handwritten ledger for OCR extraction.
-    Returns extracted data for user verification.
-
-    NOTE: Actual OCR is implemented by Agent 3 in services/ocr_service.py.
-    This endpoint calls the OCR service stub which returns mock data.
+    Upload an image of a sales register or handwritten ledger for OCR extraction.
+    Uses Google Gemini Vision API to extract product entries.
+    Returns extracted data for user verification before database insertion.
     """
     # Validate image type
     allowed = (".jpg", ".jpeg", ".png", ".webp")
@@ -89,8 +87,16 @@ async def upload_image(
     if len(content) == 0:
         raise HTTPException(status_code=400, detail="Image is empty")
 
-    # Call OCR service (stub)
+    # Max 10 MB
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Image too large. Maximum size is 10 MB.")
+
+    # Call Google Gemini Vision OCR
     result = process_ledger_image(content, current_user.language or "en")
+
+    # If OCR returned an error (e.g., missing API key), propagate it
+    if result.get("error"):
+        raise HTTPException(status_code=422, detail=result["error"])
 
     return ImageUploadResponse(
         extracted_data=result["extracted_data"],

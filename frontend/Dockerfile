@@ -18,5 +18,6 @@ COPY . .
 
 EXPOSE 5173
 
-# Vite must bind to 0.0.0.0 to be accessible outside the container
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# vite.config.js already sets host: '0.0.0.0'
+# Use npx to invoke vite directly (avoids npm run -- arg-passing issues)
+CMD ["npx", "vite", "--host", "0.0.0.0"]
