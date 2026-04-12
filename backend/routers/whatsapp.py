@@ -55,7 +55,7 @@ def connect_whatsapp(
     In production, this would call the WhatsApp bot sidecar to generate a QR code.
     For the hackathon demo, returns a stub response.
     """
-    # TODO: Call WhatsApp bot sidecar at WHATSAPP_BOT_URL/generate-qr
+    # Forward to WhatsApp bot sidecar at WHATSAPP_BOT_URL/qr when available
     return WhatsAppConnectResponse(
         status="waiting_for_scan",
         qr_code="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",

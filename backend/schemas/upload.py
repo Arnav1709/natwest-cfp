@@ -47,11 +47,14 @@ class VerifiedDataItem(BaseModel):
 class VerifyRequest(BaseModel):
     """Request body for data verification step."""
     verified_data: List[VerifiedDataItem]
+    source: Optional[str] = None  # "image" (inventory), "csv" (sales history), "manual"
 
 
 class VerifyResponse(BaseModel):
     """Response after data verification and insertion."""
     products_created: int
     sales_records_created: int
+    products_matched: int = 0  # existing products matched (fuzzy) during CSV import
+    products_skipped: int = 0  # rows skipped (no match found for CSV sales import)
     inventory_updated: bool = True
     forecast_triggered: bool = True

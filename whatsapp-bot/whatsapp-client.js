@@ -5,6 +5,8 @@
 
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
+const fs = require('fs');
+const path = require('path');
 const config = require('./config');
 const { handleIncomingMessage } = require('./message-handler');
 
@@ -17,6 +19,38 @@ function log(level, msg, data = null) {
   } else {
     console.log(`${prefix} ${msg}`);
   }
+}
+
+/**
+ * Remove stale Chromium SingletonLock/SingletonCookie/SingletonSocket files
+ * that persist across Docker container restarts and prevent Chromium from launching.
+ */
+function clearStaleLockFiles() {
+  const authDir = config.AUTH_DATA_PATH;
+  if (!fs.existsSync(authDir)) return;
+
+  const walk = (dir) => {
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(fullPath);
+        } else if (entry.name.startsWith('Singleton')) {
+          try {
+            fs.unlinkSync(fullPath);
+            log('INFO', `🧹 Removed stale lock file: ${fullPath}`);
+          } catch (err) {
+            log('WARN', `Could not remove lock file: ${fullPath}`, { error: err.message });
+          }
+        }
+      }
+    } catch (err) {
+      // Directory may not exist yet, that's fine
+    }
+  };
+
+  walk(authDir);
 }
 
 // ── State ──
@@ -42,6 +76,7 @@ function createClient() {
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
         '--no-zygote',
+        '--single-process',
         '--disable-gpu',
       ],
     },
@@ -140,6 +175,7 @@ function attemptReconnect() {
   setTimeout(async () => {
     try {
       log('INFO', 'Attempting reconnection...');
+      clearStaleLockFiles();
       await client.initialize();
     } catch (error) {
       log('ERROR', `Reconnection attempt failed`, { error: error.message });
@@ -152,6 +188,9 @@ function attemptReconnect() {
  * Initialize the WhatsApp client.
  */
 async function initializeClient() {
+  // Clear stale Chromium lock files from previous container runs
+  clearStaleLockFiles();
+
   createClient();
   log('INFO', '🚀 Initializing WhatsApp client...');
 

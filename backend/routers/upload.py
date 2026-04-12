@@ -114,35 +114,139 @@ def verify_data(
     """
     Verify and import user-confirmed data into the database.
 
-    For each verified item:
-    1. Create or update the product in the products table
-    2. Create a sales_history record if date + quantity provided
+    Behavior depends on the source of the data:
+    - "image" (inventory upload): Create/update products with stock levels. No sales records.
+    - "csv" (sales history): Only create SalesHistory for EXISTING products. No new products.
+    - "manual" / None: Legacy behavior — create products + sales records.
     """
-    products_created = 0
+    source = (request.source or "manual").lower()
+
+    if source == "csv":
+        return _handle_csv_sales_import(request, current_user, db)
+    elif source == "image":
+        return _handle_image_inventory_import(request, current_user, db)
+    else:
+        return _handle_manual_import(request, current_user, db)
+
+
+def _fuzzy_match_product(name: str, products: list[Product], threshold: float = 0.6) -> Product | None:
+    """
+    Find the best matching product by name using difflib SequenceMatcher.
+    Returns the matching product if similarity >= threshold, else None.
+    """
+    from difflib import SequenceMatcher
+
+    name_lower = name.lower().strip()
+    best_match = None
+    best_ratio = 0.0
+
+    for product in products:
+        ratio = SequenceMatcher(None, name_lower, product.name.lower().strip()).ratio()
+        if ratio > best_ratio:
+            best_ratio = ratio
+            best_match = product
+
+    if best_ratio >= threshold:
+        return best_match
+    return None
+
+
+def _handle_csv_sales_import(request: VerifyRequest, user: User, db: Session) -> VerifyResponse:
+    """
+    CSV sales history import —
+      • Match each row to an EXISTING product (fuzzy name match)
+      • Create SalesHistory records only
+      • NEVER create new products or modify current_stock
+    """
+    # Load all user's products once for fuzzy matching
+    user_products = db.query(Product).filter(Product.user_id == user.id).all()
+
     sales_created = 0
+    products_matched = 0
+    products_skipped = 0
+    matched_ids = set()
 
     for item in request.verified_data:
-        # Check if product already exists for this user
+        if not item.name or not item.name.strip():
+            products_skipped += 1
+            continue
+
+        # Try exact match first, then fuzzy
+        product = (
+            db.query(Product)
+            .filter(Product.user_id == user.id, Product.name == item.name)
+            .first()
+        )
+
+        if not product:
+            product = _fuzzy_match_product(item.name, user_products)
+
+        if not product:
+            products_skipped += 1
+            continue
+
+        # Track unique matched products
+        if product.id not in matched_ids:
+            matched_ids.add(product.id)
+            products_matched += 1
+
+        # Create sales history record if date and quantity provided
+        if item.quantity and item.quantity > 0:
+            try:
+                sale_date = date.fromisoformat(item.date) if item.date else date.today()
+            except ValueError:
+                sale_date = date.today()
+
+            sales_record = SalesHistory(
+                product_id=product.id,
+                date=sale_date,
+                quantity=item.quantity,
+                revenue=(item.quantity * item.price) if item.price else None,
+            )
+            db.add(sales_record)
+            sales_created += 1
+
+    db.commit()
+
+    return VerifyResponse(
+        products_created=0,
+        sales_records_created=sales_created,
+        products_matched=products_matched,
+        products_skipped=products_skipped,
+        inventory_updated=False,
+        forecast_triggered=sales_created > 0,
+    )
+
+
+def _handle_image_inventory_import(request: VerifyRequest, user: User, db: Session) -> VerifyResponse:
+    """
+    Image/OCR inventory import —
+      • Create or update products with stock levels from OCR
+      • Do NOT create sales records (inventory snapshot ≠ a sale)
+    """
+    products_created = 0
+
+    for item in request.verified_data:
+        if not item.name or not item.name.strip():
+            continue
+
         existing = (
             db.query(Product)
-            .filter(
-                Product.user_id == current_user.id,
-                Product.name == item.name,
-            )
+            .filter(Product.user_id == user.id, Product.name == item.name)
             .first()
         )
 
         if existing:
-            product = existing
-            # Update stock if provided
+            # Update stock and price from OCR
             if item.current_stock is not None:
-                product.current_stock = item.current_stock
+                existing.current_stock = item.current_stock
+            elif item.quantity is not None:
+                existing.current_stock = item.quantity
             if item.price is not None:
-                product.unit_cost = item.price
+                existing.unit_cost = item.price
         else:
-            # Create new product
             product = Product(
-                user_id=current_user.id,
+                user_id=user.id,
                 name=item.name,
                 category=item.category,
                 unit=item.unit or "units",
@@ -156,7 +260,53 @@ def verify_data(
             db.refresh(product)
             products_created += 1
 
-        # Create sales history record if date and quantity provided
+    db.commit()
+
+    return VerifyResponse(
+        products_created=products_created,
+        sales_records_created=0,
+        inventory_updated=True,
+        forecast_triggered=False,
+    )
+
+
+def _handle_manual_import(request: VerifyRequest, user: User, db: Session) -> VerifyResponse:
+    """
+    Manual / legacy import — keeps backwards compatibility.
+    Creates products AND sales records (original behavior).
+    """
+    products_created = 0
+    sales_created = 0
+
+    for item in request.verified_data:
+        existing = (
+            db.query(Product)
+            .filter(Product.user_id == user.id, Product.name == item.name)
+            .first()
+        )
+
+        if existing:
+            product = existing
+            if item.current_stock is not None:
+                product.current_stock = item.current_stock
+            if item.price is not None:
+                product.unit_cost = item.price
+        else:
+            product = Product(
+                user_id=user.id,
+                name=item.name,
+                category=item.category,
+                unit=item.unit or "units",
+                current_stock=item.current_stock or item.quantity or 0,
+                reorder_point=item.reorder_point or 0,
+                unit_cost=item.price or 0,
+                supplier_name=item.supplier_name,
+            )
+            db.add(product)
+            db.commit()
+            db.refresh(product)
+            products_created += 1
+
         if item.date and item.quantity:
             try:
                 sale_date = date.fromisoformat(item.date)

@@ -71,7 +71,7 @@ export default function Verify() {
         return;
       }
 
-      const result = await uploadApi.verify({ verified_data: verifiedData });
+      const result = await uploadApi.verify({ verified_data: verifiedData, source });
 
       setSubmitResult(result);
       // Navigate to dashboard after brief success display
@@ -102,27 +102,51 @@ export default function Verify() {
 
   // ── Success overlay ──
   if (submitResult) {
+    const isCSV = source === 'csv';
     return (
       <div style={{ maxWidth: '500px', margin: '80px auto', textAlign: 'center' }}>
         <div className="glass-card" style={{ padding: 'var(--space-8)' }}>
           <div style={{ fontSize: '3rem', marginBottom: 'var(--space-4)' }}>✅</div>
           <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 'var(--space-3)' }}>
-            Data Saved Successfully!
+            {isCSV ? 'Sales History Imported!' : 'Data Saved Successfully!'}
           </h2>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-6)', marginBottom: 'var(--space-4)' }}>
-            <div>
-              <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-primary)' }}>
-                {submitResult.products_created}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-6)', marginBottom: 'var(--space-4)', flexWrap: 'wrap' }}>
+            {!isCSV && (
+              <div>
+                <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-primary)' }}>
+                  {submitResult.products_created}
+                </div>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Products Created</div>
               </div>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Products Created</div>
-            </div>
+            )}
+            {isCSV && (
+              <div>
+                <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-primary)' }}>
+                  {submitResult.products_matched || 0}
+                </div>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Products Matched</div>
+              </div>
+            )}
             <div>
               <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-success)' }}>
                 {submitResult.sales_records_created}
               </div>
               <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Sales Records</div>
             </div>
+            {isCSV && submitResult.products_skipped > 0 && (
+              <div>
+                <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-warning)' }}>
+                  {submitResult.products_skipped}
+                </div>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Rows Skipped</div>
+              </div>
+            )}
           </div>
+          {isCSV && (
+            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
+              ℹ️ Stock levels were not modified — only sales history was recorded.
+            </p>
+          )}
           <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
             Redirecting to dashboard...
           </p>

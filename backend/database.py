@@ -4,9 +4,13 @@ SQLAlchemy engine, session factory, and Base declarative class.
 Supports both SQLite (local dev) and PostgreSQL (Supabase cloud).
 """
 
+import logging
+
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, declarative_base
 from config import settings
+
+logger = logging.getLogger(__name__)
 
 _is_sqlite = settings.DATABASE_URL.startswith("sqlite")
 
@@ -66,4 +70,4 @@ def init_db():
     # Import all models so they register with Base.metadata
     import models  # noqa: F401
     Base.metadata.create_all(bind=engine)
-    print(f"✅ Database initialized: {'PostgreSQL (Supabase)' if not _is_sqlite else 'SQLite (local)'}")
+    logger.info("Database initialized: %s", "PostgreSQL (Supabase)" if not _is_sqlite else "SQLite (local)")

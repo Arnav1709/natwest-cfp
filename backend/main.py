@@ -14,6 +14,7 @@ from config import settings
 from database import init_db
 
 # ── Logging setup ─────────────────────────────────────────────
+logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
 # Suppress noisy SQLAlchemy logs (keep only WARNING+)
 logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
@@ -26,9 +27,9 @@ from routers import auth, upload, inventory, forecast, anomalies, reorder, alert
 async def lifespan(app: FastAPI):
     """Application lifespan: initialize DB on startup."""
     init_db()
-    print("✅ Database tables created/verified")
+    logger.info("Database tables created/verified")
     yield
-    print("👋 StockSense shutting down")
+    logger.info("StockSense shutting down")
 
 
 app = FastAPI(
