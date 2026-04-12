@@ -30,24 +30,19 @@ services:
       # Base defaults (always present)
       - path: ./.env.example
         required: true
-      # Override with real API keys (optional — won't crash if missing)
+      # Override with real API keys and DB URL (optional — won't crash if missing)
       - path: ./backend/.env
         required: false
     environment:
-      # Force DB into the persisted volume directory
-      - DATABASE_URL=sqlite:///./data/stocksense.db
       # WhatsApp internal Docker URL
       - WHATSAPP_BOT_URL=http://whatsapp-bot:3001
     volumes:
       # Dev: mount source for hot reload (uvicorn --reload)
       - ./backend:/app
-      # Persist SQLite database between rebuilds
-      - stocksense-db:/app/data
       # Prevent host venv from clobbering container packages
       - /app/venv
     command: >
-      sh -c "mkdir -p /app/data &&
-             uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+      sh -c "uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
@@ -122,8 +117,6 @@ services:
 # ── Named Volumes ───────────────────────────────────────────
 volumes:
   wa-auth:
-    driver: local
-  stocksense-db:
     driver: local
   frontend-node-modules:
     driver: local

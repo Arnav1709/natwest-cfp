@@ -1,19 +1,65 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { uploadApi } from '../../services/api';
+import { uploadApi, inventoryApi } from '../../services/api';
 
 export default function Upload() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const fileRef = useRef(null);
   const imageRef = useRef(null);
+
+  // Tab state: 'import' or 'update'
+  const [activeTab, setActiveTab] = useState('import');
+
+  // Import tab state
   const [activeMethod, setActiveMethod] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [uploadProgress, setUploadProgress] = useState('');
+
+  // Update tab state
+  const [products, setProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [updateSuccess, setUpdateSuccess] = useState(null);
+  const [updateError, setUpdateError] = useState(null);
+  const [stockEdits, setStockEdits] = useState({}); // { productId: newStockValue }
+  const [savingIds, setSavingIds] = useState(new Set());
+
+  // Add new product state
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    name: '', category: 'medicines', unit: 'units',
+    current_stock: 0, reorder_point: 10, safety_stock: 5,
+    unit_cost: 0, supplier_name: '', supplier_contact: '',
+    lead_time_days: 3, expiry_date: '',
+  });
+  const [addingProduct, setAddingProduct] = useState(false);
+
+  // Fetch products when switching to update tab
+  useEffect(() => {
+    if (activeTab === 'update') {
+      fetchProducts();
+    }
+  }, [activeTab]);
+
+  const fetchProducts = async () => {
+    setLoadingProducts(true);
+    setUpdateError(null);
+    try {
+      const result = await inventoryApi.list();
+      const list = Array.isArray(result) ? result : (result?.products || []);
+      setProducts(list);
+    } catch (err) {
+      setUpdateError(err.message || 'Failed to load products');
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  // ── Import handlers (existing) ──
 
   const handleFileDrop = (e) => {
     e.preventDefault();
@@ -43,7 +89,6 @@ export default function Upload() {
 
     try {
       if (activeMethod === 'image') {
-        // ── Image OCR upload ──
         setUploadProgress('Uploading image to AI OCR engine...');
         const result = await uploadApi.image(selectedFile);
 
@@ -53,7 +98,6 @@ export default function Upload() {
           return;
         }
 
-        // Transform API response into verify-page format
         const verifyData = result.extracted_data.map((item, idx) => ({
           id: idx + 1,
           name: item.name || '',
@@ -74,7 +118,6 @@ export default function Upload() {
         });
 
       } else if (activeMethod === 'csv') {
-        // ── CSV/Excel upload ──
         setUploadProgress('Parsing spreadsheet...');
         const result = await uploadApi.csv(selectedFile);
 
@@ -114,159 +157,526 @@ export default function Upload() {
     }
   };
 
+  // ── Update handlers ──
+
+  const handleStockChange = (productId, newValue) => {
+    setStockEdits(prev => ({ ...prev, [productId]: newValue }));
+  };
+
+  const handleSaveStock = async (product) => {
+    const newStock = stockEdits[product.id];
+    if (newStock === undefined || newStock === product.current_stock) return;
+
+    setSavingIds(prev => new Set(prev).add(product.id));
+    setUpdateSuccess(null);
+    setUpdateError(null);
+
+    try {
+      await inventoryApi.update(product.id, { current_stock: parseInt(newStock, 10) });
+      setProducts(prev => prev.map(p =>
+        p.id === product.id ? { ...p, current_stock: parseInt(newStock, 10) } : p
+      ));
+      setStockEdits(prev => { const n = { ...prev }; delete n[product.id]; return n; });
+      setUpdateSuccess(`${product.name} updated to ${newStock} units`);
+      setTimeout(() => setUpdateSuccess(null), 3000);
+    } catch (err) {
+      setUpdateError(`Failed to update ${product.name}: ${err.message}`);
+    } finally {
+      setSavingIds(prev => { const n = new Set(prev); n.delete(product.id); return n; });
+    }
+  };
+
+  const handleAddProduct = async (e) => {
+    e.preventDefault();
+    if (!newProduct.name.trim()) return;
+
+    setAddingProduct(true);
+    setUpdateError(null);
+
+    try {
+      const result = await inventoryApi.create(newProduct);
+      setProducts(prev => [...prev, result]);
+      setNewProduct({
+        name: '', category: 'medicines', unit: 'units',
+        current_stock: 0, reorder_point: 10, safety_stock: 5,
+        unit_cost: 0, supplier_name: '', supplier_contact: '',
+        lead_time_days: 3, expiry_date: '',
+      });
+      setShowAddForm(false);
+      setUpdateSuccess(`${result.name || newProduct.name} added successfully!`);
+      setTimeout(() => setUpdateSuccess(null), 3000);
+    } catch (err) {
+      setUpdateError(`Failed to add product: ${err.message}`);
+    } finally {
+      setAddingProduct(false);
+    }
+  };
+
+  // ── Status helpers ──
+  const getStockStatus = (product) => {
+    const stock = product.current_stock || 0;
+    const reorderPt = product.reorder_point || 0;
+    if (stock === 0) return { label: 'Out of Stock', cls: 'badge-danger' };
+    if (stock <= reorderPt) return { label: 'Low Stock', cls: 'badge-warning' };
+    return { label: 'Healthy', cls: 'badge-success' };
+  };
+
   return (
-    <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-      <div style={{ marginBottom: 'var(--space-6)' }}>
+    <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+      <div style={{ marginBottom: 'var(--space-4)' }}>
         <h1 className="section-title">{t('upload.title')}</h1>
         <p className="section-subtitle">{t('upload.subtitle')}</p>
       </div>
 
-      {/* Error banner */}
-      {error && (
-        <div
-          style={{
-            background: 'rgba(239,68,68,0.1)',
-            border: '1px solid rgba(239,68,68,0.3)',
-            borderRadius: 'var(--radius-lg)',
-            padding: 'var(--space-4)',
-            marginBottom: 'var(--space-4)',
-            color: 'var(--color-danger)',
-            fontSize: 'var(--font-size-sm)',
-          }}
+      {/* ── Tab Switcher ── */}
+      <div style={{
+        display: 'flex', gap: 'var(--space-2)',
+        marginBottom: 'var(--space-5)',
+        borderBottom: '1px solid var(--color-border)',
+        paddingBottom: 'var(--space-1)',
+      }}>
+        <button
+          className={`btn ${activeTab === 'import' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setActiveTab('import')}
+          style={{ borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0', fontWeight: 600 }}
+          id="tab-import"
         >
-          ⚠️ {error}
-        </div>
-      )}
-
-      <div className="grid-3" style={{ marginBottom: 'var(--space-6)' }}>
-        {/* CSV Upload */}
-        <div
-          className={`upload-card ${activeMethod === 'csv' ? 'active' : ''} ${dragOver ? 'active' : ''}`}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={handleFileDrop}
-          onClick={() => fileRef.current?.click()}
-          id="upload-csv"
-          style={{ pointerEvents: uploading ? 'none' : 'auto', opacity: uploading ? 0.6 : 1 }}
+          📥 Import New Data
+        </button>
+        <button
+          className={`btn ${activeTab === 'update' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setActiveTab('update')}
+          style={{ borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0', fontWeight: 600 }}
+          id="tab-update"
         >
-          <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleFileDrop} hidden />
-          <div style={{ fontSize: '2.5rem', marginBottom: 'var(--space-3)' }}>📄</div>
-          <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' }}>
-            {t('upload.csv_title')}
-          </h3>
-          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-3)' }}>
-            {t('upload.csv_desc')}
-          </p>
-          <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <span className="badge badge-muted">.csv</span>
-            <span className="badge badge-muted">.xlsx</span>
-            <span className="badge badge-muted">.xls</span>
-          </div>
-        </div>
-
-        {/* Image OCR */}
-        <div
-          className={`upload-card ${activeMethod === 'image' ? 'active' : ''}`}
-          onClick={() => imageRef.current?.click()}
-          id="upload-image"
-          style={{ pointerEvents: uploading ? 'none' : 'auto', opacity: uploading ? 0.6 : 1 }}
-        >
-          <input ref={imageRef} type="file" accept="image/*" onChange={handleImageSelect} hidden />
-          <div style={{ fontSize: '2.5rem', marginBottom: 'var(--space-3)' }}>📷</div>
-          <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' }}>
-            {t('upload.image_title')}
-          </h3>
-          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-3)' }}>
-            {t('upload.image_desc')}
-          </p>
-          <span className="badge badge-primary">🤖 AI OCR</span>
-        </div>
-
-        {/* Manual Entry */}
-        <div
-          className={`upload-card ${activeMethod === 'manual' ? 'active' : ''}`}
-          onClick={() => { setActiveMethod('manual'); navigate('/upload/verify', { state: { data: [], source: 'manual' } }); }}
-          id="upload-manual"
-          style={{ pointerEvents: uploading ? 'none' : 'auto', opacity: uploading ? 0.6 : 1 }}
-        >
-          <div style={{ fontSize: '2.5rem', marginBottom: 'var(--space-3)' }}>✏️</div>
-          <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' }}>
-            {t('upload.manual_title')}
-          </h3>
-          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-            {t('upload.manual_desc')}
-          </p>
-        </div>
+          ✏️ Update Current Inventory
+        </button>
       </div>
 
-      {/* Selected File Info */}
-      {selectedFile && (
-        <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-            <span style={{ fontSize: '1.5rem' }}>{activeMethod === 'csv' ? '📄' : '📷'}</span>
-            <div>
-              <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{selectedFile.name}</div>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                {(selectedFile.size / 1024).toFixed(1)} KB
+      {/* ==== TAB 1: IMPORT ==== */}
+      {activeTab === 'import' && (
+        <>
+          {/* Error banner */}
+          {error && (
+            <div
+              style={{
+                background: 'rgba(239,68,68,0.1)',
+                border: '1px solid rgba(239,68,68,0.3)',
+                borderRadius: 'var(--radius-lg)',
+                padding: 'var(--space-4)',
+                marginBottom: 'var(--space-4)',
+                color: 'var(--color-danger)',
+                fontSize: 'var(--font-size-sm)',
+              }}
+            >
+              ⚠️ {error}
+            </div>
+          )}
+
+          <div className="grid-3" style={{ marginBottom: 'var(--space-6)' }}>
+            {/* CSV Upload */}
+            <div
+              className={`upload-card ${activeMethod === 'csv' ? 'active' : ''} ${dragOver ? 'active' : ''}`}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleFileDrop}
+              onClick={() => fileRef.current?.click()}
+              id="upload-csv"
+              style={{ pointerEvents: uploading ? 'none' : 'auto', opacity: uploading ? 0.6 : 1 }}
+            >
+              <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleFileDrop} hidden />
+              <div style={{ fontSize: '2.5rem', marginBottom: 'var(--space-3)' }}>📄</div>
+              <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' }}>
+                {t('upload.csv_title')}
+              </h3>
+              <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-3)' }}>
+                {t('upload.csv_desc')}
+              </p>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <span className="badge badge-muted">.csv</span>
+                <span className="badge badge-muted">.xlsx</span>
+                <span className="badge badge-muted">.xls</span>
               </div>
             </div>
+
+            {/* Image OCR */}
+            <div
+              className={`upload-card ${activeMethod === 'image' ? 'active' : ''}`}
+              onClick={() => imageRef.current?.click()}
+              id="upload-image"
+              style={{ pointerEvents: uploading ? 'none' : 'auto', opacity: uploading ? 0.6 : 1 }}
+            >
+              <input ref={imageRef} type="file" accept="image/*" onChange={handleImageSelect} hidden />
+              <div style={{ fontSize: '2.5rem', marginBottom: 'var(--space-3)' }}>📷</div>
+              <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' }}>
+                {t('upload.image_title')}
+              </h3>
+              <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-3)' }}>
+                {t('upload.image_desc')}
+              </p>
+              <span className="badge badge-primary">🤖 AI OCR</span>
+            </div>
+
+            {/* Manual Entry */}
+            <div
+              className={`upload-card ${activeMethod === 'manual' ? 'active' : ''}`}
+              onClick={() => { setActiveMethod('manual'); navigate('/upload/verify', { state: { data: [], source: 'manual' } }); }}
+              id="upload-manual"
+              style={{ pointerEvents: uploading ? 'none' : 'auto', opacity: uploading ? 0.6 : 1 }}
+            >
+              <div style={{ fontSize: '2.5rem', marginBottom: 'var(--space-3)' }}>✏️</div>
+              <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' }}>
+                {t('upload.manual_title')}
+              </h3>
+              <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+                {t('upload.manual_desc')}
+              </p>
+            </div>
           </div>
 
-          {uploading ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-              <div className="spinner" style={{ width: 20, height: 20, border: '3px solid var(--color-bg-active)', borderTop: '3px solid var(--color-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-              <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-primary)', fontWeight: 500 }}>
-                {uploadProgress || 'Processing...'}
-              </span>
+          {/* Selected File Info */}
+          {selectedFile && (
+            <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                <span style={{ fontSize: '1.5rem' }}>{activeMethod === 'csv' ? '📄' : '📷'}</span>
+                <div>
+                  <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{selectedFile.name}</div>
+                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                    {(selectedFile.size / 1024).toFixed(1)} KB
+                  </div>
+                </div>
+              </div>
+
+              {uploading ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                  <div className="spinner" style={{ width: 20, height: 20, border: '3px solid var(--color-bg-active)', borderTop: '3px solid var(--color-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                  <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-primary)', fontWeight: 500 }}>
+                    {uploadProgress || 'Processing...'}
+                  </span>
+                </div>
+              ) : (
+                <button className="btn btn-primary" onClick={handleProceed} id="btn-proceed-upload">
+                  Process & Verify →
+                </button>
+              )}
             </div>
-          ) : (
-            <button className="btn btn-primary" onClick={handleProceed} id="btn-proceed-upload">
-              Process & Verify →
-            </button>
           )}
-        </div>
+
+          {/* Recent Uploads */}
+          <div className="glass-card">
+            <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 'var(--space-4)' }}>
+              Recent Uploads
+            </h3>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>File</th>
+                  <th>Type</th>
+                  <th>Records</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>march_sales.csv</td>
+                  <td><span className="badge badge-info">CSV</span></td>
+                  <td>150</td>
+                  <td><span className="badge badge-success">Verified</span></td>
+                  <td>Apr 10, 2026</td>
+                </tr>
+                <tr>
+                  <td>ledger_page_3.jpg</td>
+                  <td><span className="badge badge-primary">OCR</span></td>
+                  <td>28</td>
+                  <td><span className="badge badge-success">Verified</span></td>
+                  <td>Apr 8, 2026</td>
+                </tr>
+                <tr>
+                  <td>feb_inventory.xlsx</td>
+                  <td><span className="badge badge-info">Excel</span></td>
+                  <td>95</td>
+                  <td><span className="badge badge-success">Verified</span></td>
+                  <td>Mar 28, 2026</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
-      {/* Recent Uploads */}
-      <div className="glass-card">
-        <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 'var(--space-4)' }}>
-          Recent Uploads
-        </h3>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>File</th>
-              <th>Type</th>
-              <th>Records</th>
-              <th>Status</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>march_sales.csv</td>
-              <td><span className="badge badge-info">CSV</span></td>
-              <td>150</td>
-              <td><span className="badge badge-success">Verified</span></td>
-              <td>Apr 10, 2026</td>
-            </tr>
-            <tr>
-              <td>ledger_page_3.jpg</td>
-              <td><span className="badge badge-primary">OCR</span></td>
-              <td>28</td>
-              <td><span className="badge badge-success">Verified</span></td>
-              <td>Apr 8, 2026</td>
-            </tr>
-            <tr>
-              <td>feb_inventory.xlsx</td>
-              <td><span className="badge badge-info">Excel</span></td>
-              <td>95</td>
-              <td><span className="badge badge-success">Verified</span></td>
-              <td>Mar 28, 2026</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      {/* ==== TAB 2: UPDATE CURRENT INVENTORY ==== */}
+      {activeTab === 'update' && (
+        <>
+          {/* Success / Error banners */}
+          {updateSuccess && (
+            <div style={{
+              background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
+              borderRadius: 'var(--radius-lg)', padding: 'var(--space-3) var(--space-4)',
+              marginBottom: 'var(--space-4)', color: '#10B981', fontSize: 'var(--font-size-sm)',
+            }}>
+              ✅ {updateSuccess}
+            </div>
+          )}
+          {updateError && (
+            <div style={{
+              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+              borderRadius: 'var(--radius-lg)', padding: 'var(--space-3) var(--space-4)',
+              marginBottom: 'var(--space-4)', color: 'var(--color-danger)', fontSize: 'var(--font-size-sm)',
+            }}>
+              ⚠️ {updateError}
+            </div>
+          )}
+
+          {/* Quick Stock Update Table */}
+          <div className="glass-card" style={{ marginBottom: 'var(--space-5)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+              <div>
+                <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                  📦 Quick Stock Update
+                </h3>
+                <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginTop: 'var(--space-1)' }}>
+                  Edit stock quantities for existing products directly
+                </p>
+              </div>
+              <button
+                className="btn btn-primary"
+                onClick={() => setShowAddForm(!showAddForm)}
+                id="btn-add-new-product"
+              >
+                {showAddForm ? '✕ Cancel' : '+ Add New Product'}
+              </button>
+            </div>
+
+            {loadingProducts ? (
+              <div style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--color-text-muted)' }}>
+                <div style={{ fontSize: '2rem', marginBottom: 'var(--space-2)', animation: 'pulse 1.5s ease-in-out infinite' }}>📦</div>
+                <p>Loading products...</p>
+              </div>
+            ) : products.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--color-text-muted)' }}>
+                <div style={{ fontSize: '2rem', marginBottom: 'var(--space-2)' }}>📭</div>
+                <p>No products found. Import data first or add a new product below.</p>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Category</th>
+                      <th>Current Stock</th>
+                      <th>New Stock</th>
+                      <th>Reorder Point</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {products.map(p => {
+                      const status = getStockStatus(p);
+                      const hasEdit = stockEdits[p.id] !== undefined && parseInt(stockEdits[p.id], 10) !== p.current_stock;
+                      const isSaving = savingIds.has(p.id);
+
+                      return (
+                        <tr key={p.id}>
+                          <td style={{ fontWeight: 500 }}>{p.name}</td>
+                          <td><span className="badge badge-muted">{p.category}</span></td>
+                          <td>{p.current_stock || 0}</td>
+                          <td>
+                            <input
+                              type="number"
+                              min="0"
+                              value={stockEdits[p.id] !== undefined ? stockEdits[p.id] : (p.current_stock || 0)}
+                              onChange={(e) => handleStockChange(p.id, e.target.value)}
+                              style={{
+                                width: '80px', padding: '6px 10px',
+                                background: hasEdit ? 'rgba(16,185,129,0.1)' : 'var(--color-bg-elevated)',
+                                border: hasEdit ? '1px solid rgba(16,185,129,0.5)' : '1px solid var(--color-border)',
+                                borderRadius: 'var(--radius-md)',
+                                color: 'var(--color-text-primary)',
+                                fontSize: 'var(--font-size-sm)',
+                              }}
+                              id={`stock-input-${p.id}`}
+                            />
+                          </td>
+                          <td>{p.reorder_point || 0}</td>
+                          <td><span className={`badge ${status.cls}`}>{status.label}</span></td>
+                          <td>
+                            <button
+                              className="btn btn-sm"
+                              disabled={!hasEdit || isSaving}
+                              onClick={() => handleSaveStock(p)}
+                              style={{
+                                padding: '4px 12px', fontSize: 'var(--font-size-xs)',
+                                background: hasEdit ? 'var(--color-primary)' : 'var(--color-bg-active)',
+                                color: hasEdit ? '#fff' : 'var(--color-text-muted)',
+                                border: 'none', borderRadius: 'var(--radius-md)',
+                                cursor: hasEdit ? 'pointer' : 'default',
+                                opacity: isSaving ? 0.6 : 1,
+                              }}
+                              id={`btn-save-${p.id}`}
+                            >
+                              {isSaving ? '...' : 'Save'}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* ── Add New Product Form ── */}
+          {showAddForm && (
+            <div className="glass-card" style={{ marginBottom: 'var(--space-5)' }}>
+              <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 'var(--space-4)' }}>
+                ➕ Add New Product
+              </h3>
+              <form onSubmit={handleAddProduct}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+                  {/* Product Name */}
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={labelStyle}>Product Name *</label>
+                    <input
+                      type="text" required value={newProduct.name}
+                      onChange={e => setNewProduct(p => ({ ...p, name: e.target.value }))}
+                      placeholder="e.g. Paracetamol 500mg"
+                      style={inputStyle} id="input-product-name"
+                    />
+                  </div>
+
+                  {/* Category */}
+                  <div>
+                    <label style={labelStyle}>Category</label>
+                    <select
+                      value={newProduct.category}
+                      onChange={e => setNewProduct(p => ({ ...p, category: e.target.value }))}
+                      style={inputStyle} id="input-category"
+                    >
+                      <option value="medicines">Medicines</option>
+                      <option value="supplies">Medical Supplies</option>
+                      <option value="equipment">Equipment</option>
+                      <option value="personal_care">Personal Care</option>
+                      <option value="grocery">Grocery</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  {/* Unit */}
+                  <div>
+                    <label style={labelStyle}>Unit</label>
+                    <select
+                      value={newProduct.unit}
+                      onChange={e => setNewProduct(p => ({ ...p, unit: e.target.value }))}
+                      style={inputStyle} id="input-unit"
+                    >
+                      <option value="units">Units</option>
+                      <option value="strips">Strips</option>
+                      <option value="bottles">Bottles</option>
+                      <option value="packets">Packets</option>
+                      <option value="kg">Kilograms</option>
+                      <option value="liters">Liters</option>
+                    </select>
+                  </div>
+
+                  {/* Current Stock */}
+                  <div>
+                    <label style={labelStyle}>Initial Stock *</label>
+                    <input
+                      type="number" min="0" required value={newProduct.current_stock}
+                      onChange={e => setNewProduct(p => ({ ...p, current_stock: parseInt(e.target.value, 10) || 0 }))}
+                      style={inputStyle} id="input-stock"
+                    />
+                  </div>
+
+                  {/* Unit Cost */}
+                  <div>
+                    <label style={labelStyle}>Unit Cost (₹)</label>
+                    <input
+                      type="number" min="0" step="0.01" value={newProduct.unit_cost}
+                      onChange={e => setNewProduct(p => ({ ...p, unit_cost: parseFloat(e.target.value) || 0 }))}
+                      style={inputStyle} id="input-cost"
+                    />
+                  </div>
+
+                  {/* Reorder Point */}
+                  <div>
+                    <label style={labelStyle}>Reorder Point</label>
+                    <input
+                      type="number" min="0" value={newProduct.reorder_point}
+                      onChange={e => setNewProduct(p => ({ ...p, reorder_point: parseInt(e.target.value, 10) || 0 }))}
+                      style={inputStyle} id="input-reorder-point"
+                    />
+                  </div>
+
+                  {/* Safety Stock */}
+                  <div>
+                    <label style={labelStyle}>Safety Stock</label>
+                    <input
+                      type="number" min="0" value={newProduct.safety_stock}
+                      onChange={e => setNewProduct(p => ({ ...p, safety_stock: parseInt(e.target.value, 10) || 0 }))}
+                      style={inputStyle} id="input-safety-stock"
+                    />
+                  </div>
+
+                  {/* Supplier Name */}
+                  <div>
+                    <label style={labelStyle}>Supplier Name</label>
+                    <input
+                      type="text" value={newProduct.supplier_name}
+                      onChange={e => setNewProduct(p => ({ ...p, supplier_name: e.target.value }))}
+                      placeholder="e.g. MedPlus Distributors"
+                      style={inputStyle} id="input-supplier"
+                    />
+                  </div>
+
+                  {/* Lead Time */}
+                  <div>
+                    <label style={labelStyle}>Lead Time (days)</label>
+                    <input
+                      type="number" min="1" value={newProduct.lead_time_days}
+                      onChange={e => setNewProduct(p => ({ ...p, lead_time_days: parseInt(e.target.value, 10) || 1 }))}
+                      style={inputStyle} id="input-lead-time"
+                    />
+                  </div>
+
+                  {/* Expiry Date */}
+                  <div>
+                    <label style={labelStyle}>Expiry Date</label>
+                    <input
+                      type="date" value={newProduct.expiry_date}
+                      onChange={e => setNewProduct(p => ({ ...p, expiry_date: e.target.value }))}
+                      style={inputStyle} id="input-expiry"
+                    />
+                  </div>
+
+                  {/* Supplier Contact */}
+                  <div>
+                    <label style={labelStyle}>Supplier Contact</label>
+                    <input
+                      type="text" value={newProduct.supplier_contact}
+                      onChange={e => setNewProduct(p => ({ ...p, supplier_contact: e.target.value }))}
+                      placeholder="+91-XXXXXXXXXX"
+                      style={inputStyle} id="input-supplier-contact"
+                    />
+                  </div>
+                </div>
+
+                {/* Submit */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-4)' }}>
+                  <button type="button" className="btn btn-ghost" onClick={() => setShowAddForm(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary" disabled={addingProduct || !newProduct.name.trim()} id="btn-submit-product">
+                    {addingProduct ? 'Adding...' : '✓ Add Product'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Spinner animation */}
       <style>{`
@@ -278,3 +688,19 @@ export default function Upload() {
     </div>
   );
 }
+
+// Shared inline styles for the form
+const labelStyle = {
+  display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600,
+  color: 'var(--color-text-secondary)', marginBottom: '4px',
+  textTransform: 'uppercase', letterSpacing: '0.04em',
+};
+
+const inputStyle = {
+  width: '100%', padding: '8px 12px',
+  background: 'var(--color-bg-elevated)',
+  border: '1px solid var(--color-border)',
+  borderRadius: 'var(--radius-md)',
+  color: 'var(--color-text-primary)',
+  fontSize: 'var(--font-size-sm)',
+};
