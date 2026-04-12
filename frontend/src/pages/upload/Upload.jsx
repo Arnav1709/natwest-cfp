@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { uploadApi } from '../../services/api';
 
 export default function Upload() {
   const { t } = useTranslation();
@@ -10,10 +11,14 @@ export default function Upload() {
   const [activeMethod, setActiveMethod] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState('');
 
   const handleFileDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
+    setError(null);
     const file = e.dataTransfer?.files[0] || e.target?.files[0];
     if (file) {
       setSelectedFile(file);
@@ -22,6 +27,7 @@ export default function Upload() {
   };
 
   const handleImageSelect = (e) => {
+    setError(null);
     const file = e.target?.files[0];
     if (file) {
       setSelectedFile(file);
@@ -29,8 +35,83 @@ export default function Upload() {
     }
   };
 
-  const handleProceed = () => {
-    navigate('/upload/verify');
+  const handleProceed = async () => {
+    if (!selectedFile) return;
+
+    setUploading(true);
+    setError(null);
+
+    try {
+      if (activeMethod === 'image') {
+        // ── Image OCR upload ──
+        setUploadProgress('Uploading image to AI OCR engine...');
+        const result = await uploadApi.image(selectedFile);
+
+        if (!result.extracted_data || result.extracted_data.length === 0) {
+          setError('OCR could not extract any data from this image. Please try a clearer photo or use CSV upload instead.');
+          setUploading(false);
+          return;
+        }
+
+        // Transform API response into verify-page format
+        const verifyData = result.extracted_data.map((item, idx) => ({
+          id: idx + 1,
+          name: item.name || '',
+          date: item.date || '',
+          quantity: item.quantity || 0,
+          price: item.price || 0,
+          category: 'medicines',
+          confidence: item.confidence || 0.5,
+        }));
+
+        navigate('/upload/verify', {
+          state: {
+            data: verifyData,
+            source: 'image',
+            overallConfidence: result.overall_confidence,
+            fileName: selectedFile.name,
+          },
+        });
+
+      } else if (activeMethod === 'csv') {
+        // ── CSV/Excel upload ──
+        setUploadProgress('Parsing spreadsheet...');
+        const result = await uploadApi.csv(selectedFile);
+
+        if (!result.products || result.products.length === 0) {
+          setError('No valid data rows found in the file.');
+          setUploading(false);
+          return;
+        }
+
+        const verifyData = result.products.map((item, idx) => ({
+          id: idx + 1,
+          name: item.name || '',
+          date: item.date || '',
+          quantity: item.quantity || 0,
+          price: item.price || 0,
+          category: 'medicines',
+          confidence: item.confidence || 1.0,
+        }));
+
+        navigate('/upload/verify', {
+          state: {
+            data: verifyData,
+            source: 'csv',
+            overallConfidence: 1.0,
+            fileName: selectedFile.name,
+            columnsDetected: result.columns_detected,
+          },
+        });
+      }
+
+    } catch (err) {
+      console.error('Upload failed:', err);
+      setError(err.message || 'Upload failed. Please check your connection and try again.');
+    } finally {
+      setUploading(false);
+      setUploadProgress('');
+    }
   };
 
   return (
@@ -39,6 +120,23 @@ export default function Upload() {
         <h1 className="section-title">{t('upload.title')}</h1>
         <p className="section-subtitle">{t('upload.subtitle')}</p>
       </div>
+
+      {/* Error banner */}
+      {error && (
+        <div
+          style={{
+            background: 'rgba(239,68,68,0.1)',
+            border: '1px solid rgba(239,68,68,0.3)',
+            borderRadius: 'var(--radius-lg)',
+            padding: 'var(--space-4)',
+            marginBottom: 'var(--space-4)',
+            color: 'var(--color-danger)',
+            fontSize: 'var(--font-size-sm)',
+          }}
+        >
+          ⚠️ {error}
+        </div>
+      )}
 
       <div className="grid-3" style={{ marginBottom: 'var(--space-6)' }}>
         {/* CSV Upload */}
@@ -49,6 +147,7 @@ export default function Upload() {
           onDrop={handleFileDrop}
           onClick={() => fileRef.current?.click()}
           id="upload-csv"
+          style={{ pointerEvents: uploading ? 'none' : 'auto', opacity: uploading ? 0.6 : 1 }}
         >
           <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleFileDrop} hidden />
           <div style={{ fontSize: '2.5rem', marginBottom: 'var(--space-3)' }}>📄</div>
@@ -70,6 +169,7 @@ export default function Upload() {
           className={`upload-card ${activeMethod === 'image' ? 'active' : ''}`}
           onClick={() => imageRef.current?.click()}
           id="upload-image"
+          style={{ pointerEvents: uploading ? 'none' : 'auto', opacity: uploading ? 0.6 : 1 }}
         >
           <input ref={imageRef} type="file" accept="image/*" onChange={handleImageSelect} hidden />
           <div style={{ fontSize: '2.5rem', marginBottom: 'var(--space-3)' }}>📷</div>
@@ -85,8 +185,9 @@ export default function Upload() {
         {/* Manual Entry */}
         <div
           className={`upload-card ${activeMethod === 'manual' ? 'active' : ''}`}
-          onClick={() => { setActiveMethod('manual'); navigate('/upload/verify'); }}
+          onClick={() => { setActiveMethod('manual'); navigate('/upload/verify', { state: { data: [], source: 'manual' } }); }}
           id="upload-manual"
+          style={{ pointerEvents: uploading ? 'none' : 'auto', opacity: uploading ? 0.6 : 1 }}
         >
           <div style={{ fontSize: '2.5rem', marginBottom: 'var(--space-3)' }}>✏️</div>
           <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' }}>
@@ -100,7 +201,7 @@ export default function Upload() {
 
       {/* Selected File Info */}
       {selectedFile && (
-        <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
+        <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
             <span style={{ fontSize: '1.5rem' }}>{activeMethod === 'csv' ? '📄' : '📷'}</span>
             <div>
@@ -110,9 +211,19 @@ export default function Upload() {
               </div>
             </div>
           </div>
-          <button className="btn btn-primary" onClick={handleProceed} id="btn-proceed-upload">
-            Process & Verify →
-          </button>
+
+          {uploading ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+              <div className="spinner" style={{ width: 20, height: 20, border: '3px solid var(--color-bg-active)', borderTop: '3px solid var(--color-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-primary)', fontWeight: 500 }}>
+                {uploadProgress || 'Processing...'}
+              </span>
+            </div>
+          ) : (
+            <button className="btn btn-primary" onClick={handleProceed} id="btn-proceed-upload">
+              Process & Verify →
+            </button>
+          )}
         </div>
       )}
 
@@ -156,6 +267,14 @@ export default function Upload() {
           </tbody>
         </table>
       </div>
+
+      {/* Spinner animation */}
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

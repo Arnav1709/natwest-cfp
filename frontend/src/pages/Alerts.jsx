@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { mockAlerts } from '../mocks/mockData';
+import { useApi } from '../hooks/useApi';
+import { alertsApi } from '../services/api';
 
 const severityConfig = {
   critical: { icon: '🔴', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.3)' },
@@ -11,15 +12,24 @@ const severityConfig = {
 export default function Alerts() {
   const { t } = useTranslation();
   const [filter, setFilter] = useState('all');
-  const [alerts, setAlerts] = useState(mockAlerts);
+
+  const { data: rawData, loading, error, setData } = useApi(() => alertsApi.list(), []);
+  const alerts = Array.isArray(rawData) ? rawData : (rawData?.alerts || []);
 
   const filtered = alerts.filter(a => {
     if (filter === 'all') return !a.dismissed;
     return a.severity === filter && !a.dismissed;
   });
 
-  const dismiss = (id) => {
-    setAlerts(prev => prev.map(a => a.id === id ? { ...a, dismissed: true } : a));
+  const dismiss = async (id) => {
+    try {
+      await alertsApi.dismiss(id);
+    } catch (_) {
+      // Ignore API error — still dismiss locally
+    }
+    // Update local state
+    const updated = alerts.map(a => a.id === id ? { ...a, dismissed: true } : a);
+    setData(Array.isArray(rawData) ? updated : { ...rawData, alerts: updated });
   };
 
   const counts = {
@@ -30,6 +40,7 @@ export default function Alerts() {
   };
 
   const formatTime = (iso) => {
+    if (!iso) return '';
     const d = new Date(iso);
     const now = new Date();
     const diff = Math.floor((now - d) / 60000);
@@ -45,6 +56,14 @@ export default function Alerts() {
     { key: 'info',     label: t('alerts.info') },
   ];
 
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <p style={{ color: 'var(--color-text-muted)' }}>Loading alerts...</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Header */}
@@ -54,6 +73,12 @@ export default function Alerts() {
           {counts.all} active alerts · {counts.critical} critical
         </p>
       </div>
+
+      {error && (
+        <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)', marginBottom: 'var(--space-4)', color: 'var(--color-warning)', fontSize: 'var(--font-size-sm)' }}>
+          ⚠️ {error}
+        </div>
+      )}
 
       {/* Filter Tabs */}
       <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-4)', flexWrap: 'wrap' }}>
@@ -74,11 +99,13 @@ export default function Alerts() {
         {filtered.length === 0 ? (
           <div className="glass-card" style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
             <div style={{ fontSize: '2rem', marginBottom: 'var(--space-3)' }}>✅</div>
-            <p style={{ color: 'var(--color-text-muted)' }}>No alerts in this category</p>
+            <p style={{ color: 'var(--color-text-muted)' }}>
+              {alerts.length === 0 ? 'No alerts yet — upload inventory data to start monitoring.' : 'No alerts in this category'}
+            </p>
           </div>
         ) : (
           filtered.map(alert => {
-            const sc = severityConfig[alert.severity];
+            const sc = severityConfig[alert.severity] || severityConfig.info;
             return (
               <div key={alert.id} className="glass-card" style={{
                 borderLeft: `4px solid ${sc.border}`,
@@ -107,7 +134,6 @@ export default function Alerts() {
                     <button className="btn btn-ghost btn-sm" onClick={() => dismiss(alert.id)} style={{ color: 'var(--color-text-muted)' }}>
                       {t('alerts.dismiss')}
                     </button>
-                    <button className="btn btn-primary btn-sm">View Details</button>
                   </div>
                 </div>
               </div>

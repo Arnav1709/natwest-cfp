@@ -27,20 +27,33 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ./backend/.env
+      # Base defaults (always present)
+      - path: ./.env.example
+        required: true
+      # Override with real API keys (optional — won't crash if missing)
+      - path: ./backend/.env
+        required: false
     environment:
+      # Force DB into the persisted volume directory
+      - DATABASE_URL=sqlite:///./data/stocksense.db
+      # WhatsApp internal Docker URL
       - WHATSAPP_BOT_URL=http://whatsapp-bot:3001
     volumes:
-      # Persist SQLite database on host
-      - ./backend/stocksense.db:/app/stocksense.db
       # Dev: mount source for hot reload (uvicorn --reload)
       - ./backend:/app
+      # Persist SQLite database between rebuilds
+      - stocksense-db:/app/data
+      # Prevent host venv from clobbering container packages
+      - /app/venv
+    command: >
+      sh -c "mkdir -p /app/data &&
+             uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 60s
     networks:
       - stocksense-network
     restart: unless-stopped
@@ -54,12 +67,16 @@ services:
     ports:
       - "5173:5173"
     environment:
+      # Vite dev server proxy target (used in vite.config.js)
       - VITE_API_URL=http://backend:8000
     volumes:
       # Dev: mount source for Vite HMR
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
       - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.js:/app/vite.config.js
+      # Prevent host from clobbering container's node_modules
+      - frontend-node-modules:/app/node_modules
     depends_on:
       backend:
         condition: service_started
@@ -105,6 +122,10 @@ services:
 # ── Named Volumes ───────────────────────────────────────────
 volumes:
   wa-auth:
+    driver: local
+  stocksense-db:
+    driver: local
+  frontend-node-modules:
     driver: local
 
 # ── Network ─────────────────────────────────────────────────

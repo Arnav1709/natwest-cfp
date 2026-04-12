@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 
 /**
- * Custom hook for API calls with loading/error states
- * Falls back to mock data when API is unavailable
+ * Custom hook for API calls with loading/error/empty states.
+ * No mock fallback — shows real data or error state.
  */
-export function useApi(apiCall, mockData, deps = []) {
-  const [data, setData] = useState(mockData);
+export function useApi(apiCall, deps = []) {
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -16,9 +16,8 @@ export function useApi(apiCall, mockData, deps = []) {
       const result = await apiCall();
       setData(result);
     } catch (err) {
-      // Fallback to mock data silently
-      console.warn('Using mock data:', err.message);
-      setData(mockData);
+      console.error('API error:', err.message);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -28,7 +27,7 @@ export function useApi(apiCall, mockData, deps = []) {
     fetchData();
   }, [fetchData]);
 
-  return { data, loading, error, refetch: fetchData };
+  return { data, loading, error, refetch: fetchData, setData };
 }
 
 /**

@@ -10,8 +10,8 @@ from typing import Optional
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
-    # Database
-    DATABASE_URL: str = "sqlite:///./stocksense.db"
+    # Database (uses data/ subdir for Docker volume compatibility)
+    DATABASE_URL: str = "sqlite:///./data/stocksense.db"
 
     # JWT Auth
     SECRET_KEY: str = "stocksense-super-secret-key-change-in-production-2026"

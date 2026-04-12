@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { mockProducts } from '../../mocks/mockData';
+import { useApi } from '../../hooks/useApi';
+import { inventoryApi } from '../../services/api';
 
 const statusConfig = {
   healthy: { label: 'Healthy', class: 'badge-success' },
@@ -17,12 +18,23 @@ export default function ProductCatalog() {
   const [category, setCategory] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const filtered = mockProducts.filter(p => {
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
+  const { data: rawData, loading, error } = useApi(() => inventoryApi.list(), []);
+  const products = Array.isArray(rawData) ? rawData : (rawData?.products || []);
+
+  const filtered = products.filter(p => {
+    const matchSearch = (p.name || '').toLowerCase().includes(search.toLowerCase());
     const matchCat = category === 'all' || p.category === category;
     const matchStatus = statusFilter === 'all' || p.status === statusFilter;
     return matchSearch && matchCat && matchStatus;
   });
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <p style={{ color: 'var(--color-text-muted)' }}>Loading products...</p>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -34,10 +46,16 @@ export default function ProductCatalog() {
             {filtered.length} products found
           </p>
         </div>
-        <button className="btn btn-primary" id="btn-add-product">
+        <button className="btn btn-primary" onClick={() => navigate('/upload')} id="btn-add-product">
           + {t('products.add_product')}
         </button>
       </div>
+
+      {error && (
+        <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)', marginBottom: 'var(--space-4)', color: 'var(--color-warning)', fontSize: 'var(--font-size-sm)' }}>
+          ⚠️ {error}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="glass-card" style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap', marginBottom: 'var(--space-4)' }}>
@@ -58,6 +76,7 @@ export default function ProductCatalog() {
           <option value="supplements">Supplements</option>
           <option value="supplies">Supplies</option>
           <option value="equipment">Equipment</option>
+          <option value="grocery">Grocery</option>
         </select>
         <select className="form-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ minWidth: 140 }} id="filter-status">
           <option value="all">All Status</option>
@@ -70,69 +89,80 @@ export default function ProductCatalog() {
 
       {/* Product Table */}
       <div className="glass-card" style={{ padding: 0, overflow: 'auto' }}>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>{t('products.name')}</th>
-              <th>{t('products.category')}</th>
-              <th>{t('products.stock')}</th>
-              <th>{t('products.reorder_point')}</th>
-              <th>{t('products.days_remaining')}</th>
-              <th>{t('products.status')}</th>
-              <th>{t('products.supplier')}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((p) => {
-              const sc = statusConfig[p.status];
-              return (
-                <tr key={p.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/products/${p.id}`)}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                      <div style={{
-                        width: 32, height: 32, borderRadius: 'var(--radius-md)',
-                        background: 'rgba(13,148,136,0.15)', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem'
-                      }}>💊</div>
-                      <span style={{ fontWeight: 600 }}>{p.name}</span>
-                    </div>
-                  </td>
-                  <td style={{ textTransform: 'capitalize' }}>{p.category}</td>
-                  <td>
-                    <span style={{
-                      fontWeight: 700,
-                      color: p.status === 'critical' || p.status === 'out_of_stock' ? 'var(--color-danger)' :
-                             p.status === 'low_stock' ? 'var(--color-warning)' : 'var(--color-text-primary)'
-                    }}>
-                      {p.current_stock}
-                    </span>
-                    <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-xs)' }}> {p.unit}</span>
-                  </td>
-                  <td>{p.reorder_point}</td>
-                  <td>
-                    <span style={{
-                      fontWeight: 600,
-                      color: p.days_remaining < 5 ? 'var(--color-danger)' :
-                             p.days_remaining < 10 ? 'var(--color-warning)' : 'var(--color-success)'
-                    }}>
-                      {p.days_remaining} days
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`badge ${sc.class}`}>{sc.label}</span>
-                  </td>
-                  <td style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                    {p.supplier_name}
-                  </td>
-                  <td>
-                    <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-primary-light)' }}>→</button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {filtered.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: 'var(--space-3)' }}>📦</div>
+            <h3 style={{ color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' }}>No products yet</h3>
+            <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-4)' }}>
+              Upload a CSV or scan a ledger to add your inventory.
+            </p>
+            <button className="btn btn-primary" onClick={() => navigate('/upload')}>📤 Upload Data</button>
+          </div>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>{t('products.name')}</th>
+                <th>{t('products.category')}</th>
+                <th>{t('products.stock')}</th>
+                <th>{t('products.reorder_point')}</th>
+                <th>{t('products.days_remaining')}</th>
+                <th>{t('products.status')}</th>
+                <th>{t('products.supplier')}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((p) => {
+                const sc = statusConfig[p.status] || statusConfig.healthy;
+                return (
+                  <tr key={p.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/products/${p.id}`)}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                        <div style={{
+                          width: 32, height: 32, borderRadius: 'var(--radius-md)',
+                          background: 'rgba(13,148,136,0.15)', display: 'flex',
+                          alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem'
+                        }}>💊</div>
+                        <span style={{ fontWeight: 600 }}>{p.name}</span>
+                      </div>
+                    </td>
+                    <td style={{ textTransform: 'capitalize' }}>{p.category}</td>
+                    <td>
+                      <span style={{
+                        fontWeight: 700,
+                        color: p.status === 'critical' || p.status === 'out_of_stock' ? 'var(--color-danger)' :
+                               p.status === 'low_stock' ? 'var(--color-warning)' : 'var(--color-text-primary)'
+                      }}>
+                        {p.current_stock}
+                      </span>
+                      <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-xs)' }}> {p.unit}</span>
+                    </td>
+                    <td>{p.reorder_point}</td>
+                    <td>
+                      <span style={{
+                        fontWeight: 600,
+                        color: (p.days_remaining || 0) < 5 ? 'var(--color-danger)' :
+                               (p.days_remaining || 0) < 10 ? 'var(--color-warning)' : 'var(--color-success)'
+                      }}>
+                        {p.days_remaining != null ? `${p.days_remaining} days` : '—'}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`badge ${sc.class}`}>{sc.label}</span>
+                    </td>
+                    <td style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+                      {p.supplier_name || '—'}
+                    </td>
+                    <td>
+                      <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-primary-light)' }}>→</button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

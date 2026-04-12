@@ -1,8 +1,8 @@
 // StockSense — API Service Layer
-// Calls backend at http://localhost:8000/api/
-// Falls back to mock data when backend is unavailable
+// In dev: requests go through Vite proxy (/api → backend:8000)
+// In Docker/prod: requests go through nginx (/api → backend:8000)
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = '/api';
 
 async function request(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
@@ -23,11 +23,21 @@ async function request(endpoint, options = {}) {
   try {
     const response = await fetch(url, config);
     if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      // Try to extract error detail from FastAPI responses
+      let detail = `API Error: ${response.status} ${response.statusText}`;
+      try {
+        const errorBody = await response.json();
+        if (errorBody.detail) {
+          detail = errorBody.detail;
+        }
+      } catch (_) {
+        // Response body wasn't JSON, use the default message
+      }
+      throw new Error(detail);
     }
     return await response.json();
   } catch (error) {
-    console.warn(`API call failed for ${endpoint}, using mock data:`, error.message);
+    console.warn(`API call failed for ${endpoint}:`, error.message);
     throw error;
   }
 }
