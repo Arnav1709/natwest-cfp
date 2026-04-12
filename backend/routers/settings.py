@@ -10,6 +10,7 @@ from models.user import User
 from models.notification import NotificationPreference
 from utils.auth import get_current_user
 from schemas.settings import NotificationSettingsResponse, NotificationSettingsUpdate
+from cache import cache_get, cache_set, cache_invalidate
 
 router = APIRouter(prefix="/api/notifications", tags=["settings"])
 
@@ -20,6 +21,10 @@ def get_settings(
     db: Session = Depends(get_db),
 ):
     """Get notification preferences for the current user."""
+    cached = cache_get(current_user.id, "notification_settings")
+    if cached is not None:
+        return cached
+
     prefs = (
         db.query(NotificationPreference)
         .filter(NotificationPreference.user_id == current_user.id)
@@ -33,7 +38,10 @@ def get_settings(
         db.commit()
         db.refresh(prefs)
 
-    return NotificationSettingsResponse.model_validate(prefs)
+    result = NotificationSettingsResponse.model_validate(prefs)
+
+    cache_set(current_user.id, "notification_settings", result)
+    return result
 
 
 @router.put("/settings", response_model=NotificationSettingsResponse)
@@ -61,5 +69,8 @@ def update_settings(
 
     db.commit()
     db.refresh(prefs)
+
+    # Invalidate cache
+    cache_invalidate(current_user.id, "notification_settings")
 
     return NotificationSettingsResponse.model_validate(prefs)

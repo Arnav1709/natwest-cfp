@@ -1,11 +1,18 @@
-// StockSense — API Service Layer
+// StockSense — API Service Layer with Request Deduplication
 // In dev: requests go through Vite proxy (/api → backend:8000)
 // In Docker/prod: requests go through nginx (/api → backend:8000)
 
 const API_BASE = '/api';
 
+// ── Request Deduplication ──────────────────────────────────
+// If the same GET endpoint is already in-flight, return the
+// existing Promise instead of firing a duplicate request.
+const _inflight = new Map();
+
 async function request(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
+  const method = (options.method || 'GET').toUpperCase();
+
   const config = {
     headers: {
       'Content-Type': 'application/json',
@@ -20,6 +27,26 @@ async function request(endpoint, options = {}) {
     config.headers['Authorization'] = `Bearer ${token}`;
   }
 
+  // Dedup GET requests: if same URL is already in-flight, piggyback on it
+  if (method === 'GET') {
+    const existing = _inflight.get(url);
+    if (existing) {
+      return existing;
+    }
+  }
+
+  const promise = _doFetch(url, config, endpoint);
+
+  if (method === 'GET') {
+    _inflight.set(url, promise);
+    // Clean up after settled (success or error)
+    promise.finally(() => _inflight.delete(url));
+  }
+
+  return promise;
+}
+
+async function _doFetch(url, config, endpoint) {
   try {
     const response = await fetch(url, config);
     if (!response.ok) {

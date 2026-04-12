@@ -16,6 +16,7 @@ from utils.auth import get_current_user
 from schemas.reorder import ReorderResponse
 from services.reorder_service import generate_reorder_list
 from utils.pdf_generator import generate_reorder_pdf
+from cache import cache_get, cache_set
 
 router = APIRouter(prefix="/api/reorder", tags=["reorder"])
 
@@ -29,7 +30,14 @@ def get_reorder_list(
     Get AI-generated reorder list.
     Products ranked by urgency, grouped by supplier.
     """
-    return generate_reorder_list(db, current_user.id)
+    cached = cache_get(current_user.id, "reorder")
+    if cached is not None:
+        return cached
+
+    result = generate_reorder_list(db, current_user.id)
+
+    cache_set(current_user.id, "reorder", result)
+    return result
 
 
 @router.get("/export")
@@ -41,7 +49,11 @@ def export_reorder(
     """
     Export reorder list as CSV or PDF.
     """
-    reorder_data = generate_reorder_list(db, current_user.id)
+    # Reuse cached reorder data if available
+    reorder_data = cache_get(current_user.id, "reorder")
+    if reorder_data is None:
+        reorder_data = generate_reorder_list(db, current_user.id)
+        cache_set(current_user.id, "reorder", reorder_data)
 
     if format == "csv":
         # Generate CSV

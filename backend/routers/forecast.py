@@ -20,6 +20,7 @@ from services.forecast_service import (
     get_all_forecasts_summary,
     run_scenario,
 )
+from cache import cache_get, cache_set, cache_invalidate
 
 router = APIRouter(prefix="/api/forecast", tags=["forecast"])
 
@@ -33,7 +34,14 @@ def get_all_forecasts(
     Get forecast summaries for all products.
     Used by the dashboard overview.
     """
-    return get_all_forecasts_summary(db, current_user.id)
+    cached = cache_get(current_user.id, "forecast_all")
+    if cached is not None:
+        return cached
+
+    result = get_all_forecasts_summary(db, current_user.id)
+
+    cache_set(current_user.id, "forecast_all", result)
+    return result
 
 
 @router.get("/{product_id}", response_model=ForecastResponse)
@@ -46,6 +54,10 @@ def get_forecast(
     Get the full forecast for a single product.
     Includes forecast bands, baseline, drivers, accuracy.
     """
+    cached = cache_get(current_user.id, "forecast_product", product_id=product_id)
+    if cached is not None:
+        return cached
+
     # Verify product belongs to user
     product = (
         db.query(Product)
@@ -55,7 +67,10 @@ def get_forecast(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    return generate_forecast(db, product_id)
+    result = generate_forecast(db, product_id)
+
+    cache_set(current_user.id, "forecast_product", result, product_id=product_id)
+    return result
 
 
 @router.post("/scenario", response_model=ScenarioResponse)

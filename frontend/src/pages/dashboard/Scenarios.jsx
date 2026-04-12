@@ -1,10 +1,10 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Plot from '../../components/PlotChart.jsx';
 import { useApi } from '../../hooks/useApi';
 import { inventoryApi, forecastApi } from '../../services/api';
 
 export default function Scenarios() {
-  const { data: rawProducts } = useApi(() => inventoryApi.list(), []);
+  const { data: rawProducts, loading: pLoading } = useApi(() => inventoryApi.list(), []);
   const products = Array.isArray(rawProducts) ? rawProducts : (rawProducts?.products || []);
 
   const [productId, setProductId] = useState('');
@@ -57,6 +57,17 @@ export default function Scenarios() {
   const scenLikely = scenarioStats.map((f) => f.likely);
 
   const selectedProduct = products.find((p) => p.id.toString() === productId) || {};
+
+  if (pLoading && products.length === 0) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', marginBottom: 'var(--space-3)', animation: 'pulse 1.5s ease-in-out infinite' }}>🔮</div>
+          <p style={{ color: 'var(--color-text-muted)' }}>Loading scenario planner...</p>
+        </div>
+      </div>
+    );
+  }
 
   const chartConfig = { displayModeBar: false, responsive: true };
   const sharedLayout = {

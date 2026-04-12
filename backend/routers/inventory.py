@@ -8,7 +8,7 @@ POST   /api/inventory
 PUT    /api/inventory/:id
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -31,6 +31,7 @@ from schemas.inventory import (
     ExpiringProduct,
     ExpiringProductsResponse,
 )
+from cache import cache_get, cache_set, cache_invalidate
 
 router = APIRouter(prefix="/api/inventory", tags=["inventory"])
 
@@ -46,38 +47,51 @@ def _compute_status(product: Product) -> str:
     return "healthy"
 
 
-def _compute_days_remaining(product: Product, db: Session) -> Optional[float]:
+def _batch_avg_daily_sales(db: Session, product_ids: list[int]) -> dict[int, float]:
     """
-    Calculate days of stock remaining.
-    days_remaining = current_stock / avg_daily_sales
-    Uses last 30 days of sales history.
+    Compute avg daily sales for multiple products in ONE query
+    instead of N+1 per-product queries.
+    Returns { product_id: avg_daily_sales }.
     """
-    if product.current_stock <= 0:
-        return 0.0
+    if not product_ids:
+        return {}
 
-    from datetime import timedelta
     thirty_days_ago = date.today() - timedelta(days=30)
 
-    total_sold = (
-        db.query(sql_func.sum(SalesHistory.quantity))
+    rows = (
+        db.query(
+            SalesHistory.product_id,
+            sql_func.sum(SalesHistory.quantity).label("total_sold"),
+        )
         .filter(
-            SalesHistory.product_id == product.id,
+            SalesHistory.product_id.in_(product_ids),
             SalesHistory.date >= thirty_days_ago,
         )
-        .scalar()
-    ) or 0
+        .group_by(SalesHistory.product_id)
+        .all()
+    )
 
-    if total_sold <= 0:
-        return None  # No sales data
+    result = {}
+    for row in rows:
+        total = row.total_sold or 0
+        if total > 0:
+            result[row.product_id] = total / 30.0
+    return result
 
-    avg_daily = total_sold / 30.0
+
+def _compute_days_remaining_fast(product: Product, avg_daily: Optional[float]) -> Optional[float]:
+    """Calculate days of stock remaining using pre-computed avg daily sales."""
+    if product.current_stock <= 0:
+        return 0.0
+    if avg_daily is None or avg_daily <= 0:
+        return None
     return round(product.current_stock / avg_daily, 1)
 
 
-def _product_to_response(product: Product, db: Session) -> ProductResponse:
+def _product_to_response(product: Product, avg_daily_map: dict[int, float]) -> ProductResponse:
     """Convert a Product ORM object to a ProductResponse with computed fields."""
-    status = _compute_status(product)
-    days_remaining = _compute_days_remaining(product, db)
+    s = _compute_status(product)
+    days_remaining = _compute_days_remaining_fast(product, avg_daily_map.get(product.id))
 
     return ProductResponse(
         id=product.id,
@@ -92,7 +106,7 @@ def _product_to_response(product: Product, db: Session) -> ProductResponse:
         supplier_contact=product.supplier_contact,
         lead_time_days=product.lead_time_days or 3,
         expiry_date=product.expiry_date,
-        status=status,
+        status=s,
         days_remaining=days_remaining,
         updated_at=product.updated_at,
     )
@@ -104,11 +118,18 @@ def get_health(
     db: Session = Depends(get_db),
 ):
     """Aggregated inventory health KPIs for the dashboard."""
+    # Check cache
+    cached = cache_get(current_user.id, "inventory_health")
+    if cached is not None:
+        return cached
+
     products = db.query(Product).filter(Product.user_id == current_user.id).all()
 
     total = len(products)
     if total == 0:
-        return HealthMetrics()
+        result = HealthMetrics()
+        cache_set(current_user.id, "inventory_health", result)
+        return result
 
     healthy = 0
     warning = 0
@@ -151,7 +172,7 @@ def get_health(
         if mapes:
             avg_accuracy = round(100 - sum(mapes) / len(mapes), 1)
 
-    return HealthMetrics(
+    result = HealthMetrics(
         total_skus=total,
         below_reorder=below_reorder,
         stockout_risk=stockout_risk,
@@ -170,6 +191,9 @@ def get_health(
         },
     )
 
+    cache_set(current_user.id, "inventory_health", result)
+    return result
+
 
 @router.get("/expiring", response_model=ExpiringProductsResponse)
 def get_expiring(
@@ -178,7 +202,10 @@ def get_expiring(
     db: Session = Depends(get_db),
 ):
     """Products expiring within N days."""
-    from datetime import timedelta
+    cached = cache_get(current_user.id, "inventory_expiring", days=days)
+    if cached is not None:
+        return cached
+
     cutoff = date.today() + timedelta(days=days)
 
     products = (
@@ -193,11 +220,14 @@ def get_expiring(
         .all()
     )
 
-    result = []
+    # Batch compute avg daily sales
+    product_ids = [p.id for p in products]
+    avg_daily_map = _batch_avg_daily_sales(db, product_ids)
+
+    result_items = []
     for p in products:
-        # Estimate forecast demand (simple: last week's avg × remaining days)
         days_to_expiry = (p.expiry_date - date.today()).days
-        days_remaining = _compute_days_remaining(p, db)
+        days_remaining = _compute_days_remaining_fast(p, avg_daily_map.get(p.id))
         forecast_demand = 0.0
         if days_remaining and days_remaining > 0:
             daily_rate = p.current_stock / days_remaining
@@ -209,7 +239,7 @@ def get_expiring(
         elif p.current_stock > forecast_demand * 1.3:
             risk = "medium"
 
-        result.append(ExpiringProduct(
+        result_items.append(ExpiringProduct(
             id=p.id,
             name=p.name,
             expiry_date=p.expiry_date,
@@ -218,10 +248,13 @@ def get_expiring(
             risk=risk,
         ))
 
-    return ExpiringProductsResponse(
-        expiring_products=result,
-        count=len(result),
+    result = ExpiringProductsResponse(
+        expiring_products=result_items,
+        count=len(result_items),
     )
+
+    cache_set(current_user.id, "inventory_expiring", result, days=days)
+    return result
 
 
 @router.get("", response_model=ProductListResponse)
@@ -234,6 +267,12 @@ def list_products(
     db: Session = Depends(get_db),
 ):
     """List all products with optional category/status filters and pagination."""
+    # Check cache
+    cache_params = dict(category=category or "", status=status or "", page=page, per_page=per_page)
+    cached = cache_get(current_user.id, "inventory_list", **cache_params)
+    if cached is not None:
+        return cached
+
     query = db.query(Product).filter(Product.user_id == current_user.id)
 
     if category:
@@ -253,12 +292,19 @@ def list_products(
     end = start + per_page
     page_products = all_products[start:end]
 
-    return ProductListResponse(
-        products=[_product_to_response(p, db) for p in page_products],
+    # Batch compute avg daily sales for page products (fixes N+1)
+    product_ids = [p.id for p in page_products]
+    avg_daily_map = _batch_avg_daily_sales(db, product_ids)
+
+    result = ProductListResponse(
+        products=[_product_to_response(p, avg_daily_map) for p in page_products],
         total=total,
         page=page,
         per_page=per_page,
     )
+
+    cache_set(current_user.id, "inventory_list", result, **cache_params)
+    return result
 
 
 @router.get("/{product_id}", response_model=ProductResponse)
@@ -268,6 +314,10 @@ def get_product(
     db: Session = Depends(get_db),
 ):
     """Get a single product by ID."""
+    cached = cache_get(current_user.id, "inventory_product", product_id=product_id)
+    if cached is not None:
+        return cached
+
     product = (
         db.query(Product)
         .filter(Product.id == product_id, Product.user_id == current_user.id)
@@ -276,7 +326,11 @@ def get_product(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    return _product_to_response(product, db)
+    avg_daily_map = _batch_avg_daily_sales(db, [product.id])
+    result = _product_to_response(product, avg_daily_map)
+
+    cache_set(current_user.id, "inventory_product", result, product_id=product_id)
+    return result
 
 
 @router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
@@ -315,7 +369,11 @@ def create_product(
         db.add(movement)
         db.commit()
 
-    return _product_to_response(product, db)
+    # Invalidate caches
+    cache_invalidate(current_user.id, "inventory_list", "inventory_health", "inventory_expiring", "reorder")
+
+    avg_daily_map = _batch_avg_daily_sales(db, [product.id])
+    return _product_to_response(product, avg_daily_map)
 
 
 @router.put("/{product_id}", response_model=ProductResponse)
@@ -404,4 +462,12 @@ def update_product(
     db.commit()
     db.refresh(product)
 
-    return _product_to_response(product, db)
+    # Invalidate caches
+    cache_invalidate(
+        current_user.id,
+        "inventory_list", "inventory_health", "inventory_expiring",
+        "inventory_product", "reorder", "alerts", "forecast_all", "forecast_product",
+    )
+
+    avg_daily_map = _batch_avg_daily_sales(db, [product.id])
+    return _product_to_response(product, avg_daily_map)

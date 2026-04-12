@@ -13,6 +13,7 @@ from models.product import Product
 from models.anomaly import Anomaly
 from utils.auth import get_current_user
 from schemas.anomaly import AnomalyResponse, AnomalyListResponse
+from cache import cache_get, cache_set
 
 router = APIRouter(prefix="/api/anomalies", tags=["anomalies"])
 
@@ -27,6 +28,14 @@ def list_anomalies(
     """
     List all active anomalies for the current user's products.
     """
+    cache_params = dict(
+        severity=severity or "",
+        dismissed=str(dismissed) if dismissed is not None else "",
+    )
+    cached = cache_get(current_user.id, "anomalies", **cache_params)
+    if cached is not None:
+        return cached
+
     # Get user's product IDs
     product_ids = [
         p.id for p in db.query(Product.id).filter(Product.user_id == current_user.id).all()
@@ -45,9 +54,9 @@ def list_anomalies(
         for p in db.query(Product).filter(Product.id.in_(product_ids)).all()
     }
 
-    result = []
+    result_items = []
     for a in anomalies:
-        result.append(AnomalyResponse(
+        result_items.append(AnomalyResponse(
             id=a.id,
             product_id=a.product_id,
             product_name=product_map.get(a.product_id, ""),
@@ -59,7 +68,10 @@ def list_anomalies(
             created_at=a.created_at,
         ))
 
-    return AnomalyListResponse(anomalies=result, count=len(result))
+    result = AnomalyListResponse(anomalies=result_items, count=len(result_items))
+
+    cache_set(current_user.id, "anomalies", result, **cache_params)
+    return result
 
 
 @router.get("/{product_id}", response_model=AnomalyListResponse)
@@ -69,6 +81,10 @@ def get_product_anomalies(
     db: Session = Depends(get_db),
 ):
     """Get anomalies for a specific product."""
+    cached = cache_get(current_user.id, "anomalies_product", product_id=product_id)
+    if cached is not None:
+        return cached
+
     # Verify product belongs to user
     product = (
         db.query(Product)
@@ -87,7 +103,7 @@ def get_product_anomalies(
         .all()
     )
 
-    result = [
+    result_items = [
         AnomalyResponse(
             id=a.id,
             product_id=a.product_id,
@@ -102,4 +118,7 @@ def get_product_anomalies(
         for a in anomalies
     ]
 
-    return AnomalyListResponse(anomalies=result, count=len(result))
+    result = AnomalyListResponse(anomalies=result_items, count=len(result_items))
+
+    cache_set(current_user.id, "anomalies_product", result, product_id=product_id)
+    return result

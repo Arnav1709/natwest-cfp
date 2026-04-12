@@ -29,6 +29,7 @@ from schemas.sales import (
     SalesHistoryItem,
     SalesHistoryResponse,
 )
+from cache import cache_get, cache_set, cache_invalidate
 
 router = APIRouter(prefix="/api/sales", tags=["sales"])
 
@@ -148,6 +149,14 @@ def record_sales(
 
     db.commit()
 
+    # Invalidate caches — stock levels changed
+    cache_invalidate(
+        current_user.id,
+        "inventory_list", "inventory_health", "inventory_expiring",
+        "inventory_product", "forecast_all", "forecast_product",
+        "reorder", "alerts", "sales_history",
+    )
+
     return SalesRecordResponse(
         total_processed=len(request.sales),
         successful=successful,
@@ -216,6 +225,11 @@ def get_sales_history(
     db: Session = Depends(get_db),
 ):
     """Get paginated sales history for the current user."""
+    cache_params = dict(page=page, per_page=per_page, product_id=product_id or "")
+    cached = cache_get(current_user.id, "sales_history", **cache_params)
+    if cached is not None:
+        return cached
+
     # Get all product IDs belonging to this user
     user_product_ids = (
         db.query(Product.id)
@@ -247,7 +261,7 @@ def get_sales_history(
         products = db.query(Product).filter(Product.id.in_(product_ids)).all()
         product_map = {p.id: p.name for p in products}
 
-    return SalesHistoryResponse(
+    result = SalesHistoryResponse(
         sales=[
             SalesHistoryItem(
                 id=s.id,
@@ -264,3 +278,6 @@ def get_sales_history(
         page=page,
         per_page=per_page,
     )
+
+    cache_set(current_user.id, "sales_history", result, **cache_params)
+    return result
