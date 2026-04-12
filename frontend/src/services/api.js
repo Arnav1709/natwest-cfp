@@ -28,7 +28,14 @@ async function request(endpoint, options = {}) {
       try {
         const errorBody = await response.json();
         if (errorBody.detail) {
-          detail = errorBody.detail;
+          // FastAPI detail can be a string or array of validation errors
+          if (typeof errorBody.detail === 'string') {
+            detail = errorBody.detail;
+          } else if (Array.isArray(errorBody.detail)) {
+            detail = errorBody.detail.map(e => e.msg || JSON.stringify(e)).join(', ');
+          } else {
+            detail = JSON.stringify(errorBody.detail);
+          }
         }
       } catch (_) {
         // Response body wasn't JSON, use the default message
@@ -118,4 +125,18 @@ export const settingsApi = {
 export const whatsappApi = {
   connect: () => request('/whatsapp/connect', { method: 'POST' }),
   status: () => request('/whatsapp/status'),
+};
+
+// === Sales ===
+export const salesApi = {
+  uploadCsv: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request('/sales/upload-csv', { method: 'POST', body: formData, headers: {} });
+  },
+  record: (sales) => request('/sales/record', { method: 'POST', body: JSON.stringify({ sales }) }),
+  history: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/sales/history${query ? '?' + query : ''}`);
+  },
 };

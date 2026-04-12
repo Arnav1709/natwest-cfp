@@ -1,8 +1,18 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useEffect } from 'react';
 
 export default function Landing() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem('stocksense-token');
+    if (token) {
+      navigate('/dashboard/overview');
+    }
+  }, [navigate]);
 
   return (
     <div className="gradient-bg" style={{ minHeight: '100vh' }}>
@@ -23,6 +33,7 @@ export default function Landing() {
           <a href="#features" style={{ color: '#94A3B8', fontSize: '0.875rem', fontWeight: 500 }}>Features</a>
           <a href="#how" style={{ color: '#94A3B8', fontSize: '0.875rem', fontWeight: 500 }}>How it Works</a>
           <a href="#testimonials" style={{ color: '#94A3B8', fontSize: '0.875rem', fontWeight: 500 }}>Testimonials</a>
+          <Link to="/login" style={{ color: '#94A3B8', fontSize: '0.875rem', fontWeight: 500 }}>Sign In</Link>
           <Link to="/onboarding/language" className="btn btn-primary btn-sm">Get Started</Link>
         </div>
       </nav>
@@ -49,11 +60,11 @@ export default function Landing() {
         </p>
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
           <Link to="/onboarding/language" className="btn btn-primary btn-lg">
-            {t('landing.cta_start')} →
+            🆕 New User? Get Started →
           </Link>
-          <button className="btn btn-outline btn-lg">
-            ▶ {t('landing.cta_demo')}
-          </button>
+          <Link to="/login" className="btn btn-outline btn-lg">
+            🔑 Already a User? Sign In
+          </Link>
         </div>
       </section>
 

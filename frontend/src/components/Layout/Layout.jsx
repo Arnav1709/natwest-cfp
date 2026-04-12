@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
+import { useState, useMemo } from 'react';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 const navItems = [
@@ -7,6 +7,7 @@ const navItems = [
   { label: 'nav.forecasting', path: '/dashboard/forecasting', icon: '📈' },
   { label: 'nav.inventory',   path: '/dashboard/inventory',   icon: '📦' },
   { label: 'nav.products',    path: '/products',              icon: '🏷️' },
+  { label: 'nav.sales',       path: '/sales',                 icon: '🧾' },
   { label: 'nav.upload',      path: '/upload',                icon: '📤' },
   { label: 'nav.reorder',     path: '/reorder',               icon: '🔄' },
   { label: 'nav.alerts',      path: '/alerts',                icon: '🔔', badge: 3 },
@@ -21,7 +22,21 @@ const bottomItems = [
 export default function Layout() {
   const { t } = useTranslation();
   const location = useLocation();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Get logged-in user info
+  const user = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('stocksense-user') || '{}');
+    } catch { return {}; }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('stocksense-token');
+    localStorage.removeItem('stocksense-user');
+    navigate('/login');
+  };
 
   const getPageTitle = () => {
     const path = location.pathname;
@@ -33,6 +48,7 @@ export default function Layout() {
     if (path.includes('reorder'))     return t('reorder.title');
     if (path.includes('alerts'))      return t('alerts.title');
     if (path.includes('settings'))    return t('settings.title');
+    if (path.includes('sales'))       return 'Record Sales';
     if (path.includes('upload'))      return t('upload.title');
     return t('app_name');
   };
@@ -73,17 +89,22 @@ export default function Layout() {
         </nav>
 
         <div className="sidebar-footer">
-          {bottomItems.map((item) => (
-            <NavLink
-              key={item.label}
-              to={item.path}
-              className="sidebar-link"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <span className="sidebar-link-icon">{item.icon}</span>
-              <span>{t(item.label)}</span>
-            </NavLink>
-          ))}
+          <NavLink
+            to="#"
+            className="sidebar-link"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <span className="sidebar-link-icon">💬</span>
+            <span>{t('nav.support')}</span>
+          </NavLink>
+          <button
+            className="sidebar-link"
+            onClick={handleLogout}
+            style={{ width: '100%', border: 'none', textAlign: 'left', cursor: 'pointer', background: 'none' }}
+          >
+            <span className="sidebar-link-icon">🚪</span>
+            <span>{t('nav.logout')}</span>
+          </button>
         </div>
       </aside>
 
@@ -110,10 +131,10 @@ export default function Layout() {
               🌙
             </button>
             <div className="topbar-user">
-              <div className="topbar-avatar">PA</div>
+              <div className="topbar-avatar">{(user.shop_name || 'U')[0].toUpperCase()}{(user.shop_name || 'U')[1]?.toUpperCase() || ''}</div>
               <div className="topbar-user-info">
-                <span className="topbar-user-name">Priya Admin</span>
-                <span className="topbar-user-role">Manager Access</span>
+                <span className="topbar-user-name">{user.shop_name || 'User'}</span>
+                <span className="topbar-user-role">{user.business_type || 'Manager'}</span>
               </div>
             </div>
           </div>
