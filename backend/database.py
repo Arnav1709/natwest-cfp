@@ -1,27 +1,34 @@
 """
 StockSense Database Configuration
 SQLAlchemy engine, session factory, and Base declarative class.
+Supports both SQLite (local dev) and PostgreSQL (Supabase cloud).
 """
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, declarative_base
 from config import settings
 
-# SQLite-specific: enable WAL mode and foreign keys
+_is_sqlite = settings.DATABASE_URL.startswith("sqlite")
+
+# Build engine with appropriate settings
+_connect_args = {"check_same_thread": False} if _is_sqlite else {}
+
 engine = create_engine(
     settings.DATABASE_URL,
-    connect_args={"check_same_thread": False},
+    connect_args=_connect_args,
     echo=settings.DEBUG,
+    pool_pre_ping=True,  # Ensures stale connections are recycled (important for cloud PG)
 )
 
 
-# Enable foreign key enforcement for SQLite
-@event.listens_for(engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.close()
+# SQLite-only: enable foreign key enforcement and WAL mode
+if _is_sqlite:
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.close()
 
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -46,11 +53,11 @@ def init_db():
     Create all database tables.
     Called on application startup.
     """
-    # Ensure the data directory exists (for both local and Docker)
     import os
     db_url = settings.DATABASE_URL
+
     if db_url.startswith("sqlite"):
-        # Extract path from sqlite:///./data/stocksense.db
+        # Ensure the data directory exists for SQLite
         db_path = db_url.replace("sqlite:///", "")
         db_dir = os.path.dirname(db_path)
         if db_dir:
@@ -59,3 +66,4 @@ def init_db():
     # Import all models so they register with Base.metadata
     import models  # noqa: F401
     Base.metadata.create_all(bind=engine)
+    print(f"✅ Database initialized: {'PostgreSQL (Supabase)' if not _is_sqlite else 'SQLite (local)'}")
