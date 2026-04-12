@@ -6,7 +6,6 @@ const navItems = [
   { label: 'nav.dashboard',   path: '/dashboard/overview',    icon: '📊' },
   { label: 'nav.forecasting', path: '/dashboard/forecasting', icon: '📈' },
   { label: 'nav.inventory',   path: '/dashboard/inventory',   icon: '📦' },
-  { label: 'nav.products',    path: '/products',              icon: '🏷️' },
   { label: 'nav.sales',       path: '/sales',                 icon: '🧾' },
   { label: 'nav.upload',      path: '/upload',                icon: '📤' },
   { label: 'nav.reorder',     path: '/reorder',               icon: '🔄' },

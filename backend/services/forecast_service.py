@@ -71,6 +71,7 @@ def _ensure_lookups_loaded():
 # ---------------------------------------------------------------------------
 
 MIN_WEEKS_FOR_PROPHET = 8  # Below this, use SMA fallback
+WINDOW_WEEKS = 8             # Sliding window: only use last N weeks for Prophet
 
 
 def _aggregate_weekly_sales(sales_records) -> pd.DataFrame:
@@ -103,19 +104,24 @@ def _fit_prophet(df: pd.DataFrame, weeks: int) -> pd.DataFrame:
         logger.error("Prophet not installed — falling back to SMA")
         return pd.DataFrame()
 
-    # Suppress Prophet's verbose logging
+    # Configure Prophet based on data window size
+    n_points = len(df)
     model = Prophet(
-        yearly_seasonality=True,
-        weekly_seasonality=True,
+        yearly_seasonality=(n_points >= 52),  # Need ~1 year for yearly patterns
+        weekly_seasonality=False,  # Not meaningful for weekly-aggregated data
         daily_seasonality=False,
         interval_width=0.80,
+        changepoint_prior_scale=0.15,  # More responsive to recent trends
+        n_changepoints=min(10, max(3, n_points // 2)),  # Scale with data size
     )
     model.fit(df)
 
     future = model.make_future_dataframe(periods=weeks, freq="W-MON")
     forecast = model.predict(future)
 
-    return forecast[["ds", "yhat", "yhat_lower", "yhat_upper"]].tail(weeks)
+    # Return only the future periods (after training data)
+    result = forecast[["ds", "yhat", "yhat_lower", "yhat_upper"]].tail(weeks)
+    return result
 
 
 def _sma_forecast(df: pd.DataFrame, weeks: int) -> List[dict]:
@@ -147,7 +153,7 @@ def _compute_baseline(df: pd.DataFrame, weeks: int) -> List[float]:
     recent = df.tail(weeks)
     if len(recent) == 0:
         return [0.0] * weeks
-    avg = recent["y"].mean()
+    avg = float(recent["y"].mean())  # Convert numpy to native Python float
     return [round(avg, 1)] * weeks
 
 
@@ -319,9 +325,13 @@ def generate_forecast(
         .all()
     )
 
-    # 3. Aggregate to weekly
-    df = _aggregate_weekly_sales(sales_records)
+    # 3. Aggregate to weekly + apply sliding window
+    df_all = _aggregate_weekly_sales(sales_records)
+    # Sliding window: only use last WINDOW_WEEKS for training
+    df = df_all.tail(WINDOW_WEEKS) if len(df_all) > WINDOW_WEEKS else df_all
     num_weeks_data = len(df)
+    logger.info("Forecast %s: %d total weeks, using %d (sliding window=%d)",
+                product_name, len(df_all), num_weeks_data, WINDOW_WEEKS)
 
     # 4. Choose model
     model_used = "prophet"
@@ -365,10 +375,12 @@ def generate_forecast(
     # 5. Compute baseline
     baseline = _compute_baseline(df, weeks)
 
-    # 6. Apply external factor boosts
-    current_month = date.today().month
-    boost_multiplier, driver_strings = _get_external_factor_boost(
-        product_name, category, current_month, state
+    # 6. Apply external factor boosts via Gemini Intelligence
+    from services.intelligence_service import get_external_factors
+    city = user.city if user else ""
+    business_type = user.business_type if user else "pharmacy"
+    boost_multiplier, driver_strings, driver_details = get_external_factors(
+        product_name, category, city, state, business_type
     )
 
     # Determine trend from data
@@ -379,8 +391,10 @@ def generate_forecast(
             trend_pct = ((recent_4 - older_4) / older_4) * 100
             if trend_pct > 5:
                 driver_strings.append(f"Upward sales trend (+{trend_pct:.0f}%)")
+                driver_details.append({"name": "Sales Trend", "description": f"Upward trend detected", "impact_pct": trend_pct})
             elif trend_pct < -5:
                 driver_strings.append(f"Declining sales trend ({trend_pct:.0f}%)")
+                driver_details.append({"name": "Sales Trend", "description": f"Declining trend detected", "impact_pct": trend_pct})
     else:
         trend_pct = 0
 
@@ -441,6 +455,7 @@ def generate_forecast(
         forecast=forecast_weeks,
         baseline=baseline,
         drivers=drivers_text,
+        driver_details=driver_details,
         accuracy=accuracy,
         data_quality=data_quality,
         model_used=model_used,

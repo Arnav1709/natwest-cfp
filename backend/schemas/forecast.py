@@ -22,6 +22,13 @@ class ForecastAccuracyInfo(BaseModel):
     trend: str = "stable"  # improving, declining, stable
 
 
+class DriverDetail(BaseModel):
+    """Individual demand driver from intelligence layer."""
+    name: str
+    description: str = ""
+    impact_pct: float = 0.0
+
+
 class ForecastResponse(BaseModel):
     """Full forecast response for a single product."""
     model_config = {"protected_namespaces": ()}
@@ -31,6 +38,7 @@ class ForecastResponse(BaseModel):
     forecast: List[ForecastWeek]
     baseline: List[float]
     drivers: str = ""
+    driver_details: List[DriverDetail] = []
     accuracy: ForecastAccuracyInfo = ForecastAccuracyInfo()
     data_quality: str = "sufficient"  # sufficient, limited, insufficient
     model_used: str = "prophet"  # prophet, sma, stub

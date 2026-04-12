@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     # OpenRouter Fallback
     OPENROUTER_API_KEY: Optional[str] = None
 
+    # Serper Web Search (for intelligence layer)
+    SERPER_API_KEY: Optional[str] = None
+
     # WhatsApp Bot Sidecar
     WHATSAPP_BOT_URL: str = "http://localhost:3001"
 
