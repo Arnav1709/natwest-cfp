@@ -510,6 +510,57 @@ sequenceDiagram
 
 ---
 
+## 🚀 Getting Started
+
+### One-Command Launch (Docker)
+
+```bash
+git clone https://github.com/team-zypher/supplysense.git
+cd supplysense
+
+# Add your API key
+echo "GEMINI_API_KEY=your-key-here" > backend/.env
+
+# Launch everything
+docker compose up --build
+```
+
+| Service | URL |
+|:---|:---|
+| 🖥️ Frontend | `http://localhost:5173` |
+| ⚙️ Backend API | `http://localhost:8000` |
+| 📖 Swagger Docs | `http://localhost:8000/docs` |
+| 📱 WhatsApp Bot | `http://localhost:3001` |
+
+### Local Development
+
+```bash
+# Backend
+cd backend && python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+python seed_data.py && uvicorn main:app --reload --port 8000
+
+# Frontend (new terminal)
+cd frontend && npm install && npm run dev
+
+# WhatsApp Bot (new terminal)
+cd whatsapp-bot && npm install && node index.js
+```
+
+### Environment Variables
+
+| Variable | Required | Purpose |
+|:---|:---:|:---|
+| `GEMINI_API_KEY` | ✅ | Primary AI — OCR, forecasting, intelligence |
+| `SECRET_KEY` | ✅ | JWT authentication signing |
+| `SERPER_API_KEY` | ⬜ | Live disease/festival/weather search |
+| `OPENROUTER_API_KEY` | ⬜ | Cloud AI fallback provider |
+| `OLLAMA_BASE_URL` | ⬜ | Local AI inference (privacy-first) |
+
+> **💡 Minimum setup**: Only `GEMINI_API_KEY` is needed. Everything else has graceful fallbacks.
+
+---
+
 ## 📜 License
 
 MIT License — build something great with it.
