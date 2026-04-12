@@ -25,10 +25,19 @@ venv/
 *.db-journal
 backend/data/
 
-# Environment variables
+# Environment variables & secrets
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+*.crt
+*.secret
+
+# Backend secrets (API keys loaded at runtime)
+backend/.env
+backend/.env.*
+!backend/.env.example
 
 # ========================
 # Node.js / Frontend & WhatsApp Bot

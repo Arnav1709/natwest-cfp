@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
 
     # Gemini API
-    GEMINI_API_KEY: Optional[str] = "AIzaSyBvF_2sWz3P7-hxXDSiAvL2QF7dxEP2uyw"
+    GEMINI_API_KEY: Optional[str] = None
 
     # OpenRouter Fallback
     OPENROUTER_API_KEY: Optional[str] = None
