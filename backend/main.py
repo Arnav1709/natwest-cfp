@@ -13,7 +13,7 @@ from config import settings
 from database import init_db
 
 # Import all routers
-from routers import auth, upload, inventory, forecast, anomalies, reorder, alerts, settings as settings_router, whatsapp
+from routers import auth, upload, inventory, forecast, anomalies, reorder, alerts, settings as settings_router, whatsapp, sales
 
 
 @asynccontextmanager
@@ -58,6 +58,7 @@ app.include_router(reorder.router)
 app.include_router(alerts.router)
 app.include_router(settings_router.router)
 app.include_router(whatsapp.router)
+app.include_router(sales.router)
 
 
 @app.get("/")
