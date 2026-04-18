@@ -1,0 +1,154 @@
+{
+  "app_name": "સ્ટોકસેન્સ",
+  "tagline": "અનુમાન બુદ્ધિમત્તા",
+  "nav": {
+    "dashboard": "ડેશબોર્ડ",
+    "forecasting": "આગાહી",
+    "inventory": "ઇન્વેન્ટરી",
+    "products": "ઉત્પાદનો",
+    "sales": "વેચાણ નોંધો",
+    "upload": "અપલોડ / અપડેટ",
+    "reorder": "રી-ઓર્ડર",
+    "alerts": "ચેતવણીઓ",
+    "settings": "સેટિંગ્સ",
+    "support": "સહાય",
+    "logout": "લૉગ આઉટ"
+  },
+  "landing": {
+    "hero_title": "નોટબુકથી આગાહી 60 સેકન્ડમાં",
+    "hero_subtitle": "ભારતીય નાના વ્યવસાયો માટે AI-સંચાલિત ઇન્વેન્ટરી વ્યવસ્થાપન અને માંગ આગાહી.",
+    "cta_start": "મફતમાં શરૂ કરો",
+    "cta_demo": "ડેમો જુઓ",
+    "feature_ocr": "હસ્તલિખિત OCR",
+    "feature_ocr_desc": "તમારા હસ્તલિખિત વેચાણ ડેટાનો ફોટો લો.",
+    "feature_disease": "રોગ બુદ્ધિમત્તા",
+    "feature_disease_desc": "ફાર્મસીઓ માટે: AI-સંચાલિત મોસમી રોગ બુદ્ધિમત્તા.",
+    "feature_whatsapp": "WhatsApp પ્રથમ",
+    "feature_whatsapp_desc": "WhatsApp આદેશો દ્વારા ઇન્વેન્ટરી સંચાલિત કરો.",
+    "how_title": "4 પગલામાં સ્પષ્ટતા",
+    "step1": "ડેટા અપલોડ",
+    "step2": "ચકાસો",
+    "step3": "આગાહી",
+    "step4": "પગલું ભરો",
+    "testimonials_title": "સપ્લાય ચેઇનમાં વિશ્વસનીય"
+  },
+  "onboarding": {
+    "choose_language": "તમારી ભાષા પસંદ કરો",
+    "choose_language_native": "તમારી ભાષા પસંદ કરો",
+    "choose_business": "તમે કયા પ્રકારનો વ્યવસાય ચલાવો છો?",
+    "business_desc": "આ તમારી આગાહી બુદ્ધિમત્તાને કસ્ટમાઇઝ કરવામાં મદદ કરે છે",
+    "continue": "આગળ વધો",
+    "back": "પાછા",
+    "complete": "સેટઅપ પૂર્ણ કરો",
+    "step": "પગલું"
+  },
+  "upload": {
+    "title": "તમારો ડેટા અપલોડ કરો",
+    "subtitle": "તમારો વેચાણ ડેટા આયાત કરવા માટે પદ્ધતિ પસંદ કરો",
+    "csv_title": "CSV / Excel અપલોડ",
+    "csv_desc": "તમારી CSV અથવા Excel ફાઇલ અહીં ખેંચો",
+    "image_title": "હસ્તલિખિત ખાતાવહી",
+    "image_desc": "તમારી હસ્તલિખિત નોટબુકનો ફોટો લો",
+    "manual_title": "મેન્યુઅલ એન્ટ્રી",
+    "manual_desc": "ઉત્પાદન ડેટા એક પછી એક દાખલ કરો"
+  },
+  "verify": {
+    "title": "કાઢેલો ડેટા ચકાસો",
+    "subtitle": "ઇન્વેન્ટરી બનાવતા પહેલા ડેટાની સમીક્ષા કરો",
+    "confidence": "વિશ્વાસ",
+    "confirm_label": "મેં આ ડેટાની સમીક્ષા કરી છે અને ચોક્કસ હોવાની ખાતરી કરું છું",
+    "rescan": "ફરીથી સ્કેન",
+    "confirm_btn": "ખાતરી કરો અને ઇન્વેન્ટરી બનાવો"
+  },
+  "dashboard": {
+    "overview_title": "સંચાલન કામગીરી",
+    "overview_subtitle": "બુદ્ધિશાળી વિહંગાવલોકન",
+    "total_skus": "કુલ SKUs",
+    "below_reorder": "રી-ઓર્ડરથી નીચે",
+    "stockout_risk": "સ્ટોકઆઉટ જોખમ",
+    "forecast_accuracy": "આગાહી ચોક્કસાઈ",
+    "inventory_value": "ઇન્વેન્ટરી મૂલ્ય",
+    "stock_health": "સ્ટોક આરોગ્ય",
+    "intelligence_feed": "બુદ્ધિમત્તા ફીડ",
+    "view_all_alerts": "બધી ચેતવણીઓ જુઓ",
+    "quick_actions": "ઝડપી ક્રિયાઓ",
+    "upload_data": "ડેટા અપલોડ",
+    "view_reorder": "રી-ઓર્ડર યાદી જુઓ",
+    "run_scenario": "દૃશ્ય ચલાવો",
+    "stocking_intelligence": "સ્ટોકિંગ બુદ્ધિ સૂચનો"
+  },
+  "forecast": {
+    "title": "ઇન્વેન્ટરી આગાહી",
+    "demand_projection": "માંગ પ્રક્ષેપણ",
+    "model_precision": "મૉડલ ચોક્કસાઈ",
+    "drivers_title": "આગાહી પરિબળો અને પ્રભાવો",
+    "weekly_breakdown": "સાપ્તાહિક ડેટા વિશ્લેષણ",
+    "test_scenario": "એક દૃશ્ય ચકાસો"
+  },
+  "products": {
+    "title": "ઉત્પાદન કેટલોગ",
+    "add_product": "ઉત્પાદન ઉમેરો",
+    "search": "ઉત્પાદનો શોધો...",
+    "name": "નામ",
+    "category": "શ્રેણી",
+    "stock": "વર્તમાન સ્ટોક",
+    "status": "સ્થિતિ",
+    "reorder_point": "રી-ઓર્ડર પોઇન્ટ",
+    "days_remaining": "બાકીના દિવસો",
+    "supplier": "સપ્લાયર",
+    "updated": "છેલ્લું અપડેટ"
+  },
+  "reorder": {
+    "title": "સ્માર્ટ રી-ઓર્ડર",
+    "total_items": "કુલ આઇટમ્સ",
+    "estimated_cost": "અંદાજિત ખર્ચ",
+    "most_urgent": "સૌથી તાકીદનું",
+    "export_csv": "CSV નિકાસ",
+    "export_pdf": "PDF નિકાસ"
+  },
+  "alerts": {
+    "title": "ચેતવણી કેન્દ્ર",
+    "all": "બધું",
+    "critical": "ગંભીર",
+    "warning": "ચેતવણી",
+    "info": "માહિતી",
+    "dismiss": "રદ કરો",
+    "stockout_prefix": "સ્ટોક ખતમ",
+    "low_stock_prefix": "ઓછો સ્ટોક",
+    "anomaly_prefix": "વિસંગતિ મળી",
+    "seasonal_prefix": "મોસમી ચેતવણી"
+  },
+  "settings": {
+    "title": "સેટિંગ્સ",
+    "profile": "પ્રોફાઇલ",
+    "notifications": "સૂચનાઓ",
+    "whatsapp": "WhatsApp કનેક્ટ"
+  },
+  "status": {
+    "healthy": "સ્વસ્થ",
+    "low_stock": "ઓછો સ્ટોક",
+    "critical": "ગંભીર",
+    "out_of_stock": "સ્ટોક ખતમ"
+  },
+  "common": {
+    "save": "સેવ કરો",
+    "cancel": "રદ કરો",
+    "delete": "કાઢી નાખો",
+    "edit": "સંપાદિત કરો",
+    "loading": "લોડ થઈ રહ્યું છે...",
+    "no_data": "કોઈ ડેટા ઉપલબ્ધ નથી"
+  },
+  "urgency": {
+    "high": "તાકીદનું",
+    "medium": "જલદી",
+    "low": "સામાન્ય"
+  },
+  "categories": {
+    "Medicines": "દવાઓ",
+    "Supplements": "સપ્લિમેન્ટ",
+    "Supplies": "સરબરાહ",
+    "Equipment": "ઉપકરણો",
+    "Grocery": "કિરાણા",
+    "Other": "અન્ય"
+  }
+}

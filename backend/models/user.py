@@ -27,3 +27,5 @@ class User(Base):
     notification_preference = relationship(
         "NotificationPreference", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
+    upload_history = relationship("UploadHistory", back_populates="user", cascade="all, delete-orphan")
+

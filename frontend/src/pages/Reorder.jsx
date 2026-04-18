@@ -1,13 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useApi } from '../hooks/useApi';
+import { useTransliterate } from '../hooks/useTransliterate';
 import { reorderApi } from '../services/api';
-
-const urgencyConfig = {
-  high: { label: 'Urgent', class: 'badge-danger', icon: '🔴' },
-  medium: { label: 'Soon', class: 'badge-warning', icon: '🟡' },
-  low: { label: 'Normal', class: 'badge-info', icon: '🟢' },
-};
 
 export default function Reorder() {
   const { t } = useTranslation();
@@ -17,6 +12,23 @@ export default function Reorder() {
   const [orderedSuppliers, setOrderedSuppliers] = useState(new Set());
 
   const { data: rawData, loading, error } = useApi(() => reorderApi.list(), []);
+
+  const reorderData = rawData || {};
+  const reorder_list = reorderData.reorder_list || [];
+
+  // Collect product names for transliteration
+  const productNames = useMemo(
+    () => reorder_list.map((item) => item.product_name).filter(Boolean),
+    [reorder_list]
+  );
+  const { translatedMap } = useTransliterate(productNames);
+
+  // Urgency config with translated labels
+  const urgencyConfig = {
+    high: { label: t('urgency.high'), class: 'badge-danger', icon: '🔴' },
+    medium: { label: t('urgency.medium'), class: 'badge-warning', icon: '🟡' },
+    low: { label: t('urgency.low'), class: 'badge-info', icon: '🟢' },
+  };
 
   // ── Export handlers (authenticated fetch, not bare <a href>) ──
   const handleExport = async (format) => {
@@ -63,9 +75,7 @@ export default function Reorder() {
     );
   }
 
-  const reorderData = rawData || {};
   const summary = reorderData.summary || { total_items: 0, estimated_total_cost: 0, most_urgent_product: '—', most_urgent_days_remaining: 0 };
-  const reorder_list = reorderData.reorder_list || [];
   const grouped_by_supplier = reorderData.grouped_by_supplier || {};
 
   return (
@@ -158,7 +168,7 @@ export default function Reorder() {
                 const isOrdered = orderedItems.has(item.product_id);
                 return (
                   <tr key={item.product_id} style={isOrdered ? { opacity: 0.5 } : undefined}>
-                    <td style={{ fontWeight: 600 }}>{item.product_name}</td>
+                    <td style={{ fontWeight: 600 }}>{translatedMap[item.product_name] || item.product_name}</td>
                     <td>{item.current_stock}</td>
                     <td>{item.forecast_demand}/week</td>
                     <td style={{ fontWeight: 700, color: 'var(--color-primary-light)' }}>{item.reorder_qty}</td>

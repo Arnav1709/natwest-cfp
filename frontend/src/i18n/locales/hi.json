@@ -18,29 +18,139 @@
     "hero_title": "नोटबुक से पूर्वानुमान 60 सेकंड में",
     "hero_subtitle": "भारतीय छोटे व्यवसायों के लिए AI-संचालित इन्वेंट्री प्रबंधन और मांग पूर्वानुमान।",
     "cta_start": "मुफ्त शुरू करें",
-    "cta_demo": "डेमो देखें"
+    "cta_demo": "डेमो देखें",
+    "feature_ocr": "हस्तलिखित OCR",
+    "feature_ocr_desc": "अपने हस्तलिखित बिक्री डेटा की फोटो लें। हमारा AI उत्पाद नाम, मात्रा और तारीखें निकालता है।",
+    "feature_disease": "रोग बुद्धिमत्ता",
+    "feature_disease_desc": "फार्मेसियों के लिए: AI-संचालित मौसमी रोग बुद्धिमत्ता। डेंगू, फ्लू और 15+ बीमारियों की अग्रिम चेतावनी।",
+    "feature_whatsapp": "WhatsApp पहले",
+    "feature_whatsapp_desc": "WhatsApp कमांड से इन्वेंट्री प्रबंधित करें। दैनिक ब्रीफिंग, रीऑर्डर अलर्ट और स्टॉक अपडेट प्राप्त करें।",
+    "how_title": "4 चरणों में स्पष्टता",
+    "step1": "डेटा अपलोड करें",
+    "step2": "सत्यापित करें",
+    "step3": "पूर्वानुमान",
+    "step4": "कार्यवाही करें",
+    "testimonials_title": "आपूर्ति श्रृंखला में विश्वसनीय"
   },
   "onboarding": {
     "choose_language": "अपनी भाषा चुनें",
     "choose_language_native": "अपनी भाषा चुनें",
     "choose_business": "आप किस प्रकार का व्यवसाय चलाते हैं?",
     "business_desc": "यह हमें आपकी पूर्वानुमान बुद्धिमत्ता को अनुकूलित करने में मदद करता है",
+    "setup_title": "अपनी दुकान सेटअप करें",
+    "setup_desc": "क्षेत्रीय बुद्धिमत्ता के लिए अपने व्यवसाय के बारे में बताएं",
     "continue": "जारी रखें",
     "back": "वापस",
     "complete": "सेटअप पूरा करें",
     "step": "चरण"
   },
+  "upload": {
+    "title": "अपना डेटा अपलोड करें",
+    "subtitle": "अपने बिक्री डेटा को आयात करने का तरीका चुनें",
+    "csv_title": "CSV / Excel अपलोड",
+    "csv_desc": "अपनी CSV या Excel फ़ाइल यहाँ खींचें और छोड़ें",
+    "image_title": "हस्तलिखित बही",
+    "image_desc": "अपनी हस्तलिखित नोटबुक की फोटो लें",
+    "manual_title": "मैनुअल एंट्री",
+    "manual_desc": "उत्पाद डेटा एक-एक करके दर्ज करें"
+  },
+  "verify": {
+    "title": "निकाले गए डेटा की पुष्टि करें",
+    "subtitle": "इन्वेंट्री बनाने से पहले डेटा की समीक्षा और पुष्टि करें",
+    "confidence": "विश्वास स्तर",
+    "confirm_label": "मैंने इस डेटा की समीक्षा कर ली है और पुष्टि करता हूँ",
+    "rescan": "दोबारा स्कैन करें",
+    "confirm_btn": "पुष्टि करें और इन्वेंट्री बनाएं"
+  },
   "dashboard": {
     "overview_title": "संचालन प्रदर्शन",
+    "overview_subtitle": "बुद्धिमान अवलोकन",
     "total_skus": "कुल SKU",
     "below_reorder": "रीऑर्डर से नीचे",
     "stockout_risk": "स्टॉकआउट जोखिम",
     "forecast_accuracy": "पूर्वानुमान सटीकता",
-    "inventory_value": "इन्वेंट्री मूल्य"
+    "inventory_value": "इन्वेंट्री मूल्य",
+    "stock_health": "स्टॉक स्वास्थ्य",
+    "intelligence_feed": "बुद्धिमत्ता फ़ीड",
+    "view_all_alerts": "सभी अलर्ट देखें",
+    "quick_actions": "त्वरित कार्य",
+    "upload_data": "डेटा अपलोड करें",
+    "view_reorder": "रीऑर्डर सूची देखें",
+    "run_scenario": "परिदृश्य चलाएं",
+    "stocking_intelligence": "स्टॉकिंग बुद्धिमत्ता सुझाव"
+  },
+  "forecast": {
+    "title": "इन्वेंट्री पूर्वानुमान",
+    "demand_projection": "मांग प्रक्षेपण",
+    "model_precision": "मॉडल सटीकता",
+    "drivers_title": "पूर्वानुमान कारक और प्रभाव",
+    "weekly_breakdown": "साप्ताहिक डेटा विश्लेषण",
+    "test_scenario": "एक परिदृश्य परखें"
+  },
+  "products": {
+    "title": "उत्पाद कैटलॉग",
+    "add_product": "उत्पाद जोड़ें",
+    "search": "उत्पाद खोजें...",
+    "name": "नाम",
+    "category": "श्रेणी",
+    "stock": "वर्तमान स्टॉक",
+    "status": "स्थिति",
+    "reorder_point": "रीऑर्डर स्तर",
+    "days_remaining": "शेष दिन",
+    "supplier": "आपूर्तिकर्ता",
+    "updated": "अंतिम अपडेट"
+  },
+  "reorder": {
+    "title": "स्मार्ट रीऑर्डर",
+    "total_items": "कुल आइटम",
+    "estimated_cost": "अनुमानित लागत",
+    "most_urgent": "सबसे जरूरी",
+    "export_csv": "CSV निर्यात",
+    "export_pdf": "PDF निर्यात"
+  },
+  "alerts": {
+    "title": "अलर्ट केंद्र",
+    "all": "सभी",
+    "critical": "गंभीर",
+    "warning": "चेतावनी",
+    "info": "जानकारी",
+    "dismiss": "खारिज करें",
+    "stockout_prefix": "स्टॉक ख़त्म",
+    "low_stock_prefix": "कम स्टॉक",
+    "anomaly_prefix": "विसंगति पाई गई",
+    "seasonal_prefix": "मौसमी अलर्ट"
+  },
+  "settings": {
+    "title": "सेटिंग्स",
+    "profile": "प्रोफ़ाइल",
+    "notifications": "सूचनाएं",
+    "whatsapp": "WhatsApp कनेक्ट"
+  },
+  "status": {
+    "healthy": "स्वस्थ",
+    "low_stock": "कम स्टॉक",
+    "critical": "गंभीर",
+    "out_of_stock": "स्टॉक ख़त्म"
   },
   "common": {
     "save": "सहेजें",
     "cancel": "रद्द करें",
-    "loading": "लोड हो रहा है..."
+    "delete": "हटाएं",
+    "edit": "संपादित करें",
+    "loading": "लोड हो रहा है...",
+    "no_data": "कोई डेटा उपलब्ध नहीं"
+  },
+  "urgency": {
+    "high": "जरूरी",
+    "medium": "जल्दी",
+    "low": "सामान्य"
+  },
+  "categories": {
+    "Medicines": "दवाइयां",
+    "Supplements": "सप्लीमेंट",
+    "Supplies": "आपूर्ति",
+    "Equipment": "उपकरण",
+    "Grocery": "किराना",
+    "Other": "अन्य"
   }
 }

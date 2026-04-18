@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { uploadApi, inventoryApi } from '../../services/api';
+import { useApi } from '../../hooks/useApi';
 
 export default function Upload() {
   const { t } = useTranslation();
@@ -37,6 +38,12 @@ export default function Upload() {
     lead_time_days: 3, expiry_date: '',
   });
   const [addingProduct, setAddingProduct] = useState(false);
+  const [showColumnGuide, setShowColumnGuide] = useState(false);
+
+  // Fetch real upload history from API
+  const { data: uploadHistoryData, loading: loadingHistory } = useApi(
+    () => uploadApi.history(10), [activeTab]
+  );
 
   // Fetch products when switching to update tab
   useEffect(() => {
@@ -362,45 +369,109 @@ export default function Upload() {
             </div>
           )}
 
-          {/* Recent Uploads */}
+          {/* CSV Column Format Guide */}
+          <div className="glass-card" style={{ marginBottom: 'var(--space-4)' }}>
+            <div
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+              onClick={() => setShowColumnGuide(!showColumnGuide)}
+            >
+              <h3 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                📋 CSV / Excel Column Format Guide
+              </h3>
+              <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', transition: 'transform 0.2s', transform: showColumnGuide ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+            </div>
+            {showColumnGuide && (
+              <div style={{ marginTop: 'var(--space-3)' }}>
+                <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
+                  Your file should contain at least a <strong>product name</strong> column. The system auto-detects columns from these names:
+                </p>
+                <table className="data-table" style={{ fontSize: 'var(--font-size-xs)' }}>
+                  <thead>
+                    <tr>
+                      <th>Field</th>
+                      <th>Accepted Column Names</th>
+                      <th>Required</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style={{ fontWeight: 600 }}>Product Name</td>
+                      <td><code>name</code>, <code>product_name</code>, <code>product</code>, <code>item</code>, <code>item_name</code>, <code>medicine</code>, <code>sku</code>, <code>description</code></td>
+                      <td><span className="badge badge-success">Required</span></td>
+                    </tr>
+                    <tr>
+                      <td style={{ fontWeight: 600 }}>Date</td>
+                      <td><code>date</code>, <code>sale_date</code>, <code>transaction_date</code>, <code>sold_date</code>, <code>order_date</code></td>
+                      <td><span className="badge badge-muted">Optional</span></td>
+                    </tr>
+                    <tr>
+                      <td style={{ fontWeight: 600 }}>Quantity</td>
+                      <td><code>quantity</code>, <code>qty</code>, <code>units</code>, <code>sold</code>, <code>units_sold</code>, <code>amount</code>, <code>count</code></td>
+                      <td><span className="badge badge-muted">Optional</span></td>
+                    </tr>
+                    <tr>
+                      <td style={{ fontWeight: 600 }}>Price</td>
+                      <td><code>price</code>, <code>unit_price</code>, <code>cost</code>, <code>unit_cost</code>, <code>rate</code>, <code>mrp</code>, <code>selling_price</code></td>
+                      <td><span className="badge badge-muted">Optional</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: 'var(--space-2)' }}>
+                  💡 Column names are case-insensitive. If no name column is found, the first text column is used.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Recent Uploads — from API */}
           <div className="glass-card">
             <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 'var(--space-4)' }}>
               Recent Uploads
             </h3>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>File</th>
-                  <th>Type</th>
-                  <th>Records</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>march_sales.csv</td>
-                  <td><span className="badge badge-info">CSV</span></td>
-                  <td>150</td>
-                  <td><span className="badge badge-success">Verified</span></td>
-                  <td>Apr 10, 2026</td>
-                </tr>
-                <tr>
-                  <td>ledger_page_3.jpg</td>
-                  <td><span className="badge badge-primary">OCR</span></td>
-                  <td>28</td>
-                  <td><span className="badge badge-success">Verified</span></td>
-                  <td>Apr 8, 2026</td>
-                </tr>
-                <tr>
-                  <td>feb_inventory.xlsx</td>
-                  <td><span className="badge badge-info">Excel</span></td>
-                  <td>95</td>
-                  <td><span className="badge badge-success">Verified</span></td>
-                  <td>Mar 28, 2026</td>
-                </tr>
-              </tbody>
-            </table>
+            {loadingHistory ? (
+              <div style={{ textAlign: 'center', padding: 'var(--space-4)', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+                Loading upload history...
+              </div>
+            ) : (!uploadHistoryData?.uploads || uploadHistoryData.uploads.length === 0) ? (
+              <div style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--color-text-muted)' }}>
+                <div style={{ fontSize: '2rem', marginBottom: 'var(--space-2)' }}>📭</div>
+                <p style={{ fontSize: 'var(--font-size-sm)' }}>No uploads yet — start by importing your first file above</p>
+              </div>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>File</th>
+                    <th>Type</th>
+                    <th>Records</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {uploadHistoryData.uploads.map((upload) => {
+                    const typeBadge = upload.upload_type === 'csv' ? 'badge-info' :
+                                     upload.upload_type === 'image' ? 'badge-primary' : 'badge-muted';
+                    const typeLabel = upload.upload_type === 'csv' ? 'CSV' :
+                                     upload.upload_type === 'image' ? 'OCR' : 'Manual';
+                    const statusBadge = upload.status === 'verified' ? 'badge-success' :
+                                       upload.status === 'pending' ? 'badge-warning' : 'badge-danger';
+                    const dateStr = upload.created_at
+                      ? new Date(upload.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })
+                      : '—';
+                    return (
+                      <tr key={upload.id}>
+                        <td style={{ fontWeight: 500 }}>{upload.filename}</td>
+                        <td><span className={`badge ${typeBadge}`}>{typeLabel}</span></td>
+                        <td>{upload.records}</td>
+                        <td><span className={`badge ${statusBadge}`}>{upload.status.charAt(0).toUpperCase() + upload.status.slice(1)}</span></td>
+                        <td>{dateStr}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         </>
       )}
