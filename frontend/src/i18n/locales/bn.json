@@ -1,0 +1,154 @@
+{
+  "app_name": "স্টকসেন্স",
+  "tagline": "ভবিষ্যদ্বাণী বুদ্ধিমত্তা",
+  "nav": {
+    "dashboard": "ড্যাশবোর্ড",
+    "forecasting": "পূর্বাভাস",
+    "inventory": "ইনভেন্টরি",
+    "products": "পণ্য",
+    "sales": "বিক্রয় রেকর্ড",
+    "upload": "আপলোড / আপডেট",
+    "reorder": "রি-অর্ডার",
+    "alerts": "সতর্কতা",
+    "settings": "সেটিংস",
+    "support": "সহায়তা",
+    "logout": "লগ আউট"
+  },
+  "landing": {
+    "hero_title": "নোটবুক থেকে পূর্বাভাস ৬০ সেকেন্ডে",
+    "hero_subtitle": "ভারতীয় ছোট ব্যবসার জন্য AI-চালিত ইনভেন্টরি ব্যবস্থাপনা ও চাহিদা পূর্বাভাস।",
+    "cta_start": "বিনামূল্যে শুরু করুন",
+    "cta_demo": "ডেমো দেখুন",
+    "feature_ocr": "হাতের লেখা OCR",
+    "feature_ocr_desc": "আপনার হাতে লেখা বিক্রয় ডেটার ছবি তুলুন।",
+    "feature_disease": "রোগ বুদ্ধিমত্তা",
+    "feature_disease_desc": "ফার্মেসির জন্য: AI-চালিত মৌসুমী রোগ বুদ্ধিমত্তা।",
+    "feature_whatsapp": "WhatsApp প্রথম",
+    "feature_whatsapp_desc": "WhatsApp কমান্ডের মাধ্যমে ইনভেন্টরি পরিচালনা করুন।",
+    "how_title": "৪ ধাপে স্বচ্ছতা",
+    "step1": "ডেটা আপলোড",
+    "step2": "যাচাই",
+    "step3": "পূর্বাভাস",
+    "step4": "পদক্ষেপ",
+    "testimonials_title": "সাপ্লাই চেইন জুড়ে বিশ্বস্ত"
+  },
+  "onboarding": {
+    "choose_language": "আপনার ভাষা বেছে নিন",
+    "choose_language_native": "আপনার ভাষা বেছে নিন",
+    "choose_business": "আপনি কোন ধরনের ব্যবসা পরিচালনা করেন?",
+    "business_desc": "এটি আপনার পূর্বাভাস বুদ্ধিমত্তা কাস্টমাইজ করতে সাহায্য করে",
+    "continue": "চালিয়ে যান",
+    "back": "পেছনে",
+    "complete": "সেটআপ সম্পূর্ণ করুন",
+    "step": "ধাপ"
+  },
+  "upload": {
+    "title": "আপনার ডেটা আপলোড করুন",
+    "subtitle": "আপনার বিক্রয় ডেটা আমদানি করার একটি পদ্ধতি বেছে নিন",
+    "csv_title": "CSV / Excel আপলোড",
+    "csv_desc": "আপনার CSV বা Excel ফাইল এখানে টেনে আনুন",
+    "image_title": "হাতে লেখা খাতা",
+    "image_desc": "আপনার হাতে লেখা নোটবুকের ছবি তুলুন",
+    "manual_title": "ম্যানুয়াল এন্ট্রি",
+    "manual_desc": "পণ্যের ডেটা একে একে প্রবেশ করান"
+  },
+  "verify": {
+    "title": "নিষ্কাশিত ডেটা যাচাই করুন",
+    "subtitle": "ইনভেন্টরি তৈরির আগে ডেটা পর্যালোচনা ও নিশ্চিত করুন",
+    "confidence": "আস্থা",
+    "confirm_label": "আমি এই ডেটা পর্যালোচনা করেছি এবং সঠিক বলে নিশ্চিত করছি",
+    "rescan": "পুনরায় স্ক্যান",
+    "confirm_btn": "নিশ্চিত করুন ও ইনভেন্টরি তৈরি করুন"
+  },
+  "dashboard": {
+    "overview_title": "পরিচালনা কর্মক্ষমতা",
+    "overview_subtitle": "বুদ্ধিমান সারসংক্ষেপ",
+    "total_skus": "মোট SKUs",
+    "below_reorder": "রি-অর্ডারের নিচে",
+    "stockout_risk": "স্টকআউট ঝুঁকি",
+    "forecast_accuracy": "পূর্বাভাস নির্ভুলতা",
+    "inventory_value": "ইনভেন্টরি মূল্য",
+    "stock_health": "স্টক স্বাস্থ্য",
+    "intelligence_feed": "বুদ্ধিমত্তা ফিড",
+    "view_all_alerts": "সব সতর্কতা দেখুন",
+    "quick_actions": "দ্রুত পদক্ষেপ",
+    "upload_data": "ডেটা আপলোড",
+    "view_reorder": "রি-অর্ডার তালিকা দেখুন",
+    "run_scenario": "দৃশ্যকল্প চালান",
+    "stocking_intelligence": "স্টকিং বুদ্ধিমত্তা পরামর্শ"
+  },
+  "forecast": {
+    "title": "ইনভেন্টরি পূর্বাভাস",
+    "demand_projection": "চাহিদা প্রক্ষেপণ",
+    "model_precision": "মডেল নির্ভুলতা",
+    "drivers_title": "পূর্বাভাস কারণ ও প্রভাব",
+    "weekly_breakdown": "সাপ্তাহিক ডেটা বিশ্লেষণ",
+    "test_scenario": "একটি দৃশ্যকল্প পরীক্ষা করুন"
+  },
+  "products": {
+    "title": "পণ্য ক্যাটালগ",
+    "add_product": "পণ্য যোগ করুন",
+    "search": "পণ্য খুঁজুন...",
+    "name": "নাম",
+    "category": "বিভাগ",
+    "stock": "বর্তমান স্টক",
+    "status": "অবস্থা",
+    "reorder_point": "রি-অর্ডার পয়েন্ট",
+    "days_remaining": "অবশিষ্ট দিন",
+    "supplier": "সরবরাহকারী",
+    "updated": "সর্বশেষ আপডেট"
+  },
+  "reorder": {
+    "title": "স্মার্ট রি-অর্ডার",
+    "total_items": "মোট আইটেম",
+    "estimated_cost": "আনুমানিক খরচ",
+    "most_urgent": "সবচেয়ে জরুরি",
+    "export_csv": "CSV রপ্তানি",
+    "export_pdf": "PDF রপ্তানি"
+  },
+  "alerts": {
+    "title": "সতর্কতা কেন্দ্র",
+    "all": "সব",
+    "critical": "গুরুতর",
+    "warning": "সতর্কতা",
+    "info": "তথ্য",
+    "dismiss": "বাতিল",
+    "stockout_prefix": "স্টক শেষ",
+    "low_stock_prefix": "কম স্টক",
+    "anomaly_prefix": "অসঙ্গতি ধরা পড়েছে",
+    "seasonal_prefix": "মৌসুমী সতর্কতা"
+  },
+  "settings": {
+    "title": "সেটিংস",
+    "profile": "প্রোফাইল",
+    "notifications": "বিজ্ঞপ্তি",
+    "whatsapp": "WhatsApp সংযোগ"
+  },
+  "status": {
+    "healthy": "সুস্থ",
+    "low_stock": "কম স্টক",
+    "critical": "গুরুতর",
+    "out_of_stock": "স্টক শেষ"
+  },
+  "common": {
+    "save": "সংরক্ষণ",
+    "cancel": "বাতিল",
+    "delete": "মুছুন",
+    "edit": "সম্পাদনা",
+    "loading": "লোড হচ্ছে...",
+    "no_data": "কোন ডেটা পাওয়া যায়নি"
+  },
+  "urgency": {
+    "high": "জরুরি",
+    "medium": "শীঘ্রই",
+    "low": "সাধারণ"
+  },
+  "categories": {
+    "Medicines": "ওষুধ",
+    "Supplements": "সাপ্লিমেন্ট",
+    "Supplies": "সরবরাহ",
+    "Equipment": "যন্ত্রপাতি",
+    "Grocery": "মুদিখানা",
+    "Other": "অন্যান্য"
+  }
+}

@@ -1,0 +1,154 @@
+{
+  "app_name": "స్టాక్‌సెన్స్",
+  "tagline": "అంచనా తెలివితేటలు",
+  "nav": {
+    "dashboard": "డ్యాష్‌బోర్డ్",
+    "forecasting": "అంచనా",
+    "inventory": "ఇన్వెంటరీ",
+    "products": "ఉత్పత్తులు",
+    "sales": "అమ్మకాలు నమోదు",
+    "upload": "అప్‌లోడ్ / అప్‌డేట్",
+    "reorder": "రీఆర్డర్",
+    "alerts": "అలర్ట్‌లు",
+    "settings": "సెట్టింగ్‌లు",
+    "support": "సహాయం",
+    "logout": "లాగ్ అవుట్"
+  },
+  "landing": {
+    "hero_title": "నోట్‌బుక్ నుండి అంచనా 60 సెకన్లలో",
+    "hero_subtitle": "భారతీయ చిన్న వ్యాపారాల కోసం AI-ఆధారిత ఇన్వెంటరీ నిర్వహణ & డిమాండ్ అంచనా.",
+    "cta_start": "ఉచితంగా ప్రారంభించండి",
+    "cta_demo": "డెమో చూడండి",
+    "feature_ocr": "చేతివ్రాత OCR",
+    "feature_ocr_desc": "మీ చేతివ్రాత అమ్మకాల డేటా ఫోటో తీయండి. మా AI ఉత్పత్తి పేర్లు, పరిమాణాలు మరియు తేదీలను సేకరిస్తుంది.",
+    "feature_disease": "వ్యాధి తెలివితేటలు",
+    "feature_disease_desc": "ఫార్మసీల కోసం: AI-ఆధారిత కాలానుగుణ వ్యాధి తెలివితేటలు.",
+    "feature_whatsapp": "WhatsApp ముందు",
+    "feature_whatsapp_desc": "WhatsApp ఆదేశాల ద్వారా ఇన్వెంటరీ నిర్వహించండి.",
+    "how_title": "4 దశల్లో స్పష్టత",
+    "step1": "డేటా అప్‌లోడ్",
+    "step2": "ధృవీకరించు",
+    "step3": "అంచనా",
+    "step4": "చర్య తీసుకో",
+    "testimonials_title": "సప్లై చెయిన్ అంతటా విశ్వసనీయం"
+  },
+  "onboarding": {
+    "choose_language": "మీ భాషను ఎంచుకోండి",
+    "choose_language_native": "మీ భాషను ఎంచుకోండి",
+    "choose_business": "మీరు ఏ రకమైన వ్యాపారం నడుపుతున్నారు?",
+    "business_desc": "ఇది మీ అంచనా తెలివితేటలను అనుకూలీకరించడంలో సహాయపడుతుంది",
+    "continue": "కొనసాగించు",
+    "back": "వెనుకకు",
+    "complete": "సెటప్ పూర్తి చేయండి",
+    "step": "దశ"
+  },
+  "upload": {
+    "title": "మీ డేటా అప్‌లోడ్ చేయండి",
+    "subtitle": "మీ అమ్మకాల డేటాను దిగుమతి చేసుకోవడానికి ఒక పద్ధతిని ఎంచుకోండి",
+    "csv_title": "CSV / Excel అప్‌లోడ్",
+    "csv_desc": "మీ CSV లేదా Excel ఫైల్‌ను ఇక్కడ లాగి వదలండి",
+    "image_title": "చేతివ్రాత లెడ్జర్",
+    "image_desc": "మీ చేతివ్రాత నోట్‌బుక్ ఫోటో తీయండి",
+    "manual_title": "మాన్యువల్ ఎంట్రీ",
+    "manual_desc": "ఉత్పత్తి డేటాను ఒక్కొక్కటిగా నమోదు చేయండి"
+  },
+  "verify": {
+    "title": "సేకరించిన డేటాను ధృవీకరించండి",
+    "subtitle": "ఇన్వెంటరీ నిర్మించే ముందు డేటాను సమీక్షించి నిర్ధారించండి",
+    "confidence": "నమ్మకం",
+    "confirm_label": "ఈ డేటా ఖచ్చితమైనదని నేను సమీక్షించి నిర్ధారించాను",
+    "rescan": "మళ్ళీ స్కాన్ చేయండి",
+    "confirm_btn": "నిర్ధారించి ఇన్వెంటరీ నిర్మించు"
+  },
+  "dashboard": {
+    "overview_title": "నిర్వహణ పనితీరు",
+    "overview_subtitle": "తెలివైన అవలోకనం",
+    "total_skus": "మొత్తం SKUs",
+    "below_reorder": "రీఆర్డర్ కంటే తక్కువ",
+    "stockout_risk": "స్టాక్‌అవుట్ ప్రమాదం",
+    "forecast_accuracy": "అంచనా ఖచ్చితత్వం",
+    "inventory_value": "ఇన్వెంటరీ విలువ",
+    "stock_health": "స్టాక్ ఆరోగ్యం",
+    "intelligence_feed": "తెలివితేటల ఫీడ్",
+    "view_all_alerts": "అన్ని అలర్ట్‌లు చూడండి",
+    "quick_actions": "త్వరిత చర్యలు",
+    "upload_data": "డేటా అప్‌లోడ్",
+    "view_reorder": "రీఆర్డర్ జాబితా చూడండి",
+    "run_scenario": "దృశ్యం అమలు చేయండి",
+    "stocking_intelligence": "స్టాకింగ్ తెలివి సూచనలు"
+  },
+  "forecast": {
+    "title": "ఇన్వెంటరీ అంచనా",
+    "demand_projection": "డిమాండ్ ప్రొజెక్షన్",
+    "model_precision": "మోడల్ ఖచ్చితత్వం",
+    "drivers_title": "అంచనా కారకాలు & ప్రభావాలు",
+    "weekly_breakdown": "వారపు డేటా విశ్లేషణ",
+    "test_scenario": "ఒక దృశ్యం పరీక్షించండి"
+  },
+  "products": {
+    "title": "ఉత్పత్తి కేటలాగ్",
+    "add_product": "ఉత్పత్తి జోడించు",
+    "search": "ఉత్పత్తులు వెతకండి...",
+    "name": "పేరు",
+    "category": "వర్గం",
+    "stock": "ప్రస్తుత స్టాక్",
+    "status": "స్థితి",
+    "reorder_point": "రీఆర్డర్ పాయింట్",
+    "days_remaining": "మిగిలిన రోజులు",
+    "supplier": "సరఫరాదారు",
+    "updated": "చివరి అప్‌డేట్"
+  },
+  "reorder": {
+    "title": "స్మార్ట్ రీఆర్డర్",
+    "total_items": "మొత్తం ఐటెమ్‌లు",
+    "estimated_cost": "అంచనా ఖర్చు",
+    "most_urgent": "అత్యవసరం",
+    "export_csv": "CSV ఎగుమతి",
+    "export_pdf": "PDF ఎగుమతి"
+  },
+  "alerts": {
+    "title": "అలర్ట్ కేంద్రం",
+    "all": "అన్ని",
+    "critical": "గంభీరం",
+    "warning": "హెచ్చరిక",
+    "info": "సమాచారం",
+    "dismiss": "తొలగించు",
+    "stockout_prefix": "స్టాక్ అయిపోయింది",
+    "low_stock_prefix": "తక్కువ స్టాక్",
+    "anomaly_prefix": "అసాధారణత గుర్తించబడింది",
+    "seasonal_prefix": "సీజన్ అలర్ట్"
+  },
+  "settings": {
+    "title": "సెట్టింగ్‌లు",
+    "profile": "ప్రొఫైల్",
+    "notifications": "నోటిఫికేషన్లు",
+    "whatsapp": "WhatsApp కనెక్ట్"
+  },
+  "status": {
+    "healthy": "ఆరోగ్యం",
+    "low_stock": "తక్కువ స్టాక్",
+    "critical": "గంభీరం",
+    "out_of_stock": "స్టాక్ అయిపోయింది"
+  },
+  "common": {
+    "save": "సేవ్ చేయి",
+    "cancel": "రద్దు చేయి",
+    "delete": "తొలగించు",
+    "edit": "సవరించు",
+    "loading": "లోడ్ అవుతోంది...",
+    "no_data": "డేటా అందుబాటులో లేదు"
+  },
+  "urgency": {
+    "high": "అత్యవసరం",
+    "medium": "త్వరలో",
+    "low": "సాధారణం"
+  },
+  "categories": {
+    "Medicines": "మందులు",
+    "Supplements": "సప్లిమెంట్లు",
+    "Supplies": "సరఫరాలు",
+    "Equipment": "పరికరాలు",
+    "Grocery": "కిరాణా",
+    "Other": "ఇతర"
+  }
+}

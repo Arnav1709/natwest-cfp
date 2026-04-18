@@ -1,15 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
+import { useTransliterate } from '../../hooks/useTransliterate';
 import { inventoryApi } from '../../services/api';
-
-const statusConfig = {
-  healthy: { label: 'Healthy', class: 'badge-success' },
-  low_stock: { label: 'Low Stock', class: 'badge-warning' },
-  critical: { label: 'Critical', class: 'badge-danger' },
-  out_of_stock: { label: 'Out of Stock', class: 'badge-danger' },
-};
 
 export default function ProductCatalog() {
   const { t } = useTranslation();
@@ -20,6 +14,21 @@ export default function ProductCatalog() {
 
   const { data: rawData, loading, error } = useApi(() => inventoryApi.list(), []);
   const products = Array.isArray(rawData) ? rawData : (rawData?.products || []);
+
+  // Collect product names for transliteration
+  const productNames = useMemo(
+    () => products.map((p) => p.name).filter(Boolean),
+    [products]
+  );
+  const { translatedMap } = useTransliterate(productNames);
+
+  // Status config with translated labels
+  const statusConfig = {
+    healthy: { label: t('status.healthy'), class: 'badge-success' },
+    low_stock: { label: t('status.low_stock'), class: 'badge-warning' },
+    critical: { label: t('status.critical'), class: 'badge-danger' },
+    out_of_stock: { label: t('status.out_of_stock'), class: 'badge-danger' },
+  };
 
   const filtered = products.filter(p => {
     const matchSearch = (p.name || '').toLowerCase().includes(search.toLowerCase());
@@ -71,19 +80,19 @@ export default function ProductCatalog() {
           />
         </div>
         <select className="form-select" value={category} onChange={(e) => setCategory(e.target.value)} style={{ minWidth: 140 }} id="filter-category">
-          <option value="all">All Categories</option>
-          <option value="medicines">Medicines</option>
-          <option value="supplements">Supplements</option>
-          <option value="supplies">Supplies</option>
-          <option value="equipment">Equipment</option>
-          <option value="grocery">Grocery</option>
+          <option value="all">{t('products.category')}</option>
+          <option value="medicines">{t('categories.Medicines')}</option>
+          <option value="supplements">{t('categories.Supplements')}</option>
+          <option value="supplies">{t('categories.Supplies')}</option>
+          <option value="equipment">{t('categories.Equipment')}</option>
+          <option value="grocery">{t('categories.Grocery')}</option>
         </select>
         <select className="form-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ minWidth: 140 }} id="filter-status">
-          <option value="all">All Status</option>
-          <option value="healthy">Healthy</option>
-          <option value="low_stock">Low Stock</option>
-          <option value="critical">Critical</option>
-          <option value="out_of_stock">Out of Stock</option>
+          <option value="all">{t('products.status')}</option>
+          <option value="healthy">{t('status.healthy')}</option>
+          <option value="low_stock">{t('status.low_stock')}</option>
+          <option value="critical">{t('status.critical')}</option>
+          <option value="out_of_stock">{t('status.out_of_stock')}</option>
         </select>
       </div>
 
@@ -124,10 +133,10 @@ export default function ProductCatalog() {
                           background: 'rgba(13,148,136,0.15)', display: 'flex',
                           alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem'
                         }}>💊</div>
-                        <span style={{ fontWeight: 600 }}>{p.name}</span>
+                        <span style={{ fontWeight: 600 }}>{translatedMap[p.name] || p.name}</span>
                       </div>
                     </td>
-                    <td style={{ textTransform: 'capitalize' }}>{p.category}</td>
+                    <td style={{ textTransform: 'capitalize' }}>{t(`categories.${p.category}`, { defaultValue: p.category })}</td>
                     <td>
                       <span style={{
                         fontWeight: 700,

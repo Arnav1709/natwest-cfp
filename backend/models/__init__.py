@@ -12,6 +12,8 @@ from models.alert import Alert
 from models.stock_movement import StockMovement
 from models.lookup import DiseaseSeason, FestivalCalendar
 from models.notification import NotificationPreference
+from models.upload_history import UploadHistory
+from models.translation_cache import TranslationCache
 
 __all__ = [
     "User",
@@ -25,4 +27,7 @@ __all__ = [
     "DiseaseSeason",
     "FestivalCalendar",
     "NotificationPreference",
+    "UploadHistory",
+    "TranslationCache",
 ]
+

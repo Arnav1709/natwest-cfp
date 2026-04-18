@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(nam
 logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
 # Import all routers
-from routers import auth, upload, inventory, forecast, anomalies, reorder, alerts, settings as settings_router, whatsapp, sales
+from routers import auth, upload, inventory, forecast, anomalies, reorder, alerts, settings as settings_router, whatsapp, sales, translate
 
 
 @asynccontextmanager
@@ -91,6 +91,7 @@ app.include_router(alerts.router)
 app.include_router(settings_router.router)
 app.include_router(whatsapp.router)
 app.include_router(sales.router)
+app.include_router(translate.router)
 
 
 @app.get("/")

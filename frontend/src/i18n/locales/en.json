@@ -114,7 +114,11 @@
     "critical": "Critical",
     "warning": "Warning",
     "info": "Info",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "stockout_prefix": "OUT OF STOCK",
+    "low_stock_prefix": "Low Stock",
+    "anomaly_prefix": "Anomaly Detected",
+    "seasonal_prefix": "Seasonal Alert"
   },
   "settings": {
     "title": "Settings",
@@ -135,5 +139,18 @@
     "edit": "Edit",
     "loading": "Loading...",
     "no_data": "No data available"
+  },
+  "urgency": {
+    "high": "Urgent",
+    "medium": "Soon",
+    "low": "Normal"
+  },
+  "categories": {
+    "Medicines": "Medicines",
+    "Supplements": "Supplements",
+    "Supplies": "Medical Supplies",
+    "Equipment": "Equipment",
+    "Grocery": "Grocery",
+    "Other": "Other"
   }
 }

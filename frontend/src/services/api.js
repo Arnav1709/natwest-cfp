@@ -107,6 +107,7 @@ export const uploadApi = {
     return request('/upload/image', { method: 'POST', body: formData, headers: {} });
   },
   verify: (data) => request('/upload/verify', { method: 'POST', body: JSON.stringify(data) }),
+  history: (limit = 10) => request(`/upload/history?limit=${limit}`),
 };
 
 // === Inventory ===
@@ -205,4 +206,13 @@ export const salesApi = {
     const query = new URLSearchParams(params).toString();
     return request(`/sales/history${query ? '?' + query : ''}`);
   },
+};
+
+// === Translation (AI transliteration) ===
+export const translateApi = {
+  translate: (texts, targetLang) =>
+    request('/translate', {
+      method: 'POST',
+      body: JSON.stringify({ texts, target_lang: targetLang }),
+    }),
 };

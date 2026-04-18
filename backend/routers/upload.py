@@ -1,16 +1,19 @@
 """
-Upload router — POST /api/upload/csv, /image, /verify
+Upload router — POST /api/upload/csv, /image, /verify, GET /api/upload/history
 """
 
 from datetime import date
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 from database import get_db
 from models.user import User
 from models.product import Product
 from models.sales import SalesHistory
+from models.upload_history import UploadHistory
 from utils.auth import get_current_user
 from utils.csv_parser import parse_csv
 from schemas.upload import (
@@ -23,6 +26,20 @@ from schemas.upload import (
 from services.ocr_service import process_ledger_image
 
 router = APIRouter(prefix="/api/upload", tags=["upload"])
+
+
+# ── Response schema for upload history ──
+class UploadHistoryItem(BaseModel):
+    id: int
+    filename: str
+    upload_type: str
+    records: int
+    status: str
+    created_at: Optional[str] = None
+
+class UploadHistoryResponse(BaseModel):
+    uploads: List[UploadHistoryItem]
+    total: int
 
 
 @router.post("/csv", response_model=CSVUploadResponse)
@@ -55,6 +72,17 @@ async def upload_csv(
             status_code=400,
             detail="No valid data rows found in the file",
         )
+
+    # Track upload in history
+    upload_record = UploadHistory(
+        user_id=current_user.id,
+        filename=file.filename,
+        upload_type="csv",
+        records=len(products),
+        status="pending",
+    )
+    db.add(upload_record)
+    db.commit()
 
     return CSVUploadResponse(
         products=products,
@@ -98,6 +126,17 @@ async def upload_image(
     if result.get("error"):
         raise HTTPException(status_code=422, detail=result["error"])
 
+    # Track upload in history
+    upload_record = UploadHistory(
+        user_id=current_user.id,
+        filename=image.filename,
+        upload_type="image",
+        records=len(result["extracted_data"]),
+        status="pending",
+    )
+    db.add(upload_record)
+    db.commit()
+
     return ImageUploadResponse(
         extracted_data=result["extracted_data"],
         overall_confidence=result["overall_confidence"],
@@ -122,11 +161,66 @@ def verify_data(
     source = (request.source or "manual").lower()
 
     if source == "csv":
-        return _handle_csv_sales_import(request, current_user, db)
+        result = _handle_csv_sales_import(request, current_user, db)
     elif source == "image":
-        return _handle_image_inventory_import(request, current_user, db)
+        result = _handle_image_inventory_import(request, current_user, db)
     else:
-        return _handle_manual_import(request, current_user, db)
+        result = _handle_manual_import(request, current_user, db)
+
+    # Mark the most recent pending upload for this user as verified
+    pending_upload = (
+        db.query(UploadHistory)
+        .filter(
+            UploadHistory.user_id == current_user.id,
+            UploadHistory.status == "pending",
+        )
+        .order_by(UploadHistory.created_at.desc())
+        .first()
+    )
+    if pending_upload:
+        pending_upload.status = "verified"
+        db.commit()
+
+    return result
+
+
+@router.get("/history", response_model=UploadHistoryResponse)
+def get_upload_history(
+    limit: int = Query(default=10, ge=1, le=50),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Get recent upload history for the current user.
+    """
+    total = (
+        db.query(UploadHistory)
+        .filter(UploadHistory.user_id == current_user.id)
+        .count()
+    )
+
+    uploads = (
+        db.query(UploadHistory)
+        .filter(UploadHistory.user_id == current_user.id)
+        .order_by(UploadHistory.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    return UploadHistoryResponse(
+        uploads=[
+            UploadHistoryItem(
+                id=u.id,
+                filename=u.filename,
+                upload_type=u.upload_type,
+                records=u.records,
+                status=u.status,
+                created_at=u.created_at.isoformat() if u.created_at else None,
+            )
+            for u in uploads
+        ],
+        total=total,
+    )
 
 
 def _fuzzy_match_product(name: str, products: list[Product], threshold: float = 0.6) -> Product | None:

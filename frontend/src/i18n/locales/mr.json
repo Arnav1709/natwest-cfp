@@ -1,0 +1,154 @@
+{
+  "app_name": "स्टॉकसेन्स",
+  "tagline": "भाकीत बुद्धिमत्ता",
+  "nav": {
+    "dashboard": "डॅशबोर्ड",
+    "forecasting": "भाकीत",
+    "inventory": "इन्व्हेंटरी",
+    "products": "उत्पादने",
+    "sales": "विक्री नोंदवा",
+    "upload": "अपलोड / अपडेट",
+    "reorder": "रीऑर्डर",
+    "alerts": "सूचना",
+    "settings": "सेटिंग्ज",
+    "support": "मदत",
+    "logout": "लॉगआउट"
+  },
+  "landing": {
+    "hero_title": "नोटबुकपासून भाकीत 60 सेकंदात",
+    "hero_subtitle": "भारतीय लघु व्यवसायांसाठी AI-चालित इन्व्हेंटरी व्यवस्थापन आणि मागणी भाकीत.",
+    "cta_start": "मोफत सुरू करा",
+    "cta_demo": "डेमो पहा",
+    "feature_ocr": "हस्तलिखित OCR",
+    "feature_ocr_desc": "तुमच्या हस्तलिखित विक्री डेटाचा फोटो काढा.",
+    "feature_disease": "रोग बुद्धिमत्ता",
+    "feature_disease_desc": "फार्मसींसाठी: AI-चालित हंगामी रोग बुद्धिमत्ता.",
+    "feature_whatsapp": "WhatsApp प्रथम",
+    "feature_whatsapp_desc": "WhatsApp कमांडद्वारे इन्व्हेंटरी व्यवस्थापित करा.",
+    "how_title": "4 पायऱ्यांत स्पष्टता",
+    "step1": "डेटा अपलोड",
+    "step2": "पडताळा",
+    "step3": "भाकीत",
+    "step4": "कृती करा",
+    "testimonials_title": "पुरवठा साखळीत विश्वासार्ह"
+  },
+  "onboarding": {
+    "choose_language": "तुमची भाषा निवडा",
+    "choose_language_native": "तुमची भाषा निवडा",
+    "choose_business": "तुम्ही कोणत्या प्रकारचा व्यवसाय चालवता?",
+    "business_desc": "हे तुमच्या भाकीत बुद्धिमत्तेला सानुकूलित करण्यास मदत करते",
+    "continue": "पुढे चला",
+    "back": "मागे",
+    "complete": "सेटअप पूर्ण करा",
+    "step": "पायरी"
+  },
+  "upload": {
+    "title": "तुमचा डेटा अपलोड करा",
+    "subtitle": "तुमचा विक्री डेटा आयात करण्यासाठी पद्धत निवडा",
+    "csv_title": "CSV / Excel अपलोड",
+    "csv_desc": "तुमची CSV किंवा Excel फाइल इथे ड्रॅग करा",
+    "image_title": "हस्तलिखित खातेवही",
+    "image_desc": "तुमच्या हस्तलिखित नोटबुकचा फोटो काढा",
+    "manual_title": "मॅन्युअल एंट्री",
+    "manual_desc": "उत्पादन डेटा एक एक करून प्रविष्ट करा"
+  },
+  "verify": {
+    "title": "काढलेला डेटा पडताळा",
+    "subtitle": "इन्व्हेंटरी तयार करण्यापूर्वी डेटाची समीक्षा करा",
+    "confidence": "विश्वास",
+    "confirm_label": "मी या डेटाची समीक्षा केली आहे आणि तो अचूक असल्याची पुष्टी करतो",
+    "rescan": "पुन्हा स्कॅन करा",
+    "confirm_btn": "पुष्टी करा आणि इन्व्हेंटरी तयार करा"
+  },
+  "dashboard": {
+    "overview_title": "ऑपरेशनल कामगिरी",
+    "overview_subtitle": "बुद्धिमान विहंगावलोकन",
+    "total_skus": "एकूण SKUs",
+    "below_reorder": "रीऑर्डरच्या खाली",
+    "stockout_risk": "स्टॉकआउट धोका",
+    "forecast_accuracy": "भाकीत अचूकता",
+    "inventory_value": "इन्व्हेंटरी मूल्य",
+    "stock_health": "स्टॉक आरोग्य",
+    "intelligence_feed": "बुद्धिमत्ता फीड",
+    "view_all_alerts": "सर्व सूचना पहा",
+    "quick_actions": "त्वरित कृती",
+    "upload_data": "डेटा अपलोड",
+    "view_reorder": "रीऑर्डर यादी पहा",
+    "run_scenario": "परिस्थिती चालवा",
+    "stocking_intelligence": "स्टॉकिंग बुद्धिमत्ता सूचना"
+  },
+  "forecast": {
+    "title": "इन्व्हेंटरी भाकीत",
+    "demand_projection": "मागणी प्रक्षेपण",
+    "model_precision": "मॉडेल अचूकता",
+    "drivers_title": "भाकीत कारक आणि प्रभाव",
+    "weekly_breakdown": "साप्ताहिक डेटा विश्लेषण",
+    "test_scenario": "एक परिस्थिती तपासा"
+  },
+  "products": {
+    "title": "उत्पादन कॅटलॉग",
+    "add_product": "उत्पादन जोडा",
+    "search": "उत्पादने शोधा...",
+    "name": "नाव",
+    "category": "श्रेणी",
+    "stock": "सध्याचा स्टॉक",
+    "status": "स्थिती",
+    "reorder_point": "रीऑर्डर बिंदू",
+    "days_remaining": "उरलेले दिवस",
+    "supplier": "पुरवठादार",
+    "updated": "शेवटचा अपडेट"
+  },
+  "reorder": {
+    "title": "स्मार्ट रीऑर्डर",
+    "total_items": "एकूण आयटम",
+    "estimated_cost": "अंदाजित खर्च",
+    "most_urgent": "सर्वात तातडीचे",
+    "export_csv": "CSV निर्यात",
+    "export_pdf": "PDF निर्यात"
+  },
+  "alerts": {
+    "title": "सूचना केंद्र",
+    "all": "सर्व",
+    "critical": "गंभीर",
+    "warning": "इशारा",
+    "info": "माहिती",
+    "dismiss": "काढून टाका",
+    "stockout_prefix": "स्टॉक संपला",
+    "low_stock_prefix": "कमी स्टॉक",
+    "anomaly_prefix": "विसंगती आढळली",
+    "seasonal_prefix": "हंगामी सूचना"
+  },
+  "settings": {
+    "title": "सेटिंग्ज",
+    "profile": "प्रोफाइल",
+    "notifications": "सूचना",
+    "whatsapp": "WhatsApp कनेक्ट"
+  },
+  "status": {
+    "healthy": "निरोगी",
+    "low_stock": "कमी स्टॉक",
+    "critical": "गंभीर",
+    "out_of_stock": "स्टॉक संपला"
+  },
+  "common": {
+    "save": "जतन करा",
+    "cancel": "रद्द करा",
+    "delete": "हटवा",
+    "edit": "संपादित करा",
+    "loading": "लोड होत आहे...",
+    "no_data": "डेटा उपलब्ध नाही"
+  },
+  "urgency": {
+    "high": "तातडीचे",
+    "medium": "लवकर",
+    "low": "सामान्य"
+  },
+  "categories": {
+    "Medicines": "औषधे",
+    "Supplements": "सप्लिमेंट्स",
+    "Supplies": "पुरवठा",
+    "Equipment": "उपकरणे",
+    "Grocery": "किराणा",
+    "Other": "इतर"
+  }
+}
