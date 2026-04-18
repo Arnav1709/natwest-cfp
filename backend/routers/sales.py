@@ -83,8 +83,22 @@ def record_sales(
             failed += 1
             continue
 
+        # Validate stock availability — reject if selling more than available
+        current_stock = product.current_stock or 0
+        if entry.quantity > current_stock:
+            results.append(SalesRecordResult(
+                product_name=product.name,
+                quantity=entry.quantity,
+                date=str(sale_date),
+                status="insufficient_stock",
+                new_stock=current_stock,
+                warning=f"Cannot sell {int(entry.quantity)} units — only {int(current_stock)} in stock.",
+            ))
+            failed += 1
+            continue
+
         # Deduct stock
-        old_stock = product.current_stock or 0
+        old_stock = current_stock
         product.current_stock = max(0, old_stock - entry.quantity)
 
         # Determine sale revenue

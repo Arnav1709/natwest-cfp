@@ -25,9 +25,10 @@ class SalesRecordResult(BaseModel):
     product_name: str
     quantity: float
     date: str
-    status: str  # "success", "product_not_found"
+    status: str  # "success", "product_not_found", "insufficient_stock"
     new_stock: Optional[float] = None
     alert: Optional[str] = None  # "low_stock", "stockout" if triggered
+    warning: Optional[str] = None  # Human-readable warning message
 
 
 class SalesRecordResponse(BaseModel):

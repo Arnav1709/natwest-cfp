@@ -1,6 +1,7 @@
-import { useState, useMemo, Component } from 'react';
+import { useState, useMemo, useEffect, Component } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { alertsApi } from '../../services/api';
 
 /**
  * Page-level error boundary — wraps <Outlet> so that if any individual page
@@ -81,7 +82,7 @@ const navItems = [
   { label: 'nav.sales',       path: '/sales',                 icon: '🧾' },
   { label: 'nav.upload',      path: '/upload',                icon: '📤' },
   { label: 'nav.reorder',     path: '/reorder',               icon: '🔄' },
-  { label: 'nav.alerts',      path: '/alerts',                icon: '🔔', badge: 3 },
+  { label: 'nav.alerts',      path: '/alerts',                icon: '🔔', badgeKey: 'alerts' },
   { label: 'nav.settings',    path: '/settings',              icon: '⚙️' },
 ];
 
@@ -95,6 +96,25 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [alertCount, setAlertCount] = useState(0);
+
+  // Fetch real alert count from API
+  useEffect(() => {
+    let mounted = true;
+    const fetchAlertCount = async () => {
+      try {
+        const data = await alertsApi.list();
+        const alerts = Array.isArray(data) ? data : (data?.alerts || []);
+        const undismissed = alerts.filter(a => !a.dismissed).length;
+        if (mounted) setAlertCount(undismissed);
+      } catch (_) {
+        // Silently fail — badge just won't show
+      }
+    };
+    fetchAlertCount();
+    const interval = setInterval(fetchAlertCount, 60_000); // Refresh every 60s
+    return () => { mounted = false; clearInterval(interval); };
+  }, []);
 
   // Get logged-in user info
   const user = useMemo(() => {
@@ -155,7 +175,7 @@ export default function Layout() {
             >
               <span className="sidebar-link-icon">{item.icon}</span>
               <span>{t(item.label)}</span>
-              {item.badge && <span className="sidebar-link-badge">{item.badge}</span>}
+              {item.badgeKey === 'alerts' && alertCount > 0 && <span className="sidebar-link-badge">{alertCount}</span>}
             </NavLink>
           ))}
         </nav>
