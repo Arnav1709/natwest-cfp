@@ -44,6 +44,7 @@ export default function Verify() {
       quantity: 0,
       price: 0,
       category: 'Other',
+      expiry_date: '',
       confidence: 1.0,
     }]);
   };
@@ -62,6 +63,7 @@ export default function Verify() {
           quantity: Number(row.quantity) || null,
           price: Number(row.price) || null,
           category: row.category || null,
+          expiry_date: row.expiry_date || null,
           unit: 'units',
         }));
 
@@ -216,6 +218,7 @@ export default function Verify() {
                   <th>Quantity</th>
                   <th>Unit Price (₹)</th>
                   <th>Category</th>
+                  <th>Expiry Date</th>
                   {source === 'image' && <th>Confidence</th>}
                   <th style={{ width: 40 }}></th>
                 </tr>
@@ -274,6 +277,15 @@ export default function Verify() {
                         <option value="Grocery">Grocery</option>
                         <option value="Other">Other</option>
                       </select>
+                    </td>
+                    <td>
+                      <input
+                        className="form-input"
+                        type="date"
+                        style={{ padding: '6px 10px', minHeight: '36px', width: '140px' }}
+                        value={row.expiry_date || ''}
+                        onChange={(e) => updateRow(row.id, 'expiry_date', e.target.value)}
+                      />
                     </td>
                     {source === 'image' && (
                       <td>

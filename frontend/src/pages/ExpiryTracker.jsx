@@ -21,6 +21,7 @@ const RISK_CONFIG = {
 export default function ExpiryTracker() {
   const { t } = useTranslation();
   const [riskFilter, setRiskFilter] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(null);
   const [adviceLoading, setAdviceLoading] = useState(false);
   const [advice, setAdvice] = useState(null);
   const [aiAvailable, setAiAvailable] = useState(true);
@@ -37,17 +38,46 @@ export default function ExpiryTracker() {
       const d = new Date(b.expiry_date);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const label = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      if (!months[key]) months[key] = { key, label, items: [], totalValue: 0 };
+      if (!months[key]) months[key] = { key, label, items: [], totalValue: 0, totalQty: 0 };
       months[key].items.push(b);
       months[key].totalValue += b.total_value;
+      months[key].totalQty += b.quantity || 0;
     });
     return Object.values(months).sort((a, b) => a.key.localeCompare(b.key));
   }, [batches]);
 
-  // Filter batches by risk
-  const filteredBatches = riskFilter
-    ? batches.filter((b) => b.risk === riskFilter)
-    : batches;
+  // Filter batches by risk AND/OR selected month
+  const filteredBatches = useMemo(() => {
+    let result = batches;
+    if (riskFilter) {
+      result = result.filter((b) => b.risk === riskFilter);
+    }
+    if (selectedMonth) {
+      result = result.filter((b) => {
+        const d = new Date(b.expiry_date);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        return key === selectedMonth;
+      });
+    }
+    return result;
+  }, [batches, riskFilter, selectedMonth]);
+
+  // Handle month card click
+  const handleMonthClick = (monthKey) => {
+    setSelectedMonth(selectedMonth === monthKey ? null : monthKey);
+  };
+
+  // Clear all filters
+  const hasAnyFilter = riskFilter || selectedMonth;
+  const clearAllFilters = () => {
+    setRiskFilter(null);
+    setSelectedMonth(null);
+  };
+
+  // Get selected month label for display
+  const selectedMonthLabel = selectedMonth
+    ? calendarData.find((m) => m.key === selectedMonth)?.label || selectedMonth
+    : null;
 
   // Fetch AI advice
   const handleGetAdvice = async () => {
@@ -121,9 +151,16 @@ export default function ExpiryTracker() {
 
       {/* Calendar Timeline */}
       <div className="glass-card" style={{ marginBottom: 'var(--space-6)', overflow: 'hidden' }}>
-        <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, marginBottom: 'var(--space-4)' }}>
-          📅 Expiry Calendar
-        </h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+          <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, margin: 0 }}>
+            📅 Expiry Calendar
+          </h3>
+          {selectedMonth && (
+            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary-light)', background: 'rgba(13,148,136,0.15)', padding: '4px 12px', borderRadius: 'var(--radius-full)', fontWeight: 600 }}>
+              Viewing: {selectedMonthLabel}
+            </span>
+          )}
+        </div>
         {calendarData.length === 0 ? (
           <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 'var(--space-4)' }}>
             No batches with expiry dates found.
@@ -135,20 +172,36 @@ export default function ExpiryTracker() {
                 : month.items.some((b) => b.risk === 'critical') ? 'critical'
                 : month.items.some((b) => b.risk === 'warning') ? 'warning' : 'safe';
               const rc = RISK_CONFIG[worstRisk];
+              const isSelected = selectedMonth === month.key;
 
               return (
                 <div
                   key={month.key}
+                  onClick={() => handleMonthClick(month.key)}
                   style={{
-                    minWidth: 200, flex: '0 0 auto',
+                    minWidth: 200, maxWidth: 220, flex: '0 0 auto',
                     background: rc.bg, borderRadius: 'var(--radius-lg)',
-                    border: `1px solid ${rc.color}33`, padding: 'var(--space-3)',
+                    border: isSelected ? `2px solid ${rc.color}` : `1px solid ${rc.color}33`,
+                    padding: 'var(--space-3)',
+                    cursor: 'pointer',
+                    transition: 'border 0.2s ease',
                   }}
                 >
-                  <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: rc.color, marginBottom: 'var(--space-2)' }}>
-                    {month.label}
+                  {/* Month Header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
+                    <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: rc.color }}>
+                      {month.label}
+                    </div>
+                    <div style={{
+                      fontSize: '0.65rem', fontWeight: 600, color: 'var(--color-text-muted)',
+                      background: 'rgba(255,255,255,0.08)', padding: '2px 8px', borderRadius: 'var(--radius-full)',
+                    }}>
+                      {month.items.length} · {month.totalQty} qty
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+
+                  {/* Items List — always show max 4 */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                     {month.items.slice(0, 4).map((b) => {
                       const brc = RISK_CONFIG[b.risk];
                       return (
@@ -158,15 +211,20 @@ export default function ExpiryTracker() {
                             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                             fontSize: 'var(--font-size-xs)', padding: '4px 8px',
                             background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-sm)',
-                            borderLeft: `3px solid ${brc.color}`,
+                            borderLeft: `3px solid ${brc.color}`, gap: 6,
                           }}
                         >
-                          <span style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
+                          <span style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 100, flex: 1 }}>
                             {b.product_name}
                           </span>
-                          <span style={{ color: brc.color, fontWeight: 600, fontSize: '0.65rem' }}>
-                            {b.days_to_expiry <= 0 ? 'EXP' : `${b.days_to_expiry}d`}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                            <span style={{ fontSize: '0.6rem', color: 'var(--color-text-muted)', background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: 'var(--radius-sm)' }}>
+                              ×{b.quantity}
+                            </span>
+                            <span style={{ color: brc.color, fontWeight: 600, fontSize: '0.65rem', minWidth: 28, textAlign: 'right' }}>
+                              {b.days_to_expiry <= 0 ? 'EXP' : `${b.days_to_expiry}d`}
+                            </span>
+                          </div>
                         </div>
                       );
                     })}
@@ -176,6 +234,8 @@ export default function ExpiryTracker() {
                       </div>
                     )}
                   </div>
+
+                  {/* Footer */}
                   <div style={{ marginTop: 'var(--space-2)', fontSize: '0.7rem', color: 'var(--color-text-muted)', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 6 }}>
                     💰 ₹{Math.round(month.totalValue).toLocaleString()} at risk
                   </div>
@@ -266,18 +326,63 @@ export default function ExpiryTracker() {
 
       {/* Detailed Batch Table */}
       <div className="glass-card" style={{ padding: 0, overflow: 'auto' }}>
-        <div style={{ padding: 'var(--space-4) var(--space-4) var(--space-2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600 }}>📋 All Batches</h3>
-          {riskFilter && (
-            <button className="btn btn-ghost btn-sm" onClick={() => setRiskFilter(null)}>
-              ✕ Clear filter
+        <div style={{ padding: 'var(--space-4) var(--space-4) var(--space-2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, margin: 0 }}>📋 {selectedMonthLabel ? `${selectedMonthLabel} Batches` : 'All Batches'}</h3>
+            {hasAnyFilter && (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                {selectedMonth && (
+                  <span style={{
+                    fontSize: '0.7rem', background: 'rgba(13,148,136,0.15)', color: 'var(--color-primary-light)',
+                    padding: '3px 10px', borderRadius: 'var(--radius-full)', fontWeight: 600,
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                  }}>
+                    📅 {selectedMonthLabel}
+                    <span
+                      style={{ cursor: 'pointer', marginLeft: 2, opacity: 0.7 }}
+                      onClick={(e) => { e.stopPropagation(); setSelectedMonth(null); }}
+                    >✕</span>
+                  </span>
+                )}
+                {riskFilter && (
+                  <span style={{
+                    fontSize: '0.7rem', background: `${RISK_CONFIG[riskFilter].color}20`, color: RISK_CONFIG[riskFilter].color,
+                    padding: '3px 10px', borderRadius: 'var(--radius-full)', fontWeight: 600,
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                  }}>
+                    {RISK_CONFIG[riskFilter].label}
+                    <span
+                      style={{ cursor: 'pointer', marginLeft: 2, opacity: 0.7 }}
+                      onClick={(e) => { e.stopPropagation(); setRiskFilter(null); }}
+                    >✕</span>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+          {hasAnyFilter && (
+            <button className="btn btn-ghost btn-sm" onClick={clearAllFilters} style={{ fontSize: '0.75rem' }}>
+              ✕ Clear all filters
             </button>
           )}
         </div>
+
+        {/* Result count */}
+        {hasAnyFilter && (
+          <div style={{ padding: '0 var(--space-4) var(--space-2)', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+            Showing {filteredBatches.length} of {batches.length} batches
+          </div>
+        )}
+
         {filteredBatches.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--color-text-muted)' }}>
             <div style={{ fontSize: '2rem', marginBottom: 'var(--space-2)' }}>📦</div>
-            <p>No batches found. Add batches via the Upload page to start tracking expiry dates.</p>
+            <p>{hasAnyFilter ? 'No batches match the current filters.' : 'No batches found. Add batches via the Upload page to start tracking expiry dates.'}</p>
+            {hasAnyFilter && (
+              <button className="btn btn-ghost btn-sm" onClick={clearAllFilters} style={{ marginTop: 'var(--space-2)' }}>
+                Clear filters
+              </button>
+            )}
           </div>
         ) : (
           <table className="data-table">

@@ -141,6 +141,7 @@ export default function Upload() {
           quantity: item.quantity || 0,
           price: item.price || 0,
           category: item.category || 'Other',
+          expiry_date: item.expiry_date || '',
           confidence: item.confidence || 1.0,
         }));
 
@@ -396,7 +397,7 @@ export default function Upload() {
                   <tbody>
                     <tr>
                       <td style={{ fontWeight: 600 }}>Product Name</td>
-                      <td><code>name</code>, <code>product_name</code>, <code>product</code>, <code>item</code>, <code>item_name</code>, <code>medicine</code>, <code>sku</code>, <code>description</code></td>
+                      <td><code>product_name</code>, <code>product</code>, <code>name</code>, <code>item_name</code>, <code>item</code>, <code>medicine</code>, <code>sku</code>, <code>description</code></td>
                       <td><span className="badge badge-success">Required</span></td>
                     </tr>
                     <tr>
@@ -406,12 +407,22 @@ export default function Upload() {
                     </tr>
                     <tr>
                       <td style={{ fontWeight: 600 }}>Quantity</td>
-                      <td><code>quantity</code>, <code>qty</code>, <code>units</code>, <code>sold</code>, <code>units_sold</code>, <code>amount</code>, <code>count</code></td>
+                      <td><code>quantity</code>, <code>qty</code>, <code>units</code>, <code>sold</code>, <code>units_sold</code>, <code>stock</code>, <code>current_stock</code></td>
                       <td><span className="badge badge-muted">Optional</span></td>
                     </tr>
                     <tr>
                       <td style={{ fontWeight: 600 }}>Price</td>
                       <td><code>price</code>, <code>unit_price</code>, <code>cost</code>, <code>unit_cost</code>, <code>rate</code>, <code>mrp</code>, <code>selling_price</code></td>
+                      <td><span className="badge badge-muted">Optional</span></td>
+                    </tr>
+                    <tr>
+                      <td style={{ fontWeight: 600 }}>Expiry Date</td>
+                      <td><code>expiry_date</code>, <code>expiry</code>, <code>exp_date</code>, <code>expiration_date</code>, <code>best_before</code>, <code>valid_until</code></td>
+                      <td><span className="badge badge-muted">Optional</span></td>
+                    </tr>
+                    <tr>
+                      <td style={{ fontWeight: 600 }}>Category</td>
+                      <td><code>category</code>, <code>type</code>, <code>product_type</code>, <code>product_category</code>, <code>group</code></td>
                       <td><span className="badge badge-muted">Optional</span></td>
                     </tr>
                   </tbody>

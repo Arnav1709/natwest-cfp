@@ -1,6 +1,7 @@
 """
 CSV/Excel parser utility.
-Auto-detects columns (product name, date, quantity, price) from uploaded files.
+Auto-detects columns (product name, date, quantity, price, expiry, category)
+from uploaded files.
 """
 
 import io
@@ -14,7 +15,7 @@ from schemas.upload import ParsedProduct
 # Common column name variations for auto-detection
 COLUMN_ALIASES = {
     "name": [
-        "name", "product_name", "product", "item", "item_name",
+        "product_name", "product", "name", "item_name", "item",
         "medicine", "medicine_name", "sku", "description",
     ],
     "date": [
@@ -23,12 +24,28 @@ COLUMN_ALIASES = {
     ],
     "quantity": [
         "quantity", "qty", "units", "sold", "units_sold",
-        "amount", "count", "num",
+        "amount", "count", "num", "stock", "current_stock",
     ],
     "price": [
         "price", "unit_price", "cost", "unit_cost", "rate",
         "mrp", "selling_price", "revenue",
     ],
+    "expiry_date": [
+        "expiry_date", "expiry", "exp_date", "expiration_date",
+        "expiration", "exp", "best_before", "use_before",
+        "valid_until", "valid_till", "shelf_life_end",
+    ],
+    "category": [
+        "category", "cat", "type", "product_type", "group",
+        "product_category", "item_category", "class",
+    ],
+}
+
+# Column names that look like identifiers and should NOT be used as
+# the product name when a real name column exists.
+_ID_COLUMN_NAMES = {
+    "product_id", "id", "item_id", "sku_id", "sr", "sr_no",
+    "serial", "serial_no", "s_no", "sno", "sl_no", "index",
 }
 
 
@@ -38,7 +55,7 @@ def _detect_column(df_columns: List[str], target: str) -> str | None:
 
     Args:
         df_columns: List of column names from the DataFrame.
-        target: One of 'name', 'date', 'quantity', 'price'.
+        target: One of 'name', 'date', 'quantity', 'price', 'expiry_date', 'category'.
 
     Returns:
         The matching column name, or None if not found.
@@ -57,7 +74,8 @@ def parse_csv(file_content: bytes, filename: str) -> Tuple[List[ParsedProduct], 
     """
     Parse a CSV or Excel file and extract product/sales data.
 
-    Auto-detects column names for product name, date, quantity, and price.
+    Auto-detects column names for product name, date, quantity, price,
+    expiry date, and category.
     Returns parsed products and the list of detected column mappings.
 
     Args:
@@ -85,6 +103,8 @@ def parse_csv(file_content: bytes, filename: str) -> Tuple[List[ParsedProduct], 
     date_col = _detect_column(df.columns.tolist(), "date")
     qty_col = _detect_column(df.columns.tolist(), "quantity")
     price_col = _detect_column(df.columns.tolist(), "price")
+    expiry_col = _detect_column(df.columns.tolist(), "expiry_date")
+    category_col = _detect_column(df.columns.tolist(), "category")
 
     detected_columns = []
     if name_col:
@@ -95,10 +115,17 @@ def parse_csv(file_content: bytes, filename: str) -> Tuple[List[ParsedProduct], 
         detected_columns.append("quantity")
     if price_col:
         detected_columns.append("unit_price")
+    if expiry_col:
+        detected_columns.append("expiry_date")
+    if category_col:
+        detected_columns.append("category")
 
-    # If no name column detected, try the first text column
+    # If no name column detected, try the first text column that
+    # is NOT explicitly an ID/numeric-identifier column.
     if not name_col:
         for col in df.columns:
+            if col.lower().strip() in _ID_COLUMN_NAMES:
+                continue
             if df[col].dtype == "object":
                 name_col = col
                 detected_columns.insert(0, "product_name")
@@ -131,12 +158,26 @@ def parse_csv(file_content: bytes, filename: str) -> Tuple[List[ParsedProduct], 
             except (ValueError, TypeError):
                 pass
 
+        expiry_val = None
+        if expiry_col and pd.notna(row.get(expiry_col)):
+            try:
+                expiry_val = str(pd.to_datetime(row[expiry_col]).date())
+            except Exception:
+                expiry_val = str(row[expiry_col])
+
+        category_val = None
+        if category_col and pd.notna(row.get(category_col)):
+            category_val = str(row[category_col]).strip()
+
         products.append(ParsedProduct(
             name=name_val,
             date=date_val,
             quantity=qty_val,
             price=price_val,
+            expiry_date=expiry_val,
+            category=category_val,
             confidence=1.0,
         ))
 
     return products, detected_columns
+

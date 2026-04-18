@@ -13,6 +13,7 @@ class ParsedProduct(BaseModel):
     quantity: Optional[float] = None
     price: Optional[float] = None
     category: Optional[str] = None
+    expiry_date: Optional[str] = None  # ISO date string e.g. "2026-08-15"
     confidence: float = 1.0
 
 
