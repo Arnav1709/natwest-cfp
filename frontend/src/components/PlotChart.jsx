@@ -1,7 +1,5 @@
 import { useState, useEffect, Component } from 'react';
 
-let _cachedPlotComponent = null;
-
 /**
  * Error boundary that catches Plotly render crashes
  * and shows a fallback instead of blanking the entire page.
@@ -49,29 +47,46 @@ class PlotErrorBoundary extends Component {
 }
 
 /**
- * Plotly chart wrapper that handles CJS/ESM interop properly.
- * react-plotly.js default export is a CJS module that Vite wraps in
- * { default: { default: PlotComponent } }, so we unwrap it dynamically.
+ * Resolve the actual Plot component from react-plotly.js module.
+ * Handles CJS/ESM interop: could be mod.default or mod.default.default.
+ */
+function resolvePlotComponent(mod) {
+  let Comp = mod.default || mod;
+  if (Comp && typeof Comp !== 'function' && Comp.default) {
+    Comp = Comp.default;
+  }
+  return typeof Comp === 'function' ? Comp : null;
+}
+
+/**
+ * Plotly chart wrapper with dynamic import.
+ *
+ * FIX: Removed the module-level _cachedPlotComponent variable that
+ * was causing "Cannot call a class as a function" crashes.
+ *
+ * The old code cached the resolved component reference in a module-level
+ * variable and reused it across route navigations. When React Router
+ * unmounted and remounted a page with PlotChart, the stale class reference
+ * from the previous module evaluation context would fail with the
+ * "Cannot call a class as a function" TypeError.
+ *
+ * Now each PlotChart instance does its own dynamic import.
+ * The browser/bundler deduplicates the actual network request, so there's
+ * no performance penalty — `import()` returns a cached module promise.
  */
 export default function PlotChart({ data, layout, config, style, ...rest }) {
-  const [PlotComp, setPlotComp] = useState(_cachedPlotComponent);
+  const [PlotComp, setPlotComp] = useState(null);
   const [revision, setRevision] = useState(0);
 
   useEffect(() => {
-    if (_cachedPlotComponent) return;
-
     let cancelled = false;
+
     import('react-plotly.js').then((mod) => {
-      // Handle CJS interop: could be mod.default or mod.default.default
-      let Component = mod.default || mod;
-      if (Component && typeof Component !== 'function' && Component.default) {
-        Component = Component.default;
-      }
-      if (!cancelled && typeof Component === 'function') {
-        _cachedPlotComponent = Component;
-        setPlotComp(() => Component);
+      const Comp = resolvePlotComponent(mod);
+      if (!cancelled && Comp) {
+        setPlotComp(() => Comp);
       } else if (!cancelled) {
-        console.error('react-plotly.js did not export a valid React component. Got:', typeof Component, Component);
+        console.error('react-plotly.js did not export a valid React component.');
       }
     }).catch(err => {
       console.error('Failed to load react-plotly.js:', err);
@@ -91,8 +106,13 @@ export default function PlotChart({ data, layout, config, style, ...rest }) {
     ...config,
   };
 
-  // Generate a stable key based on data to force clean re-mounts
-  const dataKey = JSON.stringify(data?.map?.(d => d?.values || d?.y || []) || []);
+  // Generate a stable key based on data
+  let dataKey;
+  try {
+    dataKey = JSON.stringify(data?.map?.(d => d?.values || d?.y || []) || []);
+  } catch {
+    dataKey = String(revision);
+  }
 
   if (!PlotComp) {
     return (
@@ -115,7 +135,6 @@ export default function PlotChart({ data, layout, config, style, ...rest }) {
   return (
     <PlotErrorBoundary dataKey={dataKey} height={layout?.height}>
       <PlotComp
-        key={dataKey}
         data={data}
         layout={layout}
         config={mergedConfig}
