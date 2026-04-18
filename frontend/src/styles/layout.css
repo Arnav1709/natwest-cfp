@@ -132,7 +132,7 @@
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--color-text-muted);
-  padding: var(--space-4) var(--space-3) var(--space-2);
+  padding: var(--space-4) var(--space-4) var(--space-2);
   white-space: nowrap;
   overflow: hidden;
 }
@@ -191,10 +191,12 @@
 .sidebar-link-icon {
   width: 24px;
   height: 24px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 1.1rem;
+  line-height: 1;
+  text-align: center;
   flex-shrink: 0;
   transition: transform var(--transition-fast);
 }
