@@ -1,243 +1,155 @@
-import { useState, useMemo, useEffect, Component } from 'react';
-import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { alertsApi } from '../../services/api';
-
-/**
- * Page-level error boundary — wraps <Outlet> so that if any individual page
- * crashes, only the content area shows the error. The sidebar stays functional
- * and the user can navigate to a different page without a full reload.
- */
-class PageErrorBoundary extends Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error, info) {
-    console.error('Page crash caught:', error, info?.componentStack);
-  }
-
-  componentDidUpdate(prevProps) {
-    // Reset error when user navigates to a different page
-    if (prevProps.locationKey !== this.props.locationKey && this.state.hasError) {
-      this.setState({ hasError: false, error: null });
-    }
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          minHeight: '60vh', padding: '2rem', textAlign: 'center',
-        }}>
-          <div>
-            <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>⚠️</div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#F8FAFC', marginBottom: '0.5rem' }}>
-              Page failed to load
-            </h2>
-            <p style={{ color: '#94A3B8', fontSize: '0.875rem', marginBottom: '1rem' }}>
-              {this.state.error?.message || 'An error occurred while rendering this page.'}
-            </p>
-            <p style={{ color: '#64748B', fontSize: '0.75rem', marginBottom: '1.5rem' }}>
-              Try navigating to a different page from the sidebar, or reload.
-            </p>
-            <button
-              onClick={() => this.setState({ hasError: false, error: null })}
-              style={{
-                padding: '8px 20px', background: 'linear-gradient(135deg, #0D9488, #10B981)',
-                color: 'white', border: 'none', borderRadius: 8, fontWeight: 600,
-                cursor: 'pointer', fontSize: '0.85rem', marginRight: '0.5rem',
-              }}
-            >
-              ↻ Retry
-            </button>
-            <button
-              onClick={() => window.location.reload()}
-              style={{
-                padding: '8px 20px', background: 'rgba(255,255,255,0.1)',
-                color: '#94A3B8', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8,
-                fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem',
-              }}
-            >
-              🔄 Reload
-            </button>
-          </div>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
 
 const navItems = [
-  { label: 'nav.dashboard',   path: '/dashboard/overview',    icon: '📊' },
-  { label: 'nav.forecasting', path: '/dashboard/forecasting', icon: '📈' },
-  { label: 'nav.inventory',   path: '/dashboard/inventory',   icon: '📦' },
-  { label: 'nav.sales',       path: '/sales',                 icon: '🧾' },
-  { label: 'nav.upload',      path: '/upload',                icon: '📤' },
-  { label: 'nav.reorder',     path: '/reorder',               icon: '🔄' },
-  { label: 'nav.expiry',      path: '/expiry',                icon: '⏰' },
-  { label: 'nav.alerts',      path: '/alerts',                icon: '🔔', badgeKey: 'alerts' },
-  { label: 'nav.settings',    path: '/settings',              icon: '⚙️' },
-];
-
-const bottomItems = [
-  { label: 'nav.support', path: '#', icon: '💬' },
-  { label: 'nav.logout',  path: '/', icon: '🚪' },
+  { section: 'Main' },
+  { path: '/dashboard/overview', icon: '📊', label: 'Overview' },
+  { path: '/dashboard/forecasting', icon: '🔮', label: 'Forecasting' },
+  { path: '/dashboard/inventory', icon: '📦', label: 'Inventory Health' },
+  { path: '/dashboard/scenarios', icon: '🧪', label: 'Scenarios' },
+  { section: 'Operations' },
+  { path: '/products', icon: '🏷️', label: 'Products' },
+  { path: '/sales', icon: '💳', label: 'Record Sales' },
+  { path: '/reorder', icon: '🔄', label: 'Reorder' },
+  { path: '/expiry', icon: '⏰', label: 'Expiry Tracker' },
+  { path: '/alerts', icon: '🔔', label: 'Alerts', badge: true },
+  { section: 'Data' },
+  { path: '/upload', icon: '📤', label: 'Upload Data' },
+  { section: 'System' },
+  { path: '/settings', icon: '⚙️', label: 'Settings' },
 ];
 
 export default function Layout() {
   const { t } = useTranslation();
-  const location = useLocation();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [alertCount, setAlertCount] = useState(0);
+  const location = useLocation();
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [alertCount, setAlertCount] = useState(3);
 
-  // Fetch real alert count from API
-  useEffect(() => {
-    let mounted = true;
-    const fetchAlertCount = async () => {
-      try {
-        const data = await alertsApi.list();
-        const alerts = Array.isArray(data) ? data : (data?.alerts || []);
-        const undismissed = alerts.filter(a => !a.dismissed).length;
-        if (mounted) setAlertCount(undismissed);
-      } catch (_) {
-        // Silently fail — badge just won't show
-      }
-    };
-    fetchAlertCount();
-    const interval = setInterval(fetchAlertCount, 60_000); // Refresh every 60s
-    return () => { mounted = false; clearInterval(interval); };
-  }, []);
-
-  // Get logged-in user info
-  const user = useMemo(() => {
-    try {
-      return JSON.parse(localStorage.getItem('stocksense-user') || '{}');
-    } catch { return {}; }
-  }, []);
+  const user = (() => {
+    try { return JSON.parse(localStorage.getItem('stocksense-user')) || {}; } catch { return {}; }
+  })();
 
   const handleLogout = () => {
     localStorage.removeItem('stocksense-token');
     localStorage.removeItem('stocksense-user');
-    window.dispatchEvent(new Event('auth-change'));
     navigate('/login');
   };
 
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  // Get page title from current route
   const getPageTitle = () => {
-    const path = location.pathname;
-    if (path.includes('overview'))    return t('dashboard.overview_title');
-    if (path.includes('forecasting')) return t('forecast.title');
-    if (path.includes('inventory'))   return 'Inventory Health';
-    if (path.includes('scenarios'))   return 'Scenario Planning';
-    if (path.includes('products'))    return t('products.title');
-    if (path.includes('reorder'))     return t('reorder.title');
-    if (path.includes('alerts'))      return t('alerts.title');
-    if (path.includes('settings'))    return t('settings.title');
-    if (path.includes('sales'))       return 'Record Sales';
-    if (path.includes('upload'))      return t('upload.title');
-    return t('app_name');
+    const item = navItems.find((n) => n.path && location.pathname.startsWith(n.path));
+    return item?.label || 'Dashboard';
   };
 
   return (
-    <div className="app-layout">
-      {/* Sidebar Overlay for Mobile */}
+    <div className={`app-layout ${collapsed ? 'sidebar-collapsed' : ''}`}>
+      {/* Mobile overlay */}
       <div
-        className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
-        onClick={() => setSidebarOpen(false)}
+        className={`sidebar-overlay ${mobileOpen ? 'visible' : ''}`}
+        onClick={() => setMobileOpen(false)}
       />
 
-      {/* Sidebar */}
-      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+      {/* === Sidebar === */}
+      <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'open' : ''}`}>
+        {/* Collapse toggle */}
+        <button className="sidebar-toggle" onClick={() => setCollapsed(!collapsed)}>
+          {collapsed ? '→' : '←'}
+        </button>
+
+        {/* Brand */}
         <div className="sidebar-brand">
           <div className="sidebar-brand-icon">📦</div>
           <div className="sidebar-brand-text">
-            <h1>{t('app_name')}</h1>
-            <p>{t('tagline')}</p>
+            Stock<span style={{ color: 'var(--color-primary-light)' }}>Sense</span>
+            <span className="sidebar-brand-sub">AI Inventory</span>
           </div>
         </div>
 
+        {/* Navigation */}
         <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `sidebar-link ${isActive || location.pathname.startsWith(item.path.split('/').slice(0, -1).join('/') + '/') && item.path === location.pathname ? 'active' : ''}`
-              }
-              onClick={() => setSidebarOpen(false)}
-            >
-              <span className="sidebar-link-icon">{item.icon}</span>
-              <span>{t(item.label)}</span>
-              {item.badgeKey === 'alerts' && alertCount > 0 && <span className="sidebar-link-badge">{alertCount}</span>}
-            </NavLink>
-          ))}
+          {navItems.map((item, i) => {
+            if (item.section) {
+              return (
+                <div key={`section-${i}`} className="sidebar-section-label">
+                  {t(`nav.${item.section.toLowerCase()}`, item.section)}
+                </div>
+              );
+            }
+
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+              >
+                <span className="sidebar-link-icon">{item.icon}</span>
+                <span className="sidebar-link-label">{t(`nav.${item.label.toLowerCase().replace(/\s+/g, '_')}`, item.label)}</span>
+                {item.badge && alertCount > 0 && (
+                  <span className="sidebar-link-badge">{alertCount}</span>
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
 
+        {/* User footer */}
         <div className="sidebar-footer">
-          <NavLink
-            to="#"
-            className="sidebar-link"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <span className="sidebar-link-icon">💬</span>
-            <span>{t('nav.support')}</span>
-          </NavLink>
-          <button
-            className="sidebar-link"
-            onClick={handleLogout}
-            style={{ width: '100%', border: 'none', textAlign: 'left', cursor: 'pointer', background: 'none' }}
-          >
-            <span className="sidebar-link-icon">🚪</span>
-            <span>{t('nav.logout')}</span>
-          </button>
+          <div className="sidebar-user" onClick={handleLogout} title="Logout">
+            <div className="sidebar-user-avatar">
+              {(user.shop_name || user.phone || 'U').charAt(0).toUpperCase()}
+            </div>
+            <div className="sidebar-user-info">
+              <div className="sidebar-user-name">{user.shop_name || 'My Shop'}</div>
+              <div className="sidebar-user-role">{user.phone || 'User'}</div>
+            </div>
+          </div>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <div className="main-content">
+      {/* === Main Area === */}
+      <div className="app-layout-content">
         {/* Topbar */}
         <header className="topbar">
           <div className="topbar-left">
-            <button className="mobile-menu-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            <button className="mobile-menu-toggle" onClick={() => setMobileOpen(true)}>
               ☰
             </button>
-            <h2 className="topbar-title">{getPageTitle()}</h2>
-            <div className="topbar-search">
-              <span>🔍</span>
-              <input type="text" placeholder="Search inventory..." id="topbar-search-input" />
-            </div>
-          </div>
-          <div className="topbar-right">
-            <button className="topbar-icon-btn" id="btn-notifications" title="Notifications" onClick={() => navigate('/alerts')}>
-              🔔
-              {alertCount > 0 && <span className="badge-dot" />}
-            </button>
-            <button className="topbar-icon-btn" id="btn-theme" title="Theme">
-              🌙
-            </button>
-            <div className="topbar-user" onClick={() => navigate('/settings')} style={{ cursor: 'pointer' }} title="Go to Settings">
-              <div className="topbar-avatar">{(user.shop_name || 'U')[0].toUpperCase()}{(user.shop_name || 'U')[1]?.toUpperCase() || ''}</div>
-              <div className="topbar-user-info">
-                <span className="topbar-user-name">{user.shop_name || 'User'}</span>
-                <span className="topbar-user-role">{user.business_type || 'Manager'}</span>
+            <div>
+              <div className="topbar-title">{getPageTitle()}</div>
+              <div className="topbar-subtitle">
+                {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
               </div>
             </div>
+          </div>
+
+          <div className="topbar-right">
+            <div className="topbar-search">
+              <span className="topbar-search-icon">🔍</span>
+              <input type="text" placeholder="Search..." />
+            </div>
+
+            <button className="topbar-action" onClick={() => navigate('/alerts')} title="Notifications">
+              🔔
+              {alertCount > 0 && <span className="notification-dot" />}
+            </button>
+
+            <button className="topbar-action" onClick={handleLogout} title="Logout">
+              🚪
+            </button>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="page-container">
-          <PageErrorBoundary locationKey={location.key}>
-            <Outlet />
-          </PageErrorBoundary>
+        <main className="main-content">
+          <Outlet />
         </main>
       </div>
     </div>

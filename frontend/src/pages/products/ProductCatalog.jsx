@@ -1,9 +1,19 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { Search, Filter, Plus, Package, ChevronRight, AlertTriangle, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import { useTransliterate } from '../../hooks/useTransliterate';
 import { inventoryApi } from '../../services/api';
+import GlowCard from '../../components/GlowCard';
+import ShimmerButton from '../../components/ShimmerButton';
+
+const statusConfig = {
+  healthy:      { label: 'Healthy',      color: '#10B981', icon: CheckCircle2 },
+  low_stock:    { label: 'Low Stock',    color: '#F59E0B', icon: AlertTriangle },
+  critical:     { label: 'Critical',     color: '#EF4444', icon: AlertCircle },
+  out_of_stock: { label: 'Out of Stock', color: '#EF4444', icon: AlertCircle },
+};
 
 export default function ProductCatalog() {
   const { t } = useTranslation();
@@ -15,20 +25,11 @@ export default function ProductCatalog() {
   const { data: rawData, loading, error } = useApi(() => inventoryApi.list(), []);
   const products = Array.isArray(rawData) ? rawData : (rawData?.products || []);
 
-  // Collect product names for transliteration
   const productNames = useMemo(
     () => products.map((p) => p.name).filter(Boolean),
     [products]
   );
   const { translatedMap } = useTransliterate(productNames);
-
-  // Status config with translated labels
-  const statusConfig = {
-    healthy: { label: t('status.healthy'), class: 'badge-success' },
-    low_stock: { label: t('status.low_stock'), class: 'badge-warning' },
-    critical: { label: t('status.critical'), class: 'badge-danger' },
-    out_of_stock: { label: t('status.out_of_stock'), class: 'badge-danger' },
-  };
 
   const filtered = products.filter(p => {
     const matchSearch = (p.name || '').toLowerCase().includes(search.toLowerCase());
@@ -39,140 +40,179 @@ export default function ProductCatalog() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-        <p style={{ color: 'var(--color-text-muted)' }}>Loading products...</p>
+      <div className="flex justify-center items-center h-96">
+        <div className="text-center">
+          <Package className="w-12 h-12 text-blue-500 animate-pulse mx-auto mb-4 opacity-50" />
+          <p className="text-slate-400 font-medium">Loading product catalog...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="space-y-6 animate-fade-in-up">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700 }}>{t('products.title')}</h1>
-          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
-            {filtered.length} products found
+          <div className="flex items-center gap-2 mb-1">
+            <div className="h-1 w-6 rounded-full bg-teal-500"></div>
+            <span className="text-xs font-bold tracking-wider text-teal-400 uppercase">Inventory Catalog</span>
+          </div>
+          <h1 className="text-3xl font-bold text-white tracking-tight">{t('products.title')}</h1>
+          <p className="text-slate-400 mt-1">
+            <span className="font-semibold text-white">{filtered.length}</span> products found
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => navigate('/upload')} id="btn-add-product">
-          + {t('products.add_product')}
-        </button>
+        <ShimmerButton onClick={() => navigate('/upload')} id="btn-add-product">
+          <span className="flex items-center gap-2"><Plus className="w-4 h-4" /> {t('products.add_product')}</span>
+        </ShimmerButton>
       </div>
 
       {error && (
-        <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)', marginBottom: 'var(--space-4)', color: 'var(--color-warning)', fontSize: 'var(--font-size-sm)' }}>
-          ⚠️ {error}
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3 text-red-400">
+          <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+          <p className="text-sm">{error}</p>
         </div>
       )}
 
       {/* Filters */}
-      <div className="glass-card" style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap', marginBottom: 'var(--space-4)' }}>
-        <div style={{ flex: '1 1 200px', position: 'relative' }}>
-          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: '1rem' }}>🔍</span>
-          <input
-            className="form-input"
-            placeholder={t('products.search')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ paddingLeft: 36 }}
-            id="product-search"
-          />
+      <GlowCard className="p-4">
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="flex-1 min-w-[200px] relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <input
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 transition-all font-medium text-sm"
+              placeholder={t('products.search')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              id="product-search"
+            />
+          </div>
+          <div className="relative">
+            <select
+              className="bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white appearance-none pr-10 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 transition-all font-medium text-sm min-w-[140px]"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              id="filter-category"
+            >
+              <option value="all">{t('products.category')}</option>
+              <option value="medicines">{t('categories.Medicines')}</option>
+              <option value="supplements">{t('categories.Supplements')}</option>
+              <option value="supplies">{t('categories.Supplies')}</option>
+              <option value="equipment">{t('categories.Equipment')}</option>
+              <option value="grocery">{t('categories.Grocery')}</option>
+            </select>
+            <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+          </div>
+          <div className="relative">
+            <select
+              className="bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white appearance-none pr-10 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 transition-all font-medium text-sm min-w-[140px]"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              id="filter-status"
+            >
+              <option value="all">{t('products.status')}</option>
+              <option value="healthy">{t('status.healthy')}</option>
+              <option value="low_stock">{t('status.low_stock')}</option>
+              <option value="critical">{t('status.critical')}</option>
+              <option value="out_of_stock">{t('status.out_of_stock')}</option>
+            </select>
+            <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+          </div>
         </div>
-        <select className="form-select" value={category} onChange={(e) => setCategory(e.target.value)} style={{ minWidth: 140 }} id="filter-category">
-          <option value="all">{t('products.category')}</option>
-          <option value="medicines">{t('categories.Medicines')}</option>
-          <option value="supplements">{t('categories.Supplements')}</option>
-          <option value="supplies">{t('categories.Supplies')}</option>
-          <option value="equipment">{t('categories.Equipment')}</option>
-          <option value="grocery">{t('categories.Grocery')}</option>
-        </select>
-        <select className="form-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ minWidth: 140 }} id="filter-status">
-          <option value="all">{t('products.status')}</option>
-          <option value="healthy">{t('status.healthy')}</option>
-          <option value="low_stock">{t('status.low_stock')}</option>
-          <option value="critical">{t('status.critical')}</option>
-          <option value="out_of_stock">{t('status.out_of_stock')}</option>
-        </select>
-      </div>
+      </GlowCard>
 
       {/* Product Table */}
-      <div className="glass-card" style={{ padding: 0, overflow: 'auto' }}>
+      <GlowCard className="overflow-hidden p-0">
         {filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: 'var(--space-3)' }}>📦</div>
-            <h3 style={{ color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' }}>No products yet</h3>
-            <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-4)' }}>
-              Upload a CSV or scan a ledger to add your inventory.
-            </p>
-            <button className="btn btn-primary" onClick={() => navigate('/upload')}>📤 Upload Data</button>
+          <div className="py-16 text-center flex flex-col items-center justify-center">
+            <div className="w-16 h-16 bg-teal-500/10 rounded-full flex items-center justify-center mb-4 border border-teal-500/20">
+              <Package className="w-8 h-8 text-teal-500" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">No products yet</h3>
+            <p className="text-slate-400 mb-6 max-w-sm mx-auto">Upload a CSV or scan a ledger to add your inventory.</p>
+            <ShimmerButton onClick={() => navigate('/upload')}>
+              <span className="flex items-center gap-2"><Plus className="w-4 h-4" /> Upload Data</span>
+            </ShimmerButton>
           </div>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>{t('products.name')}</th>
-                <th>{t('products.category')}</th>
-                <th>{t('products.stock')}</th>
-                <th>{t('products.reorder_point')}</th>
-                <th>{t('products.days_remaining')}</th>
-                <th>{t('products.status')}</th>
-                <th>{t('products.supplier')}</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p) => {
-                const sc = statusConfig[p.status] || statusConfig.healthy;
-                return (
-                  <tr key={p.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/products/${p.id}`)}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                        <div style={{
-                          width: 32, height: 32, borderRadius: 'var(--radius-md)',
-                          background: 'rgba(13,148,136,0.15)', display: 'flex',
-                          alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem'
-                        }}>💊</div>
-                        <span style={{ fontWeight: 600 }}>{translatedMap[p.name] || p.name}</span>
-                      </div>
-                    </td>
-                    <td style={{ textTransform: 'capitalize' }}>{t(`categories.${p.category}`, { defaultValue: p.category })}</td>
-                    <td>
-                      <span style={{
-                        fontWeight: 700,
-                        color: p.status === 'critical' || p.status === 'out_of_stock' ? 'var(--color-danger)' :
-                               p.status === 'low_stock' ? 'var(--color-warning)' : 'var(--color-text-primary)'
-                      }}>
-                        {p.current_stock}
-                      </span>
-                      <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-xs)' }}> {p.unit}</span>
-                    </td>
-                    <td>{p.reorder_point}</td>
-                    <td>
-                      <span style={{
-                        fontWeight: 600,
-                        color: (p.days_remaining || 0) < 5 ? 'var(--color-danger)' :
-                               (p.days_remaining || 0) < 10 ? 'var(--color-warning)' : 'var(--color-success)'
-                      }}>
-                        {p.days_remaining != null ? `${p.days_remaining} days` : '—'}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`badge ${sc.class}`}>{sc.label}</span>
-                    </td>
-                    <td style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                      {p.supplier_name || '—'}
-                    </td>
-                    <td>
-                      <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-primary-light)' }}>→</button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead className="bg-slate-900/80 border-b border-slate-700/50 text-slate-300 uppercase tracking-wider text-xs font-semibold">
+                <tr>
+                  <th className="px-6 py-4">{t('products.name')}</th>
+                  <th className="px-6 py-4">{t('products.category')}</th>
+                  <th className="px-6 py-4">{t('products.stock')}</th>
+                  <th className="px-6 py-4">{t('products.reorder_point')}</th>
+                  <th className="px-6 py-4">{t('products.days_remaining')}</th>
+                  <th className="px-6 py-4">{t('products.status')}</th>
+                  <th className="px-6 py-4">{t('products.supplier')}</th>
+                  <th className="px-6 py-4"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {filtered.map((p) => {
+                  const sc = statusConfig[p.status] || statusConfig.healthy;
+                  const Icon = sc.icon;
+                  const days = p.days_remaining;
+                  const isCritical = (days || 0) < 5;
+                  const isWarning = (days || 0) >= 5 && (days || 0) < 10;
+
+                  return (
+                    <tr
+                      key={p.id}
+                      className="cursor-pointer transition-colors hover:bg-slate-800/40 group"
+                      onClick={() => navigate(`/products/${p.id}`)}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 border"
+                            style={{ backgroundColor: `${sc.color}15`, borderColor: `${sc.color}30`, color: sc.color }}
+                          >
+                            {(p.name || '?').charAt(0).toUpperCase()}
+                          </div>
+                          <span className="font-semibold text-white group-hover:text-teal-300 transition-colors">
+                            {translatedMap[p.name] || p.name}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-slate-400 capitalize text-xs font-medium">
+                        {t(`categories.${p.category}`, { defaultValue: p.category })}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="font-bold" style={{ color: p.status === 'critical' || p.status === 'out_of_stock' ? '#EF4444' : p.status === 'low_stock' ? '#F59E0B' : '#E2E8F0' }}>
+                          {p.current_stock}
+                        </span>
+                        <span className="text-slate-500 text-xs ml-1">{p.unit}</span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-400 tabular-nums">{p.reorder_point}</td>
+                      <td className="px-6 py-4">
+                        <span className={`font-bold tabular-nums ${isCritical ? 'text-red-400' : isWarning ? 'text-amber-400' : 'text-emerald-400'}`}>
+                          {days != null ? `${days}d` : '—'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold w-max border"
+                          style={{ backgroundColor: `${sc.color}15`, borderColor: `${sc.color}30`, color: sc.color }}
+                        >
+                          <Icon className="w-3 h-3" />
+                          {sc.label}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-slate-500 text-xs">{p.supplier_name || '—'}</td>
+                      <td className="px-6 py-4">
+                        <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-teal-400 transition-colors" />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
-      </div>
+      </GlowCard>
     </div>
   );
 }

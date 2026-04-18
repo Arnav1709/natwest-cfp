@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ArrowLeft, CheckCircle2, AlertTriangle, Trash2, Plus, RefreshCw, Loader2, ShieldCheck, FileSpreadsheet, Camera, PenLine, Package } from 'lucide-react';
 import { uploadApi } from '../../services/api';
+import GlowCard from '../../components/GlowCard';
+import AnimatedCounter from '../../components/AnimatedCounter';
+import ShimmerButton from '../../components/ShimmerButton';
 
 export default function Verify() {
   const { t } = useTranslation();
@@ -90,281 +94,270 @@ export default function Verify() {
   };
 
   const getConfidenceColor = (conf) => {
-    if (conf >= 0.9) return 'var(--color-success)';
-    if (conf >= 0.75) return 'var(--color-warning)';
-    return 'var(--color-danger)';
+    if (conf >= 0.9) return '#10B981';
+    if (conf >= 0.75) return '#F59E0B';
+    return '#EF4444';
   };
 
-  const getSourceLabel = () => {
-    if (source === 'image') return '📷 AI OCR Extraction';
-    if (source === 'csv') return '📄 CSV Import';
-    if (source === 'manual') return '✏️ Manual Entry';
-    return 'Data Verification';
+  const sourceConfig = {
+    image: { icon: Camera, label: 'AI OCR Extraction', color: '#8B5CF6' },
+    csv:   { icon: FileSpreadsheet, label: 'CSV Import', color: '#3B82F6' },
+    manual: { icon: PenLine, label: 'Manual Entry', color: '#10B981' },
   };
+  const srcCfg = sourceConfig[source] || sourceConfig.manual;
 
   // ── Success overlay ──
   if (submitResult) {
     const isCSV = source === 'csv';
     return (
-      <div style={{ maxWidth: '500px', margin: '80px auto', textAlign: 'center' }}>
-        <div className="glass-card" style={{ padding: 'var(--space-8)' }}>
-          <div style={{ fontSize: '3rem', marginBottom: 'var(--space-4)' }}>✅</div>
-          <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 'var(--space-3)' }}>
+      <div className="max-w-lg mx-auto mt-20 animate-fade-in-up">
+        <GlowCard className="p-10 text-center" glowColor="#10B981">
+          <div className="w-20 h-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-center mx-auto mb-6">
+            <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-4">
             {isCSV ? 'Sales History Imported!' : 'Data Saved Successfully!'}
           </h2>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-6)', marginBottom: 'var(--space-4)', flexWrap: 'wrap' }}>
+          <div className="flex justify-center gap-8 mb-6 flex-wrap">
             {!isCSV && (
-              <div>
-                <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-primary)' }}>
-                  {submitResult.products_created}
-                </div>
-                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Products Created</div>
+              <div className="text-center">
+                <AnimatedCounter value={submitResult.products_created} className="text-3xl font-bold text-teal-300 tracking-tight" />
+                <div className="text-xs font-medium text-slate-500 mt-1">Products Created</div>
               </div>
             )}
             {isCSV && (
-              <div>
-                <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-primary)' }}>
-                  {submitResult.products_matched || 0}
-                </div>
-                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Products Matched</div>
+              <div className="text-center">
+                <AnimatedCounter value={submitResult.products_matched || 0} className="text-3xl font-bold text-teal-300 tracking-tight" />
+                <div className="text-xs font-medium text-slate-500 mt-1">Products Matched</div>
               </div>
             )}
-            <div>
-              <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-success)' }}>
-                {submitResult.sales_records_created}
-              </div>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Sales Records</div>
+            <div className="text-center">
+              <AnimatedCounter value={submitResult.sales_records_created} className="text-3xl font-bold text-emerald-400 tracking-tight" />
+              <div className="text-xs font-medium text-slate-500 mt-1">Sales Records</div>
             </div>
             {isCSV && submitResult.products_skipped > 0 && (
-              <div>
-                <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-warning)' }}>
-                  {submitResult.products_skipped}
-                </div>
-                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Rows Skipped</div>
+              <div className="text-center">
+                <AnimatedCounter value={submitResult.products_skipped} className="text-3xl font-bold text-amber-400 tracking-tight" />
+                <div className="text-xs font-medium text-slate-500 mt-1">Rows Skipped</div>
               </div>
             )}
           </div>
           {isCSV && (
-            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
-              ℹ️ Stock levels were not modified — only sales history was recorded.
+            <p className="text-xs text-slate-500 mb-4 flex items-center justify-center gap-1.5">
+              <ShieldCheck className="w-3 h-3" />
+              Stock levels were not modified — only sales history was recorded.
             </p>
           )}
-          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+          <div className="flex items-center gap-2 justify-center text-sm text-slate-400">
+            <Loader2 className="w-4 h-4 animate-spin" />
             Redirecting to dashboard...
-          </p>
-        </div>
+          </div>
+        </GlowCard>
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+    <div className="max-w-[1000px] mx-auto space-y-6 animate-fade-in-up">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="section-title" style={{ marginBottom: 'var(--space-1)' }}>{t('verify.title')}</h1>
-          <p className="section-subtitle" style={{ marginBottom: 0 }}>
-            {fileName ? `${getSourceLabel()} — ${fileName}` : t('verify.subtitle')}
+          <button
+            className="flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-teal-400 transition-colors group mb-3"
+            onClick={() => navigate('/upload')}
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            Back to Upload
+          </button>
+          <h1 className="text-3xl font-bold text-white tracking-tight">{t('verify.title')}</h1>
+          <p className="text-slate-400 mt-1 flex items-center gap-2">
+            <srcCfg.icon className="w-4 h-4" style={{ color: srcCfg.color }} />
+            <span>{srcCfg.label}</span>
+            {fileName && <><span className="text-slate-600">·</span><span className="text-slate-500">{fileName}</span></>}
           </p>
         </div>
         {hasData && (
-          <div className="badge badge-primary" style={{ fontSize: 'var(--font-size-sm)', padding: '6px 16px' }}>
-            {t('verify.confidence')}: {overallConfidence}%
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl border" style={{ backgroundColor: `${getConfidenceColor(overallConfidence / 100)}15`, borderColor: `${getConfidenceColor(overallConfidence / 100)}30` }}>
+            <ShieldCheck className="w-4 h-4" style={{ color: getConfidenceColor(overallConfidence / 100) }} />
+            <span className="text-sm font-bold" style={{ color: getConfidenceColor(overallConfidence / 100) }}>
+              {t('verify.confidence')}: {overallConfidence}%
+            </span>
           </div>
         )}
       </div>
 
       {/* Error banner */}
       {error && (
-        <div
-          style={{
-            background: 'rgba(239,68,68,0.1)',
-            border: '1px solid rgba(239,68,68,0.3)',
-            borderRadius: 'var(--radius-lg)',
-            padding: 'var(--space-4)',
-            marginBottom: 'var(--space-4)',
-            color: 'var(--color-danger)',
-            fontSize: 'var(--font-size-sm)',
-          }}
-        >
-          ⚠️ {error}
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3 text-red-400">
+          <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+          <p className="text-sm">{error}</p>
         </div>
       )}
 
       {/* Empty state */}
       {!hasData && source !== 'manual' && (
-        <div className="glass-card" style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
-          <div style={{ fontSize: '3rem', marginBottom: 'var(--space-3)' }}>📭</div>
-          <h3 style={{ fontSize: 'var(--font-size-lg)', color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' }}>
-            No Data to Verify
-          </h3>
-          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-4)' }}>
-            Go back and upload a file or image to extract data.
-          </p>
-          <button className="btn btn-primary" onClick={() => navigate('/upload')}>
-            ← Back to Upload
-          </button>
-        </div>
+        <GlowCard className="py-16 text-center">
+          <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-700">
+            <Package className="w-8 h-8 text-slate-500" />
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">No Data to Verify</h3>
+          <p className="text-slate-400 mb-6 max-w-sm mx-auto text-sm">Go back and upload a file or image to extract data.</p>
+          <ShimmerButton onClick={() => navigate('/upload')}>
+            <span className="flex items-center gap-2"><ArrowLeft className="w-4 h-4" /> Back to Upload</span>
+          </ShimmerButton>
+        </GlowCard>
       )}
 
       {/* Data Table */}
       {(hasData || source === 'manual') && (
         <>
-          <div className="glass-card" style={{ padding: 0, overflow: 'auto', marginBottom: 'var(--space-4)' }}>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Product Name</th>
-                  <th>Date</th>
-                  <th>Quantity</th>
-                  <th>Unit Price (₹)</th>
-                  <th>Category</th>
-                  <th>Expiry Date</th>
-                  {source === 'image' && <th>Confidence</th>}
-                  <th style={{ width: 40 }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.map((row) => (
-                  <tr key={row.id} style={{ background: row.confidence < 0.75 ? 'rgba(245,158,11,0.05)' : 'transparent' }}>
-                    <td>
-                      <input
-                        className="form-input"
-                        style={{ padding: '6px 10px', minHeight: '36px', width: '100%' }}
-                        value={row.name}
-                        onChange={(e) => updateRow(row.id, 'name', e.target.value)}
-                        placeholder="Product name"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        className="form-input"
-                        type="date"
-                        style={{ padding: '6px 10px', minHeight: '36px', width: '140px' }}
-                        value={row.date}
-                        onChange={(e) => updateRow(row.id, 'date', e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        className="form-input"
-                        type="number"
-                        style={{ padding: '6px 10px', minHeight: '36px', width: '80px' }}
-                        value={row.quantity}
-                        onChange={(e) => updateRow(row.id, 'quantity', Number(e.target.value))}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        className="form-input"
-                        type="number"
-                        step="0.5"
-                        style={{ padding: '6px 10px', minHeight: '36px', width: '90px' }}
-                        value={row.price}
-                        onChange={(e) => updateRow(row.id, 'price', Number(e.target.value))}
-                      />
-                    </td>
-                    <td>
-                      <select
-                        className="form-select"
-                        style={{ padding: '6px 10px', minHeight: '36px' }}
-                        value={row.category}
-                        onChange={(e) => updateRow(row.id, 'category', e.target.value)}
-                      >
-                        <option value="Medicines">Medicines</option>
-                        <option value="Supplements">Supplements</option>
-                        <option value="Supplies">Supplies</option>
-                        <option value="Equipment">Equipment</option>
-                        <option value="Grocery">Grocery</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </td>
-                    <td>
-                      <input
-                        className="form-input"
-                        type="date"
-                        style={{ padding: '6px 10px', minHeight: '36px', width: '140px' }}
-                        value={row.expiry_date || ''}
-                        onChange={(e) => updateRow(row.id, 'expiry_date', e.target.value)}
-                      />
-                    </td>
-                    {source === 'image' && (
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                          <div style={{
-                            width: 60, height: 6, borderRadius: 'var(--radius-full)',
-                            background: 'var(--color-bg-active)', overflow: 'hidden'
-                          }}>
-                            <div style={{
-                              width: `${row.confidence * 100}%`, height: '100%',
-                              background: getConfidenceColor(row.confidence), borderRadius: 'var(--radius-full)'
-                            }} />
-                          </div>
-                          <span style={{ fontSize: 'var(--font-size-xs)', color: getConfidenceColor(row.confidence), fontWeight: 600 }}>
-                            {(row.confidence * 100).toFixed(0)}%
-                          </span>
-                          {row.confidence < 0.75 && <span title="Low confidence — please verify">⚠️</span>}
-                        </div>
-                      </td>
-                    )}
-                    <td>
-                      <button
-                        onClick={() => deleteRow(row.id)}
-                        style={{
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          color: 'var(--color-text-muted)', fontSize: '1rem',
-                          padding: '4px', borderRadius: 'var(--radius-sm)',
-                        }}
-                        title="Remove row"
-                      >
-                        🗑️
-                      </button>
-                    </td>
+          <GlowCard className="overflow-hidden p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-slate-900/80 border-b border-slate-700/50 text-slate-300 uppercase tracking-wider text-xs font-semibold">
+                  <tr>
+                    <th className="px-5 py-3">Product Name</th>
+                    <th className="px-5 py-3">Date</th>
+                    <th className="px-5 py-3">Quantity</th>
+                    <th className="px-5 py-3">Unit Price (₹)</th>
+                    <th className="px-5 py-3">Category</th>
+                    <th className="px-5 py-3">Expiry Date</th>
+                    {source === 'image' && <th className="px-5 py-3">Confidence</th>}
+                    <th className="px-5 py-3 w-10"></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {data.map((row) => (
+                    <tr key={row.id} className={`transition-colors ${row.confidence < 0.75 ? 'bg-amber-500/[0.03]' : 'hover:bg-slate-800/40'}`}>
+                      <td className="px-5 py-3">
+                        <input
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 text-sm min-w-[180px]"
+                          value={row.name}
+                          onChange={(e) => updateRow(row.id, 'name', e.target.value)}
+                          placeholder="Product name"
+                        />
+                      </td>
+                      <td className="px-5 py-3">
+                        <input
+                          type="date"
+                          className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 text-sm w-[140px]"
+                          value={row.date}
+                          onChange={(e) => updateRow(row.id, 'date', e.target.value)}
+                        />
+                      </td>
+                      <td className="px-5 py-3">
+                        <input
+                          type="number"
+                          className="w-20 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 text-sm tabular-nums"
+                          value={row.quantity}
+                          onChange={(e) => updateRow(row.id, 'quantity', Number(e.target.value))}
+                        />
+                      </td>
+                      <td className="px-5 py-3">
+                        <input
+                          type="number"
+                          step="0.5"
+                          className="w-24 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 text-sm tabular-nums"
+                          value={row.price}
+                          onChange={(e) => updateRow(row.id, 'price', Number(e.target.value))}
+                        />
+                      </td>
+                      <td className="px-5 py-3">
+                        <select
+                          className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 text-sm"
+                          value={row.category}
+                          onChange={(e) => updateRow(row.id, 'category', e.target.value)}
+                        >
+                          <option value="Medicines">Medicines</option>
+                          <option value="Supplements">Supplements</option>
+                          <option value="Supplies">Supplies</option>
+                          <option value="Equipment">Equipment</option>
+                          <option value="Grocery">Grocery</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </td>
+                      <td className="px-5 py-3">
+                        <input
+                          type="date"
+                          className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 text-sm w-[140px]"
+                          value={row.expiry_date || ''}
+                          onChange={(e) => updateRow(row.id, 'expiry_date', e.target.value)}
+                        />
+                      </td>
+                      {source === 'image' && (
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all duration-500"
+                                style={{ width: `${row.confidence * 100}%`, backgroundColor: getConfidenceColor(row.confidence) }}
+                              />
+                            </div>
+                            <span className="text-xs font-bold tabular-nums" style={{ color: getConfidenceColor(row.confidence) }}>
+                              {(row.confidence * 100).toFixed(0)}%
+                            </span>
+                            {row.confidence < 0.75 && <AlertTriangle className="w-3 h-3 text-amber-400" />}
+                          </div>
+                        </td>
+                      )}
+                      <td className="px-5 py-3">
+                        <button
+                          onClick={() => deleteRow(row.id)}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                          title="Remove row"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </GlowCard>
 
           {/* Add row button */}
-          <div style={{ marginBottom: 'var(--space-4)' }}>
-            <button
-              className="btn btn-secondary"
-              onClick={addRow}
-              style={{ fontSize: 'var(--font-size-sm)' }}
-            >
-              + Add Row
-            </button>
-          </div>
+          <button
+            onClick={addRow}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-teal-300 bg-slate-900/50 hover:bg-teal-500/10 border border-slate-700/50 hover:border-teal-500/30 transition-all"
+          >
+            <Plus className="w-4 h-4" /> Add Row
+          </button>
 
           {/* Confirmation */}
-          <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer' }}>
+          <GlowCard className="p-5 flex flex-wrap items-center justify-between gap-4" glowColor={confirmed ? '#10B981' : undefined}>
+            <label className="flex items-center gap-3 cursor-pointer group">
               <input
                 type="checkbox"
                 checked={confirmed}
                 onChange={(e) => setConfirmed(e.target.checked)}
-                style={{ width: 20, height: 20, accentColor: 'var(--color-primary)' }}
+                className="w-5 h-5 rounded accent-teal-500"
                 id="checkbox-confirm"
               />
-              <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+              <span className="text-sm text-slate-400 group-hover:text-slate-200 transition-colors">
                 {t('verify.confirm_label')}
               </span>
             </label>
-            <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-              <button className="btn btn-secondary" onClick={() => navigate('/upload')} id="btn-rescan">
-                🔄 {t('verify.rescan')}
-              </button>
+            <div className="flex gap-3">
               <button
-                className="btn btn-primary"
+                onClick={() => navigate('/upload')}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 transition-all"
+                id="btn-rescan"
+              >
+                <RefreshCw className="w-4 h-4" /> {t('verify.rescan')}
+              </button>
+              <ShimmerButton
                 disabled={!confirmed || submitting || data.length === 0}
                 onClick={handleConfirm}
-                style={{ opacity: (confirmed && !submitting && data.length > 0) ? 1 : 0.5 }}
                 id="btn-confirm-verify"
+                style={{ opacity: (confirmed && !submitting && data.length > 0) ? 1 : 0.5 }}
               >
-                {submitting ? '⏳ Saving...' : `✅ ${t('verify.confirm_btn')}`}
-              </button>
+                <span className="flex items-center gap-2">
+                  {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><CheckCircle2 className="w-4 h-4" /> {t('verify.confirm_btn')}</>}
+                </span>
+              </ShimmerButton>
             </div>
-          </div>
+          </GlowCard>
         </>
       )}
     </div>
