@@ -2,26 +2,24 @@
 WhatsApp router — POST /api/whatsapp/connect, GET /api/whatsapp/status, POST /api/whatsapp/webhook
 """
 
+import logging
 from typing import Optional
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from config import settings
 from database import get_db
 from models.user import User
 from models.notification import NotificationPreference
 from utils.auth import get_current_user
 from services.reorder_service import generate_reorder_list
 
-router = APIRouter(prefix="/api/whatsapp", tags=["whatsapp"])
+logger = logging.getLogger(__name__)
 
-# In-memory WhatsApp connection state (for demo/hackathon)
-_whatsapp_state = {
-    "connected": False,
-    "phone_number": None,
-    "last_activity": None,
-}
+router = APIRouter(prefix="/api/whatsapp", tags=["whatsapp"])
 
 
 class WhatsAppConnectResponse(BaseModel):
@@ -31,8 +29,8 @@ class WhatsAppConnectResponse(BaseModel):
 
 class WhatsAppStatusResponse(BaseModel):
     connected: bool = False
-    phone_number: Optional[str] = None
-    last_activity: Optional[str] = None
+    phone: Optional[str] = None
+    uptime: int = 0
 
 
 class WebhookRequest(BaseModel):
@@ -51,23 +49,51 @@ def connect_whatsapp(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Initiate WhatsApp QR code pairing.
-    In production, this would call the WhatsApp bot sidecar to generate a QR code.
-    For the hackathon demo, returns a stub response.
+    Get QR code from the WhatsApp bot sidecar for pairing.
+    Calls GET http://whatsapp-bot:3001/qr to fetch the live QR data.
     """
-    # Forward to WhatsApp bot sidecar at WHATSAPP_BOT_URL/qr when available
-    return WhatsAppConnectResponse(
-        status="waiting_for_scan",
-        qr_code="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-    )
+    bot_url = settings.WHATSAPP_BOT_URL
+    try:
+        resp = httpx.get(f"{bot_url}/qr", timeout=5.0)
+        data = resp.json()
+        return WhatsAppConnectResponse(
+            status=data.get("status", "initializing"),
+            qr_code=data.get("qr", ""),
+        )
+    except httpx.ConnectError:
+        logger.warning(f"WhatsApp bot sidecar unreachable at {bot_url}/qr")
+        return WhatsAppConnectResponse(
+            status="bot_offline",
+            qr_code="",
+        )
+    except Exception as e:
+        logger.error(f"Error fetching QR from bot sidecar: {e}")
+        return WhatsAppConnectResponse(
+            status="error",
+            qr_code="",
+        )
 
 
 @router.get("/status", response_model=WhatsAppStatusResponse)
 def get_whatsapp_status(
     current_user: User = Depends(get_current_user),
 ):
-    """Get current WhatsApp connection status."""
-    return WhatsAppStatusResponse(**_whatsapp_state)
+    """Get current WhatsApp connection status from the bot sidecar."""
+    bot_url = settings.WHATSAPP_BOT_URL
+    try:
+        resp = httpx.get(f"{bot_url}/status", timeout=5.0)
+        data = resp.json()
+        return WhatsAppStatusResponse(
+            connected=data.get("connected", False),
+            phone=data.get("phone"),
+            uptime=data.get("uptime", 0),
+        )
+    except httpx.ConnectError:
+        logger.warning(f"WhatsApp bot sidecar unreachable at {bot_url}/status")
+        return WhatsAppStatusResponse(connected=False)
+    except Exception as e:
+        logger.error(f"Error fetching status from bot sidecar: {e}")
+        return WhatsAppStatusResponse(connected=False)
 
 
 @router.post("/webhook", response_model=WebhookResponse)
