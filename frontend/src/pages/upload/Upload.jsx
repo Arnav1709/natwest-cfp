@@ -137,10 +137,13 @@ export default function Upload() {
           return;
         }
 
+        // Default to today's date if no date column was found in the CSV
+        const todayISO = new Date().toISOString().split('T')[0];
+
         const verifyData = result.products.map((item, idx) => ({
           id: idx + 1,
           name: item.name || '',
-          date: item.date || '',
+          date: item.date || todayISO,
           quantity: item.quantity || 0,
           price: item.price || 0,
           category: item.category || 'Other',
