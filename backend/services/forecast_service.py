@@ -489,10 +489,10 @@ def generate_forecast(
             trend_pct = ((recent_4 - older_4) / older_4) * 100
             if trend_pct > 5:
                 driver_strings.append(f"Upward sales trend (+{trend_pct:.0f}%)")
-                driver_details.append({"name": "Sales Trend", "description": f"Upward trend detected", "impact_pct": trend_pct})
+                driver_details.append({"name": "Upward Sales Trend", "description": f"Recent 4-week average is {trend_pct:.0f}% above prior period", "impact_pct": round(trend_pct, 1)})
             elif trend_pct < -5:
                 driver_strings.append(f"Declining sales trend ({trend_pct:.0f}%)")
-                driver_details.append({"name": "Sales Trend", "description": f"Declining trend detected", "impact_pct": trend_pct})
+                driver_details.append({"name": "Declining Sales Trend", "description": f"Recent 4-week average is {abs(trend_pct):.0f}% below prior period", "impact_pct": round(trend_pct, 1)})
     else:
         trend_pct = 0
 
@@ -672,10 +672,10 @@ def run_scenario(
     """
     Run a what-if scenario on a product's forecast.
 
-    Supported scenario_type values:
+    Supported scenario_type values (accepts both short and long forms):
     - "discount": value = discount percentage → demand increases by same %
-    - "demand_surge": value = extra demand percentage
-    - "supplier_delay": value = additional delay days → higher stockout risk
+    - "surge" / "demand_surge": value = extra demand percentage
+    - "delay" / "supplier_delay": value = additional delay days → need safety buffer
     - "custom": value = custom growth/decline percentage
 
     Steps:
@@ -687,22 +687,41 @@ def run_scenario(
     Args:
         db: Database session
         product_id: Product to run scenario on
-        scenario_type: Type of scenario (discount, demand_surge, supplier_delay, custom)
+        scenario_type: Type of scenario
         value: Scenario parameter (percentage or days)
 
     Returns:
         ScenarioResponse with original, scenario, and delta forecasts
     """
+    # Normalize scenario_type: accept both short and long forms
+    type_aliases = {
+        "surge": "demand_surge",
+        "delay": "supplier_delay",
+    }
+    scenario_type = type_aliases.get(scenario_type, scenario_type)
+
     # Get the original forecast
     original = generate_forecast(db, product_id)
 
+    # Get product info for supplier_delay calculations
+    product = db.query(Product).filter(Product.id == product_id).first()
+    original_lead_time = (product.lead_time_days or 3) if product else 3
+
     # Calculate multiplier based on scenario type
     if scenario_type == "discount":
+        # A discount increases demand proportionally (price elasticity ~ 1:1)
         multiplier = 1.0 + (value / 100.0)  # 20% discount → 1.2x demand
     elif scenario_type == "demand_surge":
         multiplier = 1.0 + (value / 100.0)
     elif scenario_type == "supplier_delay":
-        multiplier = 1.0  # Demand doesn't change, but urgency increases
+        # Extra delay days → need more buffer stock → effectively increases
+        # required reorder qty. Model as demand uplift proportional to
+        # extra_delay / original_lead_time (need to cover more days).
+        extra_delay_days = value
+        if original_lead_time > 0:
+            multiplier = 1.0 + (extra_delay_days / (original_lead_time * 7.0))
+        else:
+            multiplier = 1.0 + (extra_delay_days / 21.0)  # fallback: assume 3-week cycle
     elif scenario_type == "custom":
         multiplier = 1.0 + (value / 100.0)
     else:
@@ -712,9 +731,9 @@ def run_scenario(
     scenario_forecast = []
     deltas = []
     for week in original.forecast:
-        new_low = round(week.low * multiplier)
-        new_likely = round(week.likely * multiplier)
-        new_high = round(week.high * multiplier)
+        new_low = round(week.low * multiplier, 1)
+        new_likely = round(week.likely * multiplier, 1)
+        new_high = round(week.high * multiplier, 1)
         scenario_forecast.append(ForecastWeek(
             week=week.week,
             week_start=week.week_start,
@@ -722,11 +741,15 @@ def run_scenario(
             likely=new_likely,
             high=new_high,
         ))
-        change_pct = round((new_likely - week.likely) / week.likely * 100, 1) if week.likely else 0
+        # Guard against division by zero
+        if week.likely > 0:
+            change_pct = round((new_likely - week.likely) / week.likely * 100, 1)
+        else:
+            change_pct = 0.0 if new_likely == 0 else 100.0
         deltas.append(ScenarioDelta(
             week=week.week,
             change_pct=change_pct,
-            additional_units=new_likely - week.likely,
+            additional_units=round(new_likely - week.likely, 1),
         ))
 
     # Calculate reorder quantities

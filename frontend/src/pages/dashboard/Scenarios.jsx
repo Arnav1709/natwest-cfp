@@ -1,7 +1,31 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Plot from '../../components/PlotChart.jsx';
 import { useApi } from '../../hooks/useApi';
 import { inventoryApi, forecastApi } from '../../services/api';
+
+// Scenario type definitions — IDs match what the backend accepts
+const SCENARIO_TYPES = [
+  { id: 'discount', label: '🏷️ Discount', desc: 'price reduction impact' },
+  { id: 'surge', label: '📈 Demand Surge', desc: 'growth percentage' },
+  { id: 'delay', label: '🚚 Supplier Delay', desc: 'additional lead time' },
+  { id: 'custom', label: '⚡ Custom', desc: 'custom multiplier' },
+];
+
+// Dynamic slider config per scenario type
+const SLIDER_CONFIG = {
+  discount: { label: 'Discount Intensity', min: 5, max: 50, step: 5, unit: '%', default: 20 },
+  surge:    { label: 'Demand Surge',       min: 5, max: 100, step: 5, unit: '%', default: 20 },
+  delay:    { label: 'Delay (Days)',       min: 1, max: 30,  step: 1, unit: '',  default: 3 },
+  custom:   { label: 'Custom Multiplier',  min: 5, max: 100, step: 5, unit: '%', default: 20 },
+};
+
+// Dynamic badge text per scenario type
+const SCENARIO_BADGES = {
+  discount: { label: 'Price Impact', className: 'badge-warning' },
+  surge:    { label: 'Projected Surge', className: 'badge-warning' },
+  delay:    { label: 'Supply Risk', className: 'badge-danger' },
+  custom:   { label: 'Custom Simulation', className: 'badge-primary' },
+};
 
 export default function Scenarios() {
   const { data: rawProducts, loading: pLoading } = useApi(() => inventoryApi.list(), []);
@@ -12,6 +36,8 @@ export default function Scenarios() {
   const [intensity, setIntensity] = useState(20);
   const [applied, setApplied] = useState(false);
   const [scenarioResult, setScenarioResult] = useState(null);
+  const [scenarioLoading, setScenarioLoading] = useState(false);
+  const [scenarioError, setScenarioError] = useState(null);
 
   useEffect(() => {
     if (products.length > 0 && !productId) {
@@ -19,8 +45,10 @@ export default function Scenarios() {
     }
   }, [products, productId]);
 
-  const fetchScenario = async (pId, type, val) => {
+  const fetchScenario = useCallback(async (pId, type, val) => {
     if (!pId) return;
+    setScenarioLoading(true);
+    setScenarioError(null);
     try {
       const res = await forecastApi.scenario({
         product_id: parseInt(pId, 10),
@@ -31,22 +59,28 @@ export default function Scenarios() {
       setApplied(true);
     } catch (e) {
       console.error('Failed to run scenario', e);
+      setScenarioError(e.message || 'Scenario simulation failed');
+    } finally {
+      setScenarioLoading(false);
     }
-  };
+  }, []);
 
+  // Default run on product change
   useEffect(() => {
     if (productId) {
-      fetchScenario(productId, scenarioType, 20); // Default run
+      const sliderCfg = SLIDER_CONFIG[scenarioType] || SLIDER_CONFIG.discount;
+      fetchScenario(productId, scenarioType, sliderCfg.default);
     }
-  }, [productId]);
+  }, [productId, fetchScenario]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleApply = () => {
     fetchScenario(productId, scenarioType, intensity);
   };
 
   const handleReset = () => {
-    setIntensity(20);
-    fetchScenario(productId, scenarioType, 20);
+    setScenarioType('discount');
+    setIntensity(SLIDER_CONFIG.discount.default);
+    fetchScenario(productId, 'discount', SLIDER_CONFIG.discount.default);
   };
 
   // Safe chart data extraction
@@ -57,6 +91,45 @@ export default function Scenarios() {
   const scenLikely = scenarioStats.map((f) => f.likely);
 
   const selectedProduct = products.find((p) => p.id.toString() === productId) || {};
+
+  // — Bug 4 fix: use Number() instead of .toFixed() which returns a string —
+  const extraDemand = scenarioResult
+    ? Math.round(scenarioResult.revised_reorder_qty - scenarioResult.original_reorder_qty)
+    : 0;
+  const unitCost = selectedProduct.unit_cost || 0;
+  const extraCost = unitCost * Math.max(0, extraDemand);
+
+  // — Bug 3 fix: compute real KPI values —
+  const sliderCfg = SLIDER_CONFIG[scenarioType] || SLIDER_CONFIG.discount;
+
+  // Margin impact: for discounts, margin drops by ~discount%; for surge, margin improves slightly
+  const marginImpact = (() => {
+    if (scenarioType === 'discount') return -(intensity / 4).toFixed(1);
+    if (scenarioType === 'surge' || scenarioType === 'custom') return '+' + (intensity / 10).toFixed(1);
+    if (scenarioType === 'delay') return -(intensity * 0.5).toFixed(1);
+    return '0.0';
+  })();
+  const marginNegative = scenarioType === 'discount' || scenarioType === 'delay';
+
+  // Shelf depletion rate: ratio of scenario demand to original demand
+  const depletionRate = scenarioResult && scenarioResult.original_reorder_qty > 0
+    ? (scenarioResult.revised_reorder_qty / scenarioResult.original_reorder_qty).toFixed(1)
+    : '1.0';
+
+  // Revenue estimate: use unit_cost as proxy (no selling_price in model)
+  const revenueEstimate = (scenarioResult?.revised_reorder_qty || 0) * unitCost;
+
+  // Dynamic badge for "Current Forecast" chart
+  const currentBadge = (() => {
+    if (!originalStats.length) return { label: '—', className: 'badge-muted' };
+    const first = origLikely[0] || 0;
+    const last = origLikely[origLikely.length - 1] || 0;
+    if (last > first * 1.05) return { label: 'Rising', className: 'badge-warning' };
+    if (last < first * 0.95) return { label: 'Declining', className: 'badge-danger' };
+    return { label: 'Steady', className: 'badge-success' };
+  })();
+
+  const scenarioBadge = SCENARIO_BADGES[scenarioType] || SCENARIO_BADGES.custom;
 
   if (pLoading && products.length === 0) {
     return (
@@ -91,15 +164,20 @@ export default function Scenarios() {
     { x: weeks, y: scenLikely, type: 'scatter', mode: 'lines+markers', line: { color: '#F59E0B', width: 2 }, marker: { size: 5 } },
   ];
 
-  const scenarioTypes = [
-    { id: 'discount', label: '🏷️ Discount', desc: 'price reduction impact' },
-    { id: 'surge', label: '📈 Demand Surge', desc: 'growth percentage' },
-    { id: 'delay', label: '🚚 Supplier Delay', desc: 'additional lead time' },
-    { id: 'custom', label: '⚡ Custom', desc: 'custom multiplier' },
-  ];
-
-  const extraDemand = scenarioResult ? (scenarioResult.revised_reorder_qty - scenarioResult.original_reorder_qty).toFixed(0) : 0;
-  const extraCost = (selectedProduct.unit_cost * extraDemand) || 0;
+  // — Bug 10 fix: contextual smart alert text —
+  const smartAlertText = (() => {
+    const name = selectedProduct.name || 'this product';
+    if (scenarioType === 'discount') {
+      return `A ${intensity}% discount on ${name} is projected to increase demand by ~${intensity}%. Ensure sufficient stock to avoid sell-through before replenishment.`;
+    }
+    if (scenarioType === 'surge') {
+      return `A ${intensity}% demand surge for ${name} would require additional safety stock. Consider pre-ordering from suppliers to avoid stockouts.`;
+    }
+    if (scenarioType === 'delay') {
+      return `A ${intensity}-day supplier delay for ${name} means existing stock must cover ${intensity} extra days. Review lead-time buffers and alternative suppliers.`;
+    }
+    return `Custom ${intensity}% adjustment applied to ${name}. Review the projected impact on stock levels and reorder timing.`;
+  })();
 
   return (
     <div>
@@ -115,11 +193,27 @@ export default function Scenarios() {
           <button className="btn btn-secondary" onClick={handleReset} id="btn-reset-scenario">
             Reset
           </button>
-          <button className="btn btn-primary" onClick={handleApply} id="btn-apply-scenario">
-            Apply Scenario
+          <button
+            className="btn btn-primary"
+            onClick={handleApply}
+            disabled={scenarioLoading}
+            id="btn-apply-scenario"
+          >
+            {scenarioLoading ? 'Simulating…' : 'Apply Scenario'}
           </button>
         </div>
       </div>
+
+      {/* Error banner */}
+      {scenarioError && (
+        <div style={{
+          background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+          borderRadius: 'var(--radius-lg)', padding: 'var(--space-3)', marginBottom: 'var(--space-4)',
+          color: 'var(--color-danger)', fontSize: 'var(--font-size-sm)',
+        }}>
+          ⚠️ {scenarioError}
+        </div>
+      )}
 
       {/* Main Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
@@ -146,12 +240,14 @@ export default function Scenarios() {
               className="form-select"
               value={scenarioType}
               onChange={(e) => {
-                setScenarioType(e.target.value);
-                setIntensity(e.target.value === 'delay' ? 3 : 20); // reasonable defaults
+                const newType = e.target.value;
+                setScenarioType(newType);
+                const cfg = SLIDER_CONFIG[newType] || SLIDER_CONFIG.discount;
+                setIntensity(cfg.default);
               }}
               id="scenario-type"
             >
-              {scenarioTypes.map((st) => (
+              {SCENARIO_TYPES.map((st) => (
                 <option key={st.id} value={st.id}>
                   {st.label}
                 </option>
@@ -161,27 +257,22 @@ export default function Scenarios() {
 
           <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
             <label className="form-label">
-              {scenarioType === 'discount'
-                ? 'Discount Intensity'
-                : scenarioType === 'delay'
-                ? 'Delay (Days)'
-                : 'Growth'}
-              : <strong>{intensity}{scenarioType !== 'delay' ? '%' : ''}</strong>
+              {sliderCfg.label}: <strong>{intensity}{sliderCfg.unit}</strong>
             </label>
             <input
               type="range"
-              min="5"
-              max="50"
-              step="5"
+              min={sliderCfg.min}
+              max={sliderCfg.max}
+              step={sliderCfg.step}
               value={intensity}
               onChange={(e) => setIntensity(Number(e.target.value))}
               style={{ width: '100%', accentColor: 'var(--color-primary)' }}
               id="scenario-slider"
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-              <span>5</span>
-              <span>25</span>
-              <span>50</span>
+              <span>{sliderCfg.min}</span>
+              <span>{Math.round((sliderCfg.min + sliderCfg.max) / 2)}</span>
+              <span>{sliderCfg.max}</span>
             </div>
           </div>
 
@@ -196,7 +287,7 @@ export default function Scenarios() {
               <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-warning)' }}>Smart Alert</span>
             </div>
             <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-              Historical data suggests high elasticity for <strong>{selectedProduct.name}</strong>. A {intensity}% {scenarioType} impact could significantly affect stock availability.
+              {smartAlertText}
             </p>
           </div>
         </div>
@@ -207,7 +298,7 @@ export default function Scenarios() {
             <div className="chart-container">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
                 <h3 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>Current Forecast</h3>
-                <span className="badge badge-success">Steady</span>
+                <span className={`badge ${currentBadge.className}`}>{currentBadge.label}</span>
               </div>
               <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
                 Baseline projection (No change)
@@ -218,12 +309,18 @@ export default function Scenarios() {
             <div className="chart-container" style={{ borderColor: applied ? 'rgba(245,158,11,0.3)' : undefined }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
                 <h3 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-warning)' }}>Scenario Forecast</h3>
-                <span className="badge badge-warning">Projected Surge</span>
+                <span className={`badge ${scenarioBadge.className}`}>{scenarioBadge.label}</span>
               </div>
               <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
-                Projection with {intensity}{scenarioType !== 'delay' ? '%' : ''} {scenarioType}
+                Projection with {intensity}{sliderCfg.unit ? sliderCfg.unit : ' days'} {scenarioType === 'delay' ? 'delay' : scenarioType}
               </p>
-              <Plot data={scenarioTraces} layout={sharedLayout} config={chartConfig} style={{ width: '100%' }} />
+              {scenarioLoading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 250, color: 'var(--color-text-muted)' }}>
+                  Simulating...
+                </div>
+              ) : (
+                <Plot data={scenarioTraces} layout={sharedLayout} config={chartConfig} style={{ width: '100%' }} />
+              )}
             </div>
           </div>
 
@@ -234,12 +331,12 @@ export default function Scenarios() {
               <span style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--color-primary-light)' }}>Simulation Outcome</span>
             </div>
             <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', lineHeight: 1.7 }}>
-              With <strong>{intensity}{scenarioType !== 'delay' ? '%' : ' Days'} {scenarioType}</strong>, expected demand changes significantly.
+              With <strong>{intensity}{sliderCfg.unit ? sliderCfg.unit : ' Days'} {scenarioType === 'delay' ? 'delay' : scenarioType}</strong>, expected demand changes significantly.
               Recommended additional stock: <strong>{extraDemand > 0 ? extraDemand : 0} units</strong>. Estimated extra cost: <strong>₹{extraCost > 0 ? extraCost.toLocaleString() : 0}</strong>.
             </p>
             <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-3)', flexWrap: 'wrap' }}>
-              <span className={`badge ${extraDemand > selectedProduct.current_stock ? 'badge-danger' : 'badge-success'}`}>
-                 {extraDemand > selectedProduct.current_stock ? '🔴 Stock Deficit' : '🟢 Stock Sufficient'}
+              <span className={`badge ${extraDemand > (selectedProduct.current_stock || 0) ? 'badge-danger' : 'badge-success'}`}>
+                 {extraDemand > (selectedProduct.current_stock || 0) ? '🔴 Stock Deficit' : '🟢 Stock Sufficient'}
               </span>
               <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Lead Time: {selectedProduct.lead_time_days || 'N/A'} Days</span>
             </div>
@@ -252,25 +349,33 @@ export default function Scenarios() {
         <div className="kpi-card">
           <div className="kpi-card-label">Impact on Margin</div>
           <div className="kpi-card-value" style={{ fontSize: 'var(--font-size-xl)' }}>
-            {scenarioType === 'discount' ? `-${(intensity/4).toFixed(1)}%` : '+1.2%'} <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-danger)' }}>{scenarioType === 'discount' ? '▼ Critical' : '▲ OK'}</span>
+            {marginImpact}% <span style={{ fontSize: 'var(--font-size-xs)', color: marginNegative ? 'var(--color-danger)' : 'var(--color-success)' }}>
+              {marginNegative ? '▼ Critical' : '▲ Positive'}
+            </span>
           </div>
         </div>
         <div className="kpi-card">
           <div className="kpi-card-label">New Volume Total</div>
           <div className="kpi-card-value" style={{ fontSize: 'var(--font-size-xl)' }}>
-             {scenarioResult?.revised_reorder_qty || 0} <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-warning)' }}>▲ HIGH</span>
+             {scenarioResult?.revised_reorder_qty || 0} <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-warning)' }}>
+              {(scenarioResult?.revised_reorder_qty || 0) > (scenarioResult?.original_reorder_qty || 0) ? '▲ HIGH' : '— SAME'}
+            </span>
           </div>
         </div>
         <div className="kpi-card">
           <div className="kpi-card-label">Shelf Depletion Rate</div>
           <div className="kpi-card-value" style={{ fontSize: 'var(--font-size-xl)' }}>
-             {extraDemand > 20 ? '1.8x' : '1.1x'} <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>FAST</span>
+             {depletionRate}x <span style={{ fontSize: 'var(--font-size-xs)', color: parseFloat(depletionRate) > 1.3 ? 'var(--color-danger)' : 'var(--color-text-muted)' }}>
+              {parseFloat(depletionRate) > 1.5 ? 'FAST' : parseFloat(depletionRate) > 1.1 ? 'MODERATE' : 'NORMAL'}
+            </span>
           </div>
         </div>
         <div className="kpi-card">
           <div className="kpi-card-label">Revenue Estimate</div>
           <div className="kpi-card-value" style={{ fontSize: 'var(--font-size-xl)' }}>
-             ₹{((scenarioResult?.revised_reorder_qty || 100) * (selectedProduct.unit_cost || 0)).toLocaleString()} <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-success)' }}>▲ OPTIMAL</span>
+             ₹{revenueEstimate.toLocaleString()} <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-success)' }}>
+              {revenueEstimate > 0 ? '▲ OPTIMAL' : '—'}
+            </span>
           </div>
         </div>
       </div>
