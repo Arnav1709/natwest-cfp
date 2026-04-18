@@ -257,6 +257,21 @@ export default function RecordSales() {
       return;
     }
 
+    // Client-side stock validation warning
+    const stockWarnings = [];
+    for (const entry of validEntries) {
+      const product = products.find(p => p.name === entry.product_name);
+      if (product && entry.quantity > (product.current_stock || 0)) {
+        stockWarnings.push(
+          `${entry.product_name}: trying to sell ${entry.quantity} but only ${product.current_stock || 0} in stock`
+        );
+      }
+    }
+    if (stockWarnings.length > 0) {
+      setError(`Insufficient stock — ${stockWarnings.join('; ')}`);
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     try {
@@ -265,7 +280,11 @@ export default function RecordSales() {
       setManualEntries([
         { product_name: '', quantity: '', date: new Date().toISOString().split('T')[0], price: '' },
       ]);
-      // Refresh history
+      // Refresh products (stock changed) and history
+      try {
+        const inv = await inventoryApi.list({ per_page: 100 });
+        setProducts(inv.products || []);
+      } catch (_) {}
       const hist = await salesApi.history({ per_page: 10 });
       setSalesHistory(hist.sales || []);
     } catch (err) {
@@ -319,21 +338,29 @@ export default function RecordSales() {
       {result && (
         <div
           style={{
-            background: 'rgba(34,197,94,0.1)',
-            border: '1px solid rgba(34,197,94,0.3)',
+            background: result.failed > 0 && result.successful === 0
+              ? 'rgba(239,68,68,0.1)' : result.failed > 0
+                ? 'rgba(245,158,11,0.1)' : 'rgba(34,197,94,0.1)',
+            border: `1px solid ${result.failed > 0 && result.successful === 0
+              ? 'rgba(239,68,68,0.3)' : result.failed > 0
+                ? 'rgba(245,158,11,0.3)' : 'rgba(34,197,94,0.3)'}`,
             borderRadius: 'var(--radius-lg)',
             padding: 'var(--space-4)',
             marginBottom: 'var(--space-4)',
           }}
         >
-          <div style={{ fontWeight: 600, color: '#22c55e', marginBottom: 'var(--space-2)' }}>
-            ✅ Sales Recorded Successfully!
+          <div style={{ fontWeight: 600, color: result.failed > 0 && result.successful === 0 ? '#ef4444' : '#22c55e', marginBottom: 'var(--space-2)' }}>
+            {result.failed > 0 && result.successful === 0
+              ? '❌ Sales Recording Failed'
+              : result.failed > 0
+                ? '⚠️ Sales Partially Recorded'
+                : '✅ Sales Recorded Successfully!'}
           </div>
           <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
             {result.successful} of {result.total_processed} sales processed.
             {result.failed > 0 && (
               <span style={{ color: 'var(--color-danger)', marginLeft: 8 }}>
-                {result.failed} failed (product not found).
+                {result.failed} failed (see details below).
               </span>
             )}
             {result.alerts_generated > 0 && (
@@ -357,10 +384,24 @@ export default function RecordSales() {
               >
                 <span>{r.status === 'success' ? '✅' : '❌'}</span>
                 <span style={{ fontWeight: 500 }}>{r.product_name}</span>
-                <span>— sold {r.quantity}</span>
-                {r.new_stock !== null && r.new_stock !== undefined && (
-                  <span style={{ color: 'var(--color-text-muted)' }}>
-                    (remaining: {r.new_stock})
+                {r.status === 'success' && (
+                  <>
+                    <span>— sold {r.quantity}</span>
+                    {r.new_stock !== null && r.new_stock !== undefined && (
+                      <span style={{ color: 'var(--color-text-muted)' }}>
+                        (remaining: {r.new_stock})
+                      </span>
+                    )}
+                  </>
+                )}
+                {r.status === 'insufficient_stock' && (
+                  <span style={{ color: 'var(--color-danger)' }}>
+                    — {r.warning || `Cannot sell ${r.quantity} (only ${r.new_stock} available)`}
+                  </span>
+                )}
+                {r.status === 'product_not_found' && (
+                  <span style={{ color: 'var(--color-danger)' }}>
+                    — Product not found in inventory
                   </span>
                 )}
                 {r.alert && (
@@ -477,11 +518,30 @@ export default function RecordSales() {
                 <input
                   type="number"
                   min="1"
-                  style={inputStyle}
+                  style={{
+                    ...inputStyle,
+                    ...((() => {
+                      const p = products.find(pr => pr.name === entry.product_name);
+                      return p && Number(entry.quantity) > (p.current_stock || 0)
+                        ? { borderColor: 'var(--color-danger)', boxShadow: '0 0 0 1px var(--color-danger)' }
+                        : {};
+                    })()),
+                  }}
                   placeholder="Qty"
                   value={entry.quantity}
                   onChange={(e) => updateManualEntry(idx, 'quantity', e.target.value)}
                 />
+                {(() => {
+                  const p = products.find(pr => pr.name === entry.product_name);
+                  if (p && Number(entry.quantity) > (p.current_stock || 0)) {
+                    return (
+                      <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-danger)', marginTop: 2 }}>
+                        Only {p.current_stock || 0} in stock
+                      </span>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
 
               {/* Date */}

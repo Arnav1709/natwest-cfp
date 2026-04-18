@@ -50,6 +50,18 @@ async function _doFetch(url, config, endpoint) {
   try {
     const response = await fetch(url, config);
     if (!response.ok) {
+      // ── Auto-logout on 401 (expired / invalid token) ──
+      if (response.status === 401) {
+        // Skip auto-logout for auth endpoints (login/register)
+        if (!endpoint.startsWith('/auth/')) {
+          localStorage.removeItem('stocksense-token');
+          localStorage.removeItem('stocksense-user');
+          window.dispatchEvent(new Event('auth-change'));
+          window.location.href = '/login';
+          throw new Error('Session expired. Please log in again.');
+        }
+      }
+
       // Try to extract error detail from FastAPI responses
       let detail = `API Error: ${response.status} ${response.statusText}`;
       try {

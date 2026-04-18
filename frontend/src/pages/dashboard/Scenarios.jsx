@@ -39,6 +39,10 @@ export default function Scenarios() {
   const [scenarioLoading, setScenarioLoading] = useState(false);
   const [scenarioError, setScenarioError] = useState(null);
 
+  // Track the last-applied values so UI only updates on Apply click
+  const [appliedIntensity, setAppliedIntensity] = useState(20);
+  const [appliedType, setAppliedType] = useState('discount');
+
   useEffect(() => {
     if (products.length > 0 && !productId) {
       setProductId(products[0].id.toString());
@@ -57,6 +61,9 @@ export default function Scenarios() {
       });
       setScenarioResult(res);
       setApplied(true);
+      // Snapshot the applied values so the UI reflects what was actually simulated
+      setAppliedIntensity(val);
+      setAppliedType(type);
     } catch (e) {
       console.error('Failed to run scenario', e);
       setScenarioError(e.message || 'Scenario simulation failed');
@@ -80,6 +87,8 @@ export default function Scenarios() {
   const handleReset = () => {
     setScenarioType('discount');
     setIntensity(SLIDER_CONFIG.discount.default);
+    setAppliedType('discount');
+    setAppliedIntensity(SLIDER_CONFIG.discount.default);
     fetchScenario(productId, 'discount', SLIDER_CONFIG.discount.default);
   };
 
@@ -101,15 +110,16 @@ export default function Scenarios() {
 
   // — Bug 3 fix: compute real KPI values —
   const sliderCfg = SLIDER_CONFIG[scenarioType] || SLIDER_CONFIG.discount;
+  const appliedSliderCfg = SLIDER_CONFIG[appliedType] || SLIDER_CONFIG.discount;
 
-  // Margin impact: for discounts, margin drops by ~discount%; for surge, margin improves slightly
+  // Margin impact: uses applied (not live slider) values
   const marginImpact = (() => {
-    if (scenarioType === 'discount') return -(intensity / 4).toFixed(1);
-    if (scenarioType === 'surge' || scenarioType === 'custom') return '+' + (intensity / 10).toFixed(1);
-    if (scenarioType === 'delay') return -(intensity * 0.5).toFixed(1);
+    if (appliedType === 'discount') return -(appliedIntensity / 4).toFixed(1);
+    if (appliedType === 'surge' || appliedType === 'custom') return '+' + (appliedIntensity / 10).toFixed(1);
+    if (appliedType === 'delay') return -(appliedIntensity * 0.5).toFixed(1);
     return '0.0';
   })();
-  const marginNegative = scenarioType === 'discount' || scenarioType === 'delay';
+  const marginNegative = appliedType === 'discount' || appliedType === 'delay';
 
   // Shelf depletion rate: ratio of scenario demand to original demand
   const depletionRate = scenarioResult && scenarioResult.original_reorder_qty > 0
@@ -129,7 +139,7 @@ export default function Scenarios() {
     return { label: 'Steady', className: 'badge-success' };
   })();
 
-  const scenarioBadge = SCENARIO_BADGES[scenarioType] || SCENARIO_BADGES.custom;
+  const scenarioBadge = SCENARIO_BADGES[appliedType] || SCENARIO_BADGES.custom;
 
   if (pLoading && products.length === 0) {
     return (
@@ -164,19 +174,19 @@ export default function Scenarios() {
     { x: weeks, y: scenLikely, type: 'scatter', mode: 'lines+markers', line: { color: '#F59E0B', width: 2 }, marker: { size: 5 } },
   ];
 
-  // — Bug 10 fix: contextual smart alert text —
+  // — Bug 10 fix: contextual smart alert text (uses applied values, not live slider) —
   const smartAlertText = (() => {
     const name = selectedProduct.name || 'this product';
-    if (scenarioType === 'discount') {
-      return `A ${intensity}% discount on ${name} is projected to increase demand by ~${intensity}%. Ensure sufficient stock to avoid sell-through before replenishment.`;
+    if (appliedType === 'discount') {
+      return `A ${appliedIntensity}% discount on ${name} is projected to increase demand by ~${appliedIntensity}%. Ensure sufficient stock to avoid sell-through before replenishment.`;
     }
-    if (scenarioType === 'surge') {
-      return `A ${intensity}% demand surge for ${name} would require additional safety stock. Consider pre-ordering from suppliers to avoid stockouts.`;
+    if (appliedType === 'surge') {
+      return `A ${appliedIntensity}% demand surge for ${name} would require additional safety stock. Consider pre-ordering from suppliers to avoid stockouts.`;
     }
-    if (scenarioType === 'delay') {
-      return `A ${intensity}-day supplier delay for ${name} means existing stock must cover ${intensity} extra days. Review lead-time buffers and alternative suppliers.`;
+    if (appliedType === 'delay') {
+      return `A ${appliedIntensity}-day supplier delay for ${name} means existing stock must cover ${appliedIntensity} extra days. Review lead-time buffers and alternative suppliers.`;
     }
-    return `Custom ${intensity}% adjustment applied to ${name}. Review the projected impact on stock levels and reorder timing.`;
+    return `Custom ${appliedIntensity}% adjustment applied to ${name}. Review the projected impact on stock levels and reorder timing.`;
   })();
 
   return (
@@ -312,7 +322,7 @@ export default function Scenarios() {
                 <span className={`badge ${scenarioBadge.className}`}>{scenarioBadge.label}</span>
               </div>
               <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
-                Projection with {intensity}{sliderCfg.unit ? sliderCfg.unit : ' days'} {scenarioType === 'delay' ? 'delay' : scenarioType}
+                Projection with {appliedIntensity}{appliedSliderCfg.unit ? appliedSliderCfg.unit : ' days'} {appliedType === 'delay' ? 'delay' : appliedType}
               </p>
               {scenarioLoading ? (
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 250, color: 'var(--color-text-muted)' }}>
@@ -331,7 +341,7 @@ export default function Scenarios() {
               <span style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--color-primary-light)' }}>Simulation Outcome</span>
             </div>
             <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', lineHeight: 1.7 }}>
-              With <strong>{intensity}{sliderCfg.unit ? sliderCfg.unit : ' Days'} {scenarioType === 'delay' ? 'delay' : scenarioType}</strong>, expected demand changes significantly.
+              With <strong>{appliedIntensity}{appliedSliderCfg.unit ? appliedSliderCfg.unit : ' Days'} {appliedType === 'delay' ? 'delay' : appliedType}</strong>, expected demand changes significantly.
               Recommended additional stock: <strong>{extraDemand > 0 ? extraDemand : 0} units</strong>. Estimated extra cost: <strong>₹{extraCost > 0 ? extraCost.toLocaleString() : 0}</strong>.
             </p>
             <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-3)', flexWrap: 'wrap' }}>
