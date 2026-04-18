@@ -75,6 +75,8 @@ services:
       - ./frontend/vite.config.js:/app/vite.config.js
       # Prevent host from clobbering container's node_modules
       - frontend-node-modules:/app/node_modules
+    # Sync node_modules on every start so new deps from git pulls are installed
+    command: sh -c "npm install && npx vite --host 0.0.0.0"
     depends_on:
       backend:
         condition: service_started
