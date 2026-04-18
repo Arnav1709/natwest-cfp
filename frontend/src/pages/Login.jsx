@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import ParticleBackground from '../components/ParticleBackground';
 import ShimmerButton from '../components/ShimmerButton';
+import { authApi } from '../services/api';
 
 export default function Login() {
   const { t } = useTranslation();
@@ -17,14 +18,8 @@ export default function Login() {
     setLoading(true);
     setError('');
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const res = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Login failed');
+      const data = await authApi.login({ phone, password });
+      if (!data.access_token) throw new Error('No token received');
       localStorage.setItem('stocksense-token', data.access_token);
       localStorage.setItem('stocksense-user', JSON.stringify(data.user));
       navigate('/dashboard/overview');
