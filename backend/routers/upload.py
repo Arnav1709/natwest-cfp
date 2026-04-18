@@ -2,6 +2,8 @@
 Upload router — POST /api/upload/csv, /image, /verify, GET /api/upload/history
 """
 
+import json
+import logging
 from datetime import date
 from typing import List, Optional
 
@@ -24,8 +26,71 @@ from schemas.upload import (
     VerifyResponse,
 )
 from services.ocr_service import process_ledger_image
+from services.ai_client import call_llm
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/upload", tags=["upload"])
+
+# Valid categories that the system supports
+_VALID_CATEGORIES = {
+    "medicines", "supplements", "supplies", "equipment", "grocery", "other",
+}
+
+
+def _ai_categorise_products(products: List[ParsedProduct]) -> List[ParsedProduct]:
+    """
+    Use AI to assign a category to each product based on its name.
+    Sends unique names in a single batch prompt for efficiency.
+    Falls back to 'Other' if the AI call fails.
+    """
+    # Collect unique product names that need a category
+    unique_names = list({p.name for p in products if p.name and not p.category})
+    if not unique_names:
+        return products
+
+    prompt = (
+        "You are a product categoriser for a pharmacy / grocery inventory system.\n"
+        "Valid categories are EXACTLY: Medicines, Supplements, Supplies, Equipment, Grocery, Other.\n\n"
+        "For each product name below, return a JSON object mapping the product name to its category.\n"
+        "Return ONLY valid JSON, no markdown, no explanation.\n\n"
+        "Example output:\n"
+        '{"Paracetamol 500mg": "Medicines", "Rice 5kg": "Grocery", "Surgical Gloves": "Supplies"}\n\n'
+        "Product names:\n"
+        + "\n".join(f"- {name}" for name in unique_names)
+    )
+
+    try:
+        response = call_llm(prompt)
+        if not response:
+            logger.warning("AI category inference returned empty — keeping 'Other'")
+            return products
+
+        # Strip markdown fences if present
+        cleaned = response.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+
+        category_map = json.loads(cleaned)
+        logger.info("AI categorised %d products: %s", len(category_map), category_map)
+
+        # Apply categories back
+        for product in products:
+            if product.category:
+                continue
+            ai_cat = category_map.get(product.name, "Other")
+            # Validate against our allowed categories
+            if ai_cat.lower() in _VALID_CATEGORIES:
+                product.category = ai_cat
+            else:
+                product.category = "Other"
+
+    except (json.JSONDecodeError, KeyError, TypeError) as e:
+        logger.warning("Failed to parse AI category response: %s", e)
+    except Exception as e:
+        logger.warning("AI categorisation failed: %s", e)
+
+    return products
 
 
 # ── Response schema for upload history ──
@@ -83,6 +148,12 @@ async def upload_csv(
     )
     db.add(upload_record)
     db.commit()
+
+    # ── AI-powered category inference ──
+    # If no category column was found in the CSV, use LLM to classify
+    # products by name so the user doesn't see "Other" for everything.
+    if "category" not in columns_detected:
+        products = _ai_categorise_products(products)
 
     return CSVUploadResponse(
         products=products,
