@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
  * GlowCard — Mouse-tracking gradient glow with frosted glass.
  * The glow follows cursor position on hover.
  */
-export default function GlowCard({ children, className = '', glowColor = 'rgba(16, 185, 129, 0.15)', style = {}, onClick, id }) {
+export default function GlowCard({ children, className = '', glowColor = 'rgba(16, 185, 129, 0.15)', style = {}, onClick, id, ...rest }) {
   const cardRef = useRef(null);
   const [glowPos, setGlowPos] = useState({ x: 50, y: 50 });
   const [isHovered, setIsHovered] = useState(false);
@@ -23,6 +23,7 @@ export default function GlowCard({ children, className = '', glowColor = 'rgba(1
       className={`glow-card ${className}`}
       id={id}
       onClick={onClick}
+      {...rest}
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

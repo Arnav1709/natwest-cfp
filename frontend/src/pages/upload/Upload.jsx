@@ -301,6 +301,10 @@ export default function Upload() {
             </div>
           )}
 
+          {/* Hidden file inputs — must be outside the card loop */}
+          <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleFileDrop} hidden />
+          <input ref={imageRef} type="file" accept="image/*" onChange={handleImageSelect} hidden />
+
           {/* Upload Methods */}
           <div className="grid sm:grid-cols-3 gap-4">
             {methods.map((m) => {
@@ -317,9 +321,6 @@ export default function Upload() {
                   onDragLeave={m.id === 'csv' ? () => setDragOver(false) : undefined}
                   onDrop={m.id === 'csv' ? handleFileDrop : undefined}
                 >
-                  <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleFileDrop} hidden />
-                  <input ref={imageRef} type="file" accept="image/*" onChange={handleImageSelect} hidden />
-
                   <div
                     className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 border transition-all group-hover:scale-110"
                     style={{ backgroundColor: `${m.color}15`, borderColor: `${m.color}30` }}
