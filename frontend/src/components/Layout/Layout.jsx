@@ -215,14 +215,14 @@ export default function Layout() {
             </div>
           </div>
           <div className="topbar-right">
-            <button className="topbar-icon-btn" id="btn-notifications" title="Notifications">
+            <button className="topbar-icon-btn" id="btn-notifications" title="Notifications" onClick={() => navigate('/alerts')}>
               🔔
-              <span className="badge-dot" />
+              {alertCount > 0 && <span className="badge-dot" />}
             </button>
             <button className="topbar-icon-btn" id="btn-theme" title="Theme">
               🌙
             </button>
-            <div className="topbar-user">
+            <div className="topbar-user" onClick={() => navigate('/settings')} style={{ cursor: 'pointer' }} title="Go to Settings">
               <div className="topbar-avatar">{(user.shop_name || 'U')[0].toUpperCase()}{(user.shop_name || 'U')[1]?.toUpperCase() || ''}</div>
               <div className="topbar-user-info">
                 <span className="topbar-user-name">{user.shop_name || 'User'}</span>
