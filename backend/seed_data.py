@@ -118,6 +118,44 @@ def seed():
         print(f"   ✅ {len(products)} products created")
 
         # ──────────────────────────────────────────
+        # 2b. CREATE PRODUCT BATCHES (multi-batch expiry tracking)
+        # ──────────────────────────────────────────
+        from models.product_batch import ProductBatch
+        batch_count = 0
+        for i, p in enumerate(products):
+            if p.expiry_date is None:
+                continue
+            # Create 2-3 batches per product with staggered expiry dates
+            batch_configs = [
+                # (days_offset, qty_fraction, batch_suffix)
+                (-5, 0.1, "A"),     # Already expired (small qty)
+                (15, 0.3, "B"),     # Expiring soon
+                (120, 0.6, "C"),    # Safe batch
+            ]
+            # Vary batches per product
+            if i % 3 == 0:
+                batch_configs = [(-3, 0.15, "A"), (8, 0.35, "B"), (200, 0.5, "C")]
+            elif i % 3 == 1:
+                batch_configs = [(25, 0.4, "B"), (180, 0.6, "C")]
+            else:
+                batch_configs = [(5, 0.2, "A"), (45, 0.3, "B"), (150, 0.5, "C")]
+
+            for (days_off, qty_frac, suffix) in batch_configs:
+                qty = max(1, int(p.current_stock * qty_frac))
+                batch = ProductBatch(
+                    product_id=p.id,
+                    batch_number=f"BATCH-{p.name[:3].upper()}-{suffix}",
+                    quantity=qty,
+                    expiry_date=today + timedelta(days=days_off),
+                    purchase_date=today - timedelta(days=random.randint(30, 180)),
+                    unit_cost=p.unit_cost,
+                )
+                db.add(batch)
+                batch_count += 1
+        db.commit()
+        print(f"   ✅ {batch_count} product batches created")
+
+        # ──────────────────────────────────────────
         # 3. GENERATE SALES HISTORY (6 months)
         # ──────────────────────────────────────────
         sales_count = 0

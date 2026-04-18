@@ -368,7 +368,21 @@ def create_product(
             notes="Initial stock",
         )
         db.add(movement)
-        db.commit()
+
+    # Auto-create a ProductBatch if expiry_date is provided
+    if request.expiry_date and request.current_stock > 0:
+        from models.product_batch import ProductBatch
+        batch = ProductBatch(
+            product_id=product.id,
+            batch_number=f"BATCH-{product.name[:3].upper()}-001",
+            quantity=request.current_stock,
+            expiry_date=request.expiry_date,
+            purchase_date=date.today(),
+            unit_cost=request.unit_cost,
+        )
+        db.add(batch)
+
+    db.commit()
 
     # Invalidate caches
     cache_invalidate(current_user.id, "inventory_list", "inventory_health", "inventory_expiring", "reorder")

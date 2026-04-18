@@ -34,3 +34,4 @@ class Product(Base):
     anomalies = relationship("Anomaly", back_populates="product", cascade="all, delete-orphan")
     alerts = relationship("Alert", back_populates="product", cascade="all, delete-orphan")
     stock_movements = relationship("StockMovement", back_populates="product", cascade="all, delete-orphan")
+    batches = relationship("ProductBatch", back_populates="product", cascade="all, delete-orphan")

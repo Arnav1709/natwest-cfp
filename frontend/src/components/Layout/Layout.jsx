@@ -12,6 +12,7 @@ const navItems = [
   { path: '/products', icon: '🏷️', label: 'Products' },
   { path: '/sales', icon: '💳', label: 'Record Sales' },
   { path: '/reorder', icon: '🔄', label: 'Reorder' },
+  { path: '/expiry', icon: '⏰', label: 'Expiry Tracker' },
   { path: '/alerts', icon: '🔔', label: 'Alerts', badge: true },
   { section: 'Data' },
   { path: '/upload', icon: '📤', label: 'Upload Data' },

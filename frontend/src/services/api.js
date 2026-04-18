@@ -216,3 +216,18 @@ export const translateApi = {
       body: JSON.stringify({ texts, target_lang: targetLang }),
     }),
 };
+
+// === Expiry Tracker ===
+export const expiryApi = {
+  batches: (risk) => {
+    const params = risk ? `?risk=${risk}` : '';
+    return request(`/expiry/batches${params}`);
+  },
+  addBatch: (data) => request('/expiry/batches', { method: 'POST', body: JSON.stringify(data) }),
+  deleteBatch: (id) => request(`/expiry/batches/${id}`, { method: 'DELETE' }),
+  getAdvice: (productIds) =>
+    request('/expiry/advice', {
+      method: 'POST',
+      body: JSON.stringify({ product_ids: productIds || null }),
+    }),
+};

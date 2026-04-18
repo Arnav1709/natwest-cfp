@@ -144,6 +144,7 @@ export default function Upload() {
           quantity: item.quantity || 0,
           price: item.price || 0,
           category: item.category || 'Other',
+          expiry_date: item.expiry_date || '',
           confidence: item.confidence || 1.0,
         }));
 
@@ -393,10 +394,12 @@ export default function Upload() {
                     </thead>
                     <tbody className="divide-y divide-slate-800/60">
                       {[
-                        { field: 'Product Name', names: 'name, product_name, product, item, item_name, medicine, sku, description', required: true },
+                        { field: 'Product Name', names: 'product_name, product, name, item_name, item, medicine, sku, description', required: true },
                         { field: 'Date', names: 'date, sale_date, transaction_date, sold_date, order_date', required: false },
-                        { field: 'Quantity', names: 'quantity, qty, units, sold, units_sold, amount, count', required: false },
+                        { field: 'Quantity', names: 'quantity, qty, units, sold, units_sold, stock, current_stock', required: false },
                         { field: 'Price', names: 'price, unit_price, cost, unit_cost, rate, mrp, selling_price', required: false },
+                        { field: 'Expiry Date', names: 'expiry_date, expiry, exp_date, expiration_date, best_before, valid_until', required: false },
+                        { field: 'Category', names: 'category, type, product_type, product_category, group', required: false },
                       ].map((row) => (
                         <tr key={row.field}>
                           <td className="px-4 py-2 font-semibold text-white">{row.field}</td>
