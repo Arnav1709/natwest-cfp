@@ -145,7 +145,7 @@ def whatsapp_webhook(
         )
         return WebhookResponse(reply=reply)
 
-    elif command == "REPORT":
+    elif command == "REPORT" or command == "FULL":
         return WebhookResponse(
             reply=(
                 "📊 *StockSense Forecast Report*\n\n"
@@ -166,6 +166,22 @@ def whatsapp_webhook(
             db.commit()
         return WebhookResponse(reply="🔇 WhatsApp notifications paused. Send START to resume.")
 
+    elif command == "START":
+        prefs = (
+            db.query(NotificationPreference)
+            .filter(NotificationPreference.user_id == user.id)
+            .first()
+        )
+        if prefs:
+            prefs.channel_whatsapp = True
+            db.commit()
+        else:
+            # Create default prefs with WhatsApp enabled
+            new_prefs = NotificationPreference(user_id=user.id, channel_whatsapp=True)
+            db.add(new_prefs)
+            db.commit()
+        return WebhookResponse(reply="🔔 WhatsApp notifications resumed! You'll receive alerts and briefings again.")
+
     elif command == "HELP":
         return WebhookResponse(
             reply=(
@@ -175,6 +191,7 @@ def whatsapp_webhook(
                 "STATUS — Stock health summary\n"
                 "REPORT — Forecast report link\n"
                 "STOP — Pause notifications\n"
+                "START — Resume notifications\n"
                 "HELP — Show this message"
             )
         )

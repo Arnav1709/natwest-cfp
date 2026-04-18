@@ -25,10 +25,35 @@ from routers import auth, upload, inventory, forecast, anomalies, reorder, alert
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan: initialize DB on startup."""
+    """Application lifespan: initialize DB and start background scheduler."""
     init_db()
     logger.info("Database tables created/verified")
+
+    # ── Start background scheduler for alert jobs ──
+    from apscheduler.schedulers.background import BackgroundScheduler
+    from services.alert_service import (
+        run_daily_briefing,
+        run_anomaly_scan,
+        run_seasonal_check,
+        run_weekly_summary,
+    )
+
+    scheduler = BackgroundScheduler()
+    # Daily briefing at 8:00 AM
+    scheduler.add_job(run_daily_briefing, "cron", hour=8, minute=0, id="daily_briefing")
+    # Anomaly scan at 8:30 AM
+    scheduler.add_job(run_anomaly_scan, "cron", hour=8, minute=30, id="anomaly_scan")
+    # Seasonal check every Monday at 9:00 AM
+    scheduler.add_job(run_seasonal_check, "cron", day_of_week="mon", hour=9, minute=0, id="seasonal_check")
+    # Weekly summary every Sunday at 7:00 PM
+    scheduler.add_job(run_weekly_summary, "cron", day_of_week="sun", hour=19, minute=0, id="weekly_summary")
+
+    scheduler.start()
+    logger.info("Background scheduler started with 4 alert jobs")
+
     yield
+
+    scheduler.shutdown(wait=False)
     logger.info("StockSense shutting down")
 
 

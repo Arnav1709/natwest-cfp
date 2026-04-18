@@ -39,3 +39,6 @@ numpy>=1.26.4
 scipy>=1.13.1
 requests>=2.31.0
 chromadb>=0.4.0
+
+# Scheduling (background jobs for alerts)
+apscheduler>=3.10.0

@@ -162,6 +162,7 @@ function formatHelpMessage() {
   msg += `*FULL* — Get detailed weekly report\n`;
   msg += `*STATUS* — Quick stock health summary\n`;
   msg += `*STOP* — Pause all notifications\n`;
+  msg += `*START* — Resume notifications\n`;
   msg += `*HELP* — Show this help message\n\n`;
   msg += `Just type any command above to get started! 🚀`;
   return msg;
