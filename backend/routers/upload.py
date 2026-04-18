@@ -317,12 +317,23 @@ def _handle_image_inventory_import(request: VerifyRequest, user: User, db: Sessi
     Image/OCR inventory import —
       • Create or update products with stock levels from OCR
       • Do NOT create sales records (inventory snapshot ≠ a sale)
+      • Auto-create ProductBatch if expiry_date is provided
     """
+    from models.product_batch import ProductBatch
+
     products_created = 0
 
     for item in request.verified_data:
         if not item.name or not item.name.strip():
             continue
+
+        # Parse expiry_date if provided
+        expiry = None
+        if item.expiry_date:
+            try:
+                expiry = date.fromisoformat(item.expiry_date)
+            except ValueError:
+                pass
 
         existing = (
             db.query(Product)
@@ -338,6 +349,20 @@ def _handle_image_inventory_import(request: VerifyRequest, user: User, db: Sessi
                 existing.current_stock = item.quantity
             if item.price is not None:
                 existing.unit_cost = item.price
+            if expiry:
+                existing.expiry_date = expiry
+                # Create a new batch for the updated stock
+                stock = item.current_stock or item.quantity or 0
+                if stock > 0:
+                    batch = ProductBatch(
+                        product_id=existing.id,
+                        batch_number=f"BATCH-{existing.name[:3].upper()}-{db.query(ProductBatch).filter(ProductBatch.product_id == existing.id).count() + 1:03d}",
+                        quantity=stock,
+                        expiry_date=expiry,
+                        purchase_date=date.today(),
+                        unit_cost=existing.unit_cost or 0,
+                    )
+                    db.add(batch)
         else:
             product = Product(
                 user_id=user.id,
@@ -348,11 +373,25 @@ def _handle_image_inventory_import(request: VerifyRequest, user: User, db: Sessi
                 reorder_point=item.reorder_point or 0,
                 unit_cost=item.price or 0,
                 supplier_name=item.supplier_name,
+                expiry_date=expiry,
             )
             db.add(product)
             db.commit()
             db.refresh(product)
             products_created += 1
+
+            # Auto-create batch if expiry_date provided
+            stock = product.current_stock or 0
+            if expiry and stock > 0:
+                batch = ProductBatch(
+                    product_id=product.id,
+                    batch_number=f"BATCH-{product.name[:3].upper()}-001",
+                    quantity=stock,
+                    expiry_date=expiry,
+                    purchase_date=date.today(),
+                    unit_cost=product.unit_cost or 0,
+                )
+                db.add(batch)
 
     db.commit()
 
@@ -368,11 +407,22 @@ def _handle_manual_import(request: VerifyRequest, user: User, db: Session) -> Ve
     """
     Manual / legacy import — keeps backwards compatibility.
     Creates products AND sales records (original behavior).
+    Auto-creates ProductBatch if expiry_date is provided.
     """
+    from models.product_batch import ProductBatch
+
     products_created = 0
     sales_created = 0
 
     for item in request.verified_data:
+        # Parse expiry_date if provided
+        expiry = None
+        if item.expiry_date:
+            try:
+                expiry = date.fromisoformat(item.expiry_date)
+            except ValueError:
+                pass
+
         existing = (
             db.query(Product)
             .filter(Product.user_id == user.id, Product.name == item.name)
@@ -385,6 +435,8 @@ def _handle_manual_import(request: VerifyRequest, user: User, db: Session) -> Ve
                 product.current_stock = item.current_stock
             if item.price is not None:
                 product.unit_cost = item.price
+            if expiry:
+                product.expiry_date = expiry
         else:
             product = Product(
                 user_id=user.id,
@@ -395,11 +447,25 @@ def _handle_manual_import(request: VerifyRequest, user: User, db: Session) -> Ve
                 reorder_point=item.reorder_point or 0,
                 unit_cost=item.price or 0,
                 supplier_name=item.supplier_name,
+                expiry_date=expiry,
             )
             db.add(product)
             db.commit()
             db.refresh(product)
             products_created += 1
+
+            # Auto-create batch if expiry_date provided
+            stock = product.current_stock or 0
+            if expiry and stock > 0:
+                batch = ProductBatch(
+                    product_id=product.id,
+                    batch_number=f"BATCH-{product.name[:3].upper()}-001",
+                    quantity=stock,
+                    expiry_date=expiry,
+                    purchase_date=date.today(),
+                    unit_cost=product.unit_cost or 0,
+                )
+                db.add(batch)
 
         if item.date and item.quantity:
             try:

@@ -42,6 +42,7 @@ class VerifiedDataItem(BaseModel):
     current_stock: Optional[float] = None
     reorder_point: Optional[float] = None
     supplier_name: Optional[str] = None
+    expiry_date: Optional[str] = None  # ISO date string e.g. "2026-08-15"
 
 
 class VerifyRequest(BaseModel):

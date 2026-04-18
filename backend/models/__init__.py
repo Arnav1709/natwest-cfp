@@ -14,6 +14,7 @@ from models.lookup import DiseaseSeason, FestivalCalendar
 from models.notification import NotificationPreference
 from models.upload_history import UploadHistory
 from models.translation_cache import TranslationCache
+from models.product_batch import ProductBatch
 
 __all__ = [
     "User",
@@ -29,5 +30,6 @@ __all__ = [
     "NotificationPreference",
     "UploadHistory",
     "TranslationCache",
+    "ProductBatch",
 ]
 

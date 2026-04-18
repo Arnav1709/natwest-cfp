@@ -15,6 +15,7 @@ import Scenarios from './pages/dashboard/Scenarios';
 import ProductCatalog from './pages/products/ProductCatalog';
 import ProductDetail from './pages/products/ProductDetail';
 import Reorder from './pages/Reorder';
+import ExpiryTracker from './pages/ExpiryTracker';
 import Alerts from './pages/Alerts';
 import Settings from './pages/Settings';
 import RecordSales from './pages/sales/RecordSales';
@@ -108,6 +109,7 @@ function App() {
             <Route path="/products" element={<ProductCatalog />} />
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/reorder" element={<Reorder />} />
+            <Route path="/expiry" element={<ExpiryTracker />} />
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/sales" element={<RecordSales />} />

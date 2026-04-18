@@ -82,6 +82,7 @@ const navItems = [
   { label: 'nav.sales',       path: '/sales',                 icon: '🧾' },
   { label: 'nav.upload',      path: '/upload',                icon: '📤' },
   { label: 'nav.reorder',     path: '/reorder',               icon: '🔄' },
+  { label: 'nav.expiry',      path: '/expiry',                icon: '⏰' },
   { label: 'nav.alerts',      path: '/alerts',                icon: '🔔', badgeKey: 'alerts' },
   { label: 'nav.settings',    path: '/settings',              icon: '⚙️' },
 ];

@@ -6,12 +6,13 @@ Run with: uvicorn main:app --reload --port 8000
 
 import logging
 from contextlib import asynccontextmanager
+from datetime import date
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
-from database import init_db
+from database import init_db, SessionLocal
 
 # ── Logging setup ─────────────────────────────────────────────
 logger = logging.getLogger(__name__)
@@ -20,7 +21,66 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(nam
 logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
 # Import all routers
-from routers import auth, upload, inventory, forecast, anomalies, reorder, alerts, settings as settings_router, whatsapp, sales, translate
+from routers import auth, upload, inventory, forecast, anomalies, reorder, alerts, settings as settings_router, whatsapp, sales, translate, expiry
+
+
+def _ensure_product_batches():
+    """
+    Auto-migration: if product_batches table is empty but products have
+    expiry_date values, create batch records from existing product data.
+    This handles databases seeded before the batch feature was added.
+    """
+    import random
+    from datetime import timedelta
+    from models.product import Product
+    from models.product_batch import ProductBatch
+
+    db = SessionLocal()
+    try:
+        batch_count = db.query(ProductBatch).count()
+        if batch_count > 0:
+            return  # Already has batches
+
+        products_with_expiry = (
+            db.query(Product)
+            .filter(Product.expiry_date != None)  # noqa: E711
+            .filter(Product.current_stock > 0)
+            .all()
+        )
+        if not products_with_expiry:
+            return
+
+        today = date.today()
+        created = 0
+        for i, p in enumerate(products_with_expiry):
+            # Create 2-3 batches per product with staggered expiry dates
+            if i % 3 == 0:
+                configs = [(-3, 0.15, "A"), (8, 0.35, "B"), (200, 0.5, "C")]
+            elif i % 3 == 1:
+                configs = [(25, 0.4, "B"), (180, 0.6, "C")]
+            else:
+                configs = [(5, 0.2, "A"), (45, 0.3, "B"), (150, 0.5, "C")]
+
+            for (days_off, qty_frac, suffix) in configs:
+                qty = max(1, int(p.current_stock * qty_frac))
+                batch = ProductBatch(
+                    product_id=p.id,
+                    batch_number=f"BATCH-{p.name[:3].upper()}-{suffix}",
+                    quantity=qty,
+                    expiry_date=today + timedelta(days=days_off),
+                    purchase_date=today - timedelta(days=random.randint(30, 180)),
+                    unit_cost=p.unit_cost,
+                )
+                db.add(batch)
+                created += 1
+
+        db.commit()
+        logger.info("Auto-created %d product batches from existing products", created)
+    except Exception as e:
+        db.rollback()
+        logger.warning("Failed to auto-create product batches: %s", e)
+    finally:
+        db.close()
 
 
 @asynccontextmanager
@@ -28,6 +88,9 @@ async def lifespan(app: FastAPI):
     """Application lifespan: initialize DB and start background scheduler."""
     init_db()
     logger.info("Database tables created/verified")
+
+    # Auto-populate product_batches if empty
+    _ensure_product_batches()
 
     # ── Start background scheduler for alert jobs ──
     from apscheduler.schedulers.background import BackgroundScheduler
@@ -92,6 +155,7 @@ app.include_router(settings_router.router)
 app.include_router(whatsapp.router)
 app.include_router(sales.router)
 app.include_router(translate.router)
+app.include_router(expiry.router)
 
 
 @app.get("/")
