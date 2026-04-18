@@ -26,6 +26,7 @@ const BACKEND_COMMANDS = new Set([
   'FULL',
   'STATUS',
   'STOP',
+  'START',
 ]);
 
 // ── Message queue for when backend is unreachable ──

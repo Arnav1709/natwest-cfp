@@ -21,6 +21,7 @@ from models.product import Product
 from models.stock_movement import StockMovement
 from models.sales import SalesHistory
 from models.alert import Alert
+from services.alert_service import create_and_notify
 from utils.auth import get_current_user
 from schemas.inventory import (
     ProductCreate,
@@ -436,27 +437,41 @@ def update_product(
         elif mv.type == "adjustment":
             product.current_stock = max(0, (product.current_stock or 0) + mv.quantity)
 
-        # Check for alerts
+        # Check for alerts — create in DB + send WhatsApp via alert_service
         if product.current_stock <= 0:
-            alert = Alert(
+            create_and_notify(
+                db=db,
                 user_id=current_user.id,
                 product_id=product.id,
-                type="stockout",
+                alert_type="stockout",
                 severity="critical",
                 title=f"OUT OF STOCK: {product.name}",
                 message=f"{product.name} is now out of stock. Immediate reorder recommended.",
+                whatsapp_template_data={
+                    "product_name": product.name,
+                    "last_qty": abs(mv.quantity),
+                    "reorder_qty": product.reorder_point or 0,
+                    "supplier_name": product.supplier_name or "N/A",
+                    "supplier_contact": product.supplier_contact or "N/A",
+                },
             )
-            db.add(alert)
         elif product.current_stock <= (product.reorder_point or 0):
-            alert = Alert(
+            create_and_notify(
+                db=db,
                 user_id=current_user.id,
                 product_id=product.id,
-                type="low_stock",
+                alert_type="low_stock",
                 severity="warning",
                 title=f"Low Stock: {product.name}",
                 message=f"{product.name} is below reorder point ({product.reorder_point}). Current: {product.current_stock}.",
+                whatsapp_template_data={
+                    "product_name": product.name,
+                    "current_stock": product.current_stock,
+                    "reorder_point": product.reorder_point or 0,
+                    "days_remaining": "N/A",
+                    "reorder_qty": product.reorder_point or 0,
+                },
             )
-            db.add(alert)
 
     product.updated_at = datetime.utcnow()
     db.commit()

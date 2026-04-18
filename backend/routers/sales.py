@@ -18,6 +18,7 @@ from models.product import Product
 from models.sales import SalesHistory
 from models.stock_movement import StockMovement
 from models.alert import Alert
+from services.alert_service import create_and_notify
 from utils.auth import get_current_user
 from utils.csv_parser import parse_csv
 from schemas.sales import (
@@ -108,30 +109,44 @@ def record_sales(
         )
         db.add(movement)
 
-        # Check for alerts
+        # Check for alerts — create in DB + send WhatsApp via alert_service
         alert_type = None
         if product.current_stock <= 0:
-            alert = Alert(
+            create_and_notify(
+                db=db,
                 user_id=current_user.id,
                 product_id=product.id,
-                type="stockout",
+                alert_type="stockout",
                 severity="critical",
                 title=f"OUT OF STOCK: {product.name}",
                 message=f"{product.name} is now out of stock after selling {entry.quantity} units. Immediate reorder recommended.",
+                whatsapp_template_data={
+                    "product_name": product.name,
+                    "last_qty": entry.quantity,
+                    "reorder_qty": product.reorder_point or 0,
+                    "supplier_name": product.supplier_name or "N/A",
+                    "supplier_contact": product.supplier_contact or "N/A",
+                },
             )
-            db.add(alert)
             alert_type = "stockout"
             alerts_generated += 1
         elif product.current_stock <= (product.reorder_point or 0):
-            alert = Alert(
+            create_and_notify(
+                db=db,
                 user_id=current_user.id,
                 product_id=product.id,
-                type="low_stock",
+                alert_type="low_stock",
                 severity="warning",
                 title=f"Low Stock: {product.name}",
                 message=f"{product.name} dropped to {product.current_stock} units (reorder point: {product.reorder_point}). Consider reordering.",
+                whatsapp_template_data={
+                    "product_name": product.name,
+                    "current_stock": product.current_stock,
+                    "reorder_point": product.reorder_point or 0,
+                    "days_remaining": "N/A",
+                    "reorder_qty": product.reorder_point or 0,
+                },
             )
-            db.add(alert)
             alert_type = "low_stock"
             alerts_generated += 1
 
