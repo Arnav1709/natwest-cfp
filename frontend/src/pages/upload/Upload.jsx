@@ -1,8 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Upload as UploadIcon, FileSpreadsheet, Camera, PenLine, ChevronDown, Package, Clock, CheckCircle2, AlertTriangle, Plus, Save, X, Loader2, ArrowRight, History, Info } from 'lucide-react';
 import { uploadApi, inventoryApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
+import GlowCard from '../../components/GlowCard';
+import ShimmerButton from '../../components/ShimmerButton';
 
 export default function Upload() {
   const { t } = useTranslation();
@@ -223,41 +226,67 @@ export default function Upload() {
   const getStockStatus = (product) => {
     const stock = product.current_stock || 0;
     const reorderPt = product.reorder_point || 0;
-    if (stock === 0) return { label: 'Out of Stock', cls: 'badge-danger' };
-    if (stock <= reorderPt) return { label: 'Low Stock', cls: 'badge-warning' };
-    return { label: 'Healthy', cls: 'badge-success' };
+    if (stock === 0) return { label: 'Out of Stock', color: '#EF4444' };
+    if (stock <= reorderPt) return { label: 'Low Stock', color: '#F59E0B' };
+    return { label: 'Healthy', color: '#10B981' };
   };
 
+  // Upload method cards config
+  const methods = [
+    {
+      id: 'csv', icon: FileSpreadsheet, color: '#3B82F6',
+      title: t('upload.csv_title'), desc: t('upload.csv_desc'),
+      badges: ['.csv', '.xlsx', '.xls'],
+      onClick: () => fileRef.current?.click(),
+    },
+    {
+      id: 'image', icon: Camera, color: '#8B5CF6',
+      title: t('upload.image_title'), desc: t('upload.image_desc'),
+      badges: ['AI OCR'],
+      onClick: () => imageRef.current?.click(),
+    },
+    {
+      id: 'manual', icon: PenLine, color: '#10B981',
+      title: t('upload.manual_title'), desc: t('upload.manual_desc'),
+      badges: [],
+      onClick: () => { setActiveMethod('manual'); navigate('/upload/verify', { state: { data: [], source: 'manual' } }); },
+    },
+  ];
+
+  const tabs = [
+    { key: 'import', label: 'Import New Data', icon: UploadIcon },
+    { key: 'update', label: 'Update Inventory', icon: Package },
+  ];
+
   return (
-    <div style={{ maxWidth: '960px', margin: '0 auto' }}>
-      <div style={{ marginBottom: 'var(--space-4)' }}>
-        <h1 className="section-title">{t('upload.title')}</h1>
-        <p className="section-subtitle">{t('upload.subtitle')}</p>
+    <div className="max-w-[960px] mx-auto space-y-6 animate-fade-in-up">
+      {/* Header */}
+      <div>
+        <div className="flex items-center gap-2 mb-1">
+          <div className="h-1 w-6 rounded-full bg-teal-500"></div>
+          <span className="text-xs font-bold tracking-wider text-teal-400 uppercase">Data Management</span>
+        </div>
+        <h1 className="text-3xl font-bold text-white tracking-tight">{t('upload.title')}</h1>
+        <p className="text-slate-400 mt-1">{t('upload.subtitle')}</p>
       </div>
 
-      {/* ── Tab Switcher ── */}
-      <div style={{
-        display: 'flex', gap: 'var(--space-2)',
-        marginBottom: 'var(--space-5)',
-        borderBottom: '1px solid var(--color-border)',
-        paddingBottom: 'var(--space-1)',
-      }}>
-        <button
-          className={`btn ${activeTab === 'import' ? 'btn-primary' : 'btn-ghost'}`}
-          onClick={() => setActiveTab('import')}
-          style={{ borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0', fontWeight: 600 }}
-          id="tab-import"
-        >
-          📥 Import New Data
-        </button>
-        <button
-          className={`btn ${activeTab === 'update' ? 'btn-primary' : 'btn-ghost'}`}
-          onClick={() => setActiveTab('update')}
-          style={{ borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0', fontWeight: 600 }}
-          id="tab-update"
-        >
-          ✏️ Update Current Inventory
-        </button>
+      {/* Tab Switcher */}
+      <div className="flex gap-1 p-1 rounded-xl bg-slate-900/70 border border-slate-800 w-max">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            id={`tab-${tab.key}`}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+              activeTab === tab.key
+                ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30 shadow-md shadow-teal-500/10'
+                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+            }`}
+          >
+            <tab.icon className="w-4 h-4" />
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* ==== TAB 1: IMPORT ==== */}
@@ -265,214 +294,191 @@ export default function Upload() {
         <>
           {/* Error banner */}
           {error && (
-            <div
-              style={{
-                background: 'rgba(239,68,68,0.1)',
-                border: '1px solid rgba(239,68,68,0.3)',
-                borderRadius: 'var(--radius-lg)',
-                padding: 'var(--space-4)',
-                marginBottom: 'var(--space-4)',
-                color: 'var(--color-danger)',
-                fontSize: 'var(--font-size-sm)',
-              }}
-            >
-              ⚠️ {error}
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3 text-red-400">
+              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+              <p className="text-sm">{error}</p>
             </div>
           )}
 
-          <div className="grid-3" style={{ marginBottom: 'var(--space-6)' }}>
-            {/* CSV Upload */}
-            <div
-              className={`upload-card ${activeMethod === 'csv' ? 'active' : ''} ${dragOver ? 'active' : ''}`}
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleFileDrop}
-              onClick={() => fileRef.current?.click()}
-              id="upload-csv"
-              style={{ pointerEvents: uploading ? 'none' : 'auto', opacity: uploading ? 0.6 : 1 }}
-            >
-              <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleFileDrop} hidden />
-              <div style={{ fontSize: '2.5rem', marginBottom: 'var(--space-3)' }}>📄</div>
-              <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' }}>
-                {t('upload.csv_title')}
-              </h3>
-              <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-3)' }}>
-                {t('upload.csv_desc')}
-              </p>
-              <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }}>
-                <span className="badge badge-muted">.csv</span>
-                <span className="badge badge-muted">.xlsx</span>
-                <span className="badge badge-muted">.xls</span>
-              </div>
-            </div>
+          {/* Upload Methods */}
+          <div className="grid sm:grid-cols-3 gap-4">
+            {methods.map((m) => {
+              const isActive = activeMethod === m.id;
+              return (
+                <GlowCard
+                  key={m.id}
+                  className={`p-6 text-center cursor-pointer transition-all duration-300 group ${isActive ? 'ring-2 ring-teal-500/40' : ''} ${dragOver && m.id === 'csv' ? 'ring-2 ring-blue-500/40' : ''}`}
+                  onClick={m.onClick}
+                  id={`upload-${m.id}`}
+                  glowColor={isActive ? m.color : undefined}
+                  style={{ pointerEvents: uploading ? 'none' : 'auto', opacity: uploading ? 0.5 : 1 }}
+                  onDragOver={m.id === 'csv' ? (e) => { e.preventDefault(); setDragOver(true); } : undefined}
+                  onDragLeave={m.id === 'csv' ? () => setDragOver(false) : undefined}
+                  onDrop={m.id === 'csv' ? handleFileDrop : undefined}
+                >
+                  <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleFileDrop} hidden />
+                  <input ref={imageRef} type="file" accept="image/*" onChange={handleImageSelect} hidden />
 
-            {/* Image OCR */}
-            <div
-              className={`upload-card ${activeMethod === 'image' ? 'active' : ''}`}
-              onClick={() => imageRef.current?.click()}
-              id="upload-image"
-              style={{ pointerEvents: uploading ? 'none' : 'auto', opacity: uploading ? 0.6 : 1 }}
-            >
-              <input ref={imageRef} type="file" accept="image/*" onChange={handleImageSelect} hidden />
-              <div style={{ fontSize: '2.5rem', marginBottom: 'var(--space-3)' }}>📷</div>
-              <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' }}>
-                {t('upload.image_title')}
-              </h3>
-              <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-3)' }}>
-                {t('upload.image_desc')}
-              </p>
-              <span className="badge badge-primary">🤖 AI OCR</span>
-            </div>
-
-            {/* Manual Entry */}
-            <div
-              className={`upload-card ${activeMethod === 'manual' ? 'active' : ''}`}
-              onClick={() => { setActiveMethod('manual'); navigate('/upload/verify', { state: { data: [], source: 'manual' } }); }}
-              id="upload-manual"
-              style={{ pointerEvents: uploading ? 'none' : 'auto', opacity: uploading ? 0.6 : 1 }}
-            >
-              <div style={{ fontSize: '2.5rem', marginBottom: 'var(--space-3)' }}>✏️</div>
-              <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 'var(--space-2)' }}>
-                {t('upload.manual_title')}
-              </h3>
-              <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                {t('upload.manual_desc')}
-              </p>
-            </div>
+                  <div
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 border transition-all group-hover:scale-110"
+                    style={{ backgroundColor: `${m.color}15`, borderColor: `${m.color}30` }}
+                  >
+                    <m.icon className="w-7 h-7" style={{ color: m.color }} />
+                  </div>
+                  <h3 className="text-base font-bold text-white mb-1.5">{m.title}</h3>
+                  <p className="text-xs text-slate-400 mb-3 leading-relaxed">{m.desc}</p>
+                  <div className="flex gap-1.5 justify-center flex-wrap">
+                    {m.badges.map((b) => (
+                      <span key={b} className="px-2 py-0.5 rounded-md text-[10px] font-bold border" style={{ backgroundColor: `${m.color}10`, borderColor: `${m.color}25`, color: m.color }}>
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+                </GlowCard>
+              );
+            })}
           </div>
 
           {/* Selected File Info */}
           {selectedFile && (
-            <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                <span style={{ fontSize: '1.5rem' }}>{activeMethod === 'csv' ? '📄' : '📷'}</span>
+            <GlowCard className="p-4 flex flex-wrap items-center justify-between gap-4" glowColor="#3B82F6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-500/10 border border-blue-500/20">
+                  {activeMethod === 'csv' ? <FileSpreadsheet className="w-5 h-5 text-blue-400" /> : <Camera className="w-5 h-5 text-violet-400" />}
+                </div>
                 <div>
-                  <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{selectedFile.name}</div>
-                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                    {(selectedFile.size / 1024).toFixed(1)} KB
-                  </div>
+                  <div className="font-semibold text-white text-sm">{selectedFile.name}</div>
+                  <div className="text-xs text-slate-500">{(selectedFile.size / 1024).toFixed(1)} KB</div>
                 </div>
               </div>
 
               {uploading ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                  <div className="spinner" style={{ width: 20, height: 20, border: '3px solid var(--color-bg-active)', borderTop: '3px solid var(--color-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                  <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-primary)', fontWeight: 500 }}>
-                    {uploadProgress || 'Processing...'}
-                  </span>
+                <div className="flex items-center gap-3">
+                  <Loader2 className="w-5 h-5 text-teal-400 animate-spin" />
+                  <span className="text-sm font-medium text-teal-400">{uploadProgress || 'Processing...'}</span>
                 </div>
               ) : (
-                <button className="btn btn-primary" onClick={handleProceed} id="btn-proceed-upload">
-                  Process & Verify →
-                </button>
+                <ShimmerButton onClick={handleProceed} id="btn-proceed-upload">
+                  <span className="flex items-center gap-2">Process & Verify <ArrowRight className="w-4 h-4" /></span>
+                </ShimmerButton>
               )}
-            </div>
+            </GlowCard>
           )}
 
           {/* CSV Column Format Guide */}
-          <div className="glass-card" style={{ marginBottom: 'var(--space-4)' }}>
+          <GlowCard className="p-4">
             <div
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+              className="flex justify-between items-center cursor-pointer"
               onClick={() => setShowColumnGuide(!showColumnGuide)}
             >
-              <h3 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                📋 CSV / Excel Column Format Guide
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Info className="w-4 h-4 text-blue-400" />
+                CSV / Excel Column Format Guide
               </h3>
-              <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', transition: 'transform 0.2s', transform: showColumnGuide ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+              <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${showColumnGuide ? 'rotate-180' : ''}`} />
             </div>
             {showColumnGuide && (
-              <div style={{ marginTop: 'var(--space-3)' }}>
-                <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
-                  Your file should contain at least a <strong>product name</strong> column. The system auto-detects columns from these names:
+              <div className="mt-4 space-y-3">
+                <p className="text-xs text-slate-500">
+                  Your file should contain at least a <strong className="text-slate-300">product name</strong> column. The system auto-detects columns from these names:
                 </p>
-                <table className="data-table" style={{ fontSize: 'var(--font-size-xs)' }}>
-                  <thead>
-                    <tr>
-                      <th>Field</th>
-                      <th>Accepted Column Names</th>
-                      <th>Required</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td style={{ fontWeight: 600 }}>Product Name</td>
-                      <td><code>name</code>, <code>product_name</code>, <code>product</code>, <code>item</code>, <code>item_name</code>, <code>medicine</code>, <code>sku</code>, <code>description</code></td>
-                      <td><span className="badge badge-success">Required</span></td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 600 }}>Date</td>
-                      <td><code>date</code>, <code>sale_date</code>, <code>transaction_date</code>, <code>sold_date</code>, <code>order_date</code></td>
-                      <td><span className="badge badge-muted">Optional</span></td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 600 }}>Quantity</td>
-                      <td><code>quantity</code>, <code>qty</code>, <code>units</code>, <code>sold</code>, <code>units_sold</code>, <code>amount</code>, <code>count</code></td>
-                      <td><span className="badge badge-muted">Optional</span></td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 600 }}>Price</td>
-                      <td><code>price</code>, <code>unit_price</code>, <code>cost</code>, <code>unit_cost</code>, <code>rate</code>, <code>mrp</code>, <code>selling_price</code></td>
-                      <td><span className="badge badge-muted">Optional</span></td>
-                    </tr>
-                  </tbody>
-                </table>
-                <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: 'var(--space-2)' }}>
-                  💡 Column names are case-insensitive. If no name column is found, the first text column is used.
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-900/80 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-700/50">
+                      <tr>
+                        <th className="px-4 py-2">Field</th>
+                        <th className="px-4 py-2">Accepted Column Names</th>
+                        <th className="px-4 py-2">Required</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {[
+                        { field: 'Product Name', names: 'name, product_name, product, item, item_name, medicine, sku, description', required: true },
+                        { field: 'Date', names: 'date, sale_date, transaction_date, sold_date, order_date', required: false },
+                        { field: 'Quantity', names: 'quantity, qty, units, sold, units_sold, amount, count', required: false },
+                        { field: 'Price', names: 'price, unit_price, cost, unit_cost, rate, mrp, selling_price', required: false },
+                      ].map((row) => (
+                        <tr key={row.field}>
+                          <td className="px-4 py-2 font-semibold text-white">{row.field}</td>
+                          <td className="px-4 py-2 text-slate-400"><code className="text-xs text-slate-300">{row.names}</code></td>
+                          <td className="px-4 py-2">
+                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${row.required ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-slate-700/50 border-slate-600 text-slate-400'}`}>
+                              {row.required ? 'Required' : 'Optional'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-[11px] text-slate-500 flex items-center gap-1.5">
+                  <Info className="w-3 h-3" />
+                  Column names are case-insensitive. If no name column is found, the first text column is used.
                 </p>
               </div>
             )}
-          </div>
+          </GlowCard>
 
           {/* Recent Uploads — from API */}
-          <div className="glass-card">
-            <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 'var(--space-4)' }}>
-              Recent Uploads
-            </h3>
+          <GlowCard className="overflow-hidden p-0">
+            <div className="px-6 py-4 border-b border-slate-800">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <History className="w-4 h-4 text-teal-400" />
+                Recent Uploads
+              </h3>
+            </div>
             {loadingHistory ? (
-              <div style={{ textAlign: 'center', padding: 'var(--space-4)', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
-                Loading upload history...
-              </div>
+              <div className="py-8 text-center text-slate-500 text-sm">Loading upload history...</div>
             ) : (!uploadHistoryData?.uploads || uploadHistoryData.uploads.length === 0) ? (
-              <div style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--color-text-muted)' }}>
-                <div style={{ fontSize: '2rem', marginBottom: 'var(--space-2)' }}>📭</div>
-                <p style={{ fontSize: 'var(--font-size-sm)' }}>No uploads yet — start by importing your first file above</p>
+              <div className="py-12 text-center">
+                <Package className="w-8 h-8 text-slate-600 mx-auto mb-3" />
+                <p className="text-sm text-slate-500">No uploads yet — start by importing your first file above</p>
               </div>
             ) : (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>File</th>
-                    <th>Type</th>
-                    <th>Records</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {uploadHistoryData.uploads.map((upload) => {
-                    const typeBadge = upload.upload_type === 'csv' ? 'badge-info' :
-                                     upload.upload_type === 'image' ? 'badge-primary' : 'badge-muted';
-                    const typeLabel = upload.upload_type === 'csv' ? 'CSV' :
-                                     upload.upload_type === 'image' ? 'OCR' : 'Manual';
-                    const statusBadge = upload.status === 'verified' ? 'badge-success' :
-                                       upload.status === 'pending' ? 'badge-warning' : 'badge-danger';
-                    const dateStr = upload.created_at
-                      ? new Date(upload.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })
-                      : '—';
-                    return (
-                      <tr key={upload.id}>
-                        <td style={{ fontWeight: 500 }}>{upload.filename}</td>
-                        <td><span className={`badge ${typeBadge}`}>{typeLabel}</span></td>
-                        <td>{upload.records}</td>
-                        <td><span className={`badge ${statusBadge}`}>{upload.status.charAt(0).toUpperCase() + upload.status.slice(1)}</span></td>
-                        <td>{dateStr}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm whitespace-nowrap">
+                  <thead className="bg-slate-900/80 border-b border-slate-700/50 text-slate-300 uppercase tracking-wider text-xs font-semibold">
+                    <tr>
+                      <th className="px-6 py-3">File</th>
+                      <th className="px-6 py-3">Type</th>
+                      <th className="px-6 py-3">Records</th>
+                      <th className="px-6 py-3">Status</th>
+                      <th className="px-6 py-3">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {uploadHistoryData.uploads.map((upload) => {
+                      const typeColors = { csv: '#3B82F6', image: '#8B5CF6' };
+                      const typeLabels = { csv: 'CSV', image: 'OCR' };
+                      const statusColors = { verified: '#10B981', pending: '#F59E0B', failed: '#EF4444' };
+                      const tc = typeColors[upload.upload_type] || '#6B7280';
+                      const sc = statusColors[upload.status] || '#6B7280';
+                      const dateStr = upload.created_at
+                        ? new Date(upload.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })
+                        : '—';
+                      return (
+                        <tr key={upload.id} className="hover:bg-slate-800/40 transition-colors">
+                          <td className="px-6 py-3 font-medium text-slate-200">{upload.filename}</td>
+                          <td className="px-6 py-3">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold border" style={{ backgroundColor: `${tc}15`, borderColor: `${tc}30`, color: tc }}>
+                              {typeLabels[upload.upload_type] || 'Manual'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-3 text-slate-400 tabular-nums">{upload.records}</td>
+                          <td className="px-6 py-3">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold border capitalize" style={{ backgroundColor: `${sc}15`, borderColor: `${sc}30`, color: sc }}>
+                              {upload.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-3 text-slate-500 text-xs">{dateStr}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
-          </div>
+          </GlowCard>
         </>
       )}
 
@@ -481,113 +487,96 @@ export default function Upload() {
         <>
           {/* Success / Error banners */}
           {updateSuccess && (
-            <div style={{
-              background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
-              borderRadius: 'var(--radius-lg)', padding: 'var(--space-3) var(--space-4)',
-              marginBottom: 'var(--space-4)', color: '#10B981', fontSize: 'var(--font-size-sm)',
-            }}>
-              ✅ {updateSuccess}
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex items-start gap-3 text-emerald-400">
+              <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
+              <p className="text-sm font-medium">{updateSuccess}</p>
             </div>
           )}
           {updateError && (
-            <div style={{
-              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
-              borderRadius: 'var(--radius-lg)', padding: 'var(--space-3) var(--space-4)',
-              marginBottom: 'var(--space-4)', color: 'var(--color-danger)', fontSize: 'var(--font-size-sm)',
-            }}>
-              ⚠️ {updateError}
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3 text-red-400">
+              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+              <p className="text-sm">{updateError}</p>
             </div>
           )}
 
           {/* Quick Stock Update Table */}
-          <div className="glass-card" style={{ marginBottom: 'var(--space-5)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+          <GlowCard className="overflow-hidden p-0">
+            <div className="px-6 py-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                  📦 Quick Stock Update
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Package className="w-5 h-5 text-teal-400" />
+                  Quick Stock Update
                 </h3>
-                <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginTop: 'var(--space-1)' }}>
-                  Edit stock quantities for existing products directly
-                </p>
+                <p className="text-xs text-slate-500 mt-1">Edit stock quantities for existing products directly</p>
               </div>
-              <button
-                className="btn btn-primary"
-                onClick={() => setShowAddForm(!showAddForm)}
-                id="btn-add-new-product"
-              >
-                {showAddForm ? '✕ Cancel' : '+ Add New Product'}
-              </button>
+              <ShimmerButton onClick={() => setShowAddForm(!showAddForm)} id="btn-add-new-product">
+                <span className="flex items-center gap-2">
+                  {showAddForm ? <><X className="w-4 h-4" /> Cancel</> : <><Plus className="w-4 h-4" /> Add New Product</>}
+                </span>
+              </ShimmerButton>
             </div>
 
             {loadingProducts ? (
-              <div style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--color-text-muted)' }}>
-                <div style={{ fontSize: '2rem', marginBottom: 'var(--space-2)', animation: 'pulse 1.5s ease-in-out infinite' }}>📦</div>
-                <p>Loading products...</p>
+              <div className="py-12 text-center">
+                <Package className="w-10 h-10 text-teal-500/30 animate-pulse mx-auto mb-3" />
+                <p className="text-slate-500 text-sm">Loading products...</p>
               </div>
             ) : products.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--color-text-muted)' }}>
-                <div style={{ fontSize: '2rem', marginBottom: 'var(--space-2)' }}>📭</div>
-                <p>No products found. Import data first or add a new product below.</p>
+              <div className="py-12 text-center">
+                <Package className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+                <p className="text-slate-500 text-sm">No products found. Import data first or add a new product.</p>
               </div>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table className="data-table">
-                  <thead>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm whitespace-nowrap">
+                  <thead className="bg-slate-900/80 border-b border-slate-700/50 text-slate-300 uppercase tracking-wider text-xs font-semibold">
                     <tr>
-                      <th>Product</th>
-                      <th>Category</th>
-                      <th>Current Stock</th>
-                      <th>New Stock</th>
-                      <th>Reorder Point</th>
-                      <th>Status</th>
-                      <th>Action</th>
+                      <th className="px-6 py-3">Product</th>
+                      <th className="px-6 py-3">Category</th>
+                      <th className="px-6 py-3">Current Stock</th>
+                      <th className="px-6 py-3">New Stock</th>
+                      <th className="px-6 py-3">Reorder Pt</th>
+                      <th className="px-6 py-3">Status</th>
+                      <th className="px-6 py-3">Action</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-slate-800/60">
                     {products.map(p => {
                       const status = getStockStatus(p);
                       const hasEdit = stockEdits[p.id] !== undefined && parseInt(stockEdits[p.id], 10) !== p.current_stock;
                       const isSaving = savingIds.has(p.id);
 
                       return (
-                        <tr key={p.id}>
-                          <td style={{ fontWeight: 500 }}>{p.name}</td>
-                          <td><span className="badge badge-muted">{p.category}</span></td>
-                          <td>{p.current_stock || 0}</td>
-                          <td>
+                        <tr key={p.id} className="hover:bg-slate-800/40 transition-colors">
+                          <td className="px-6 py-3 font-semibold text-white">{p.name}</td>
+                          <td className="px-6 py-3">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700 capitalize">{p.category}</span>
+                          </td>
+                          <td className="px-6 py-3 text-slate-400 tabular-nums">{p.current_stock || 0}</td>
+                          <td className="px-6 py-3">
                             <input
                               type="number"
                               min="0"
                               value={stockEdits[p.id] !== undefined ? stockEdits[p.id] : (p.current_stock || 0)}
                               onChange={(e) => handleStockChange(p.id, e.target.value)}
-                              style={{
-                                width: '80px', padding: '6px 10px',
-                                background: hasEdit ? 'rgba(16,185,129,0.1)' : 'var(--color-bg-elevated)',
-                                border: hasEdit ? '1px solid rgba(16,185,129,0.5)' : '1px solid var(--color-border)',
-                                borderRadius: 'var(--radius-md)',
-                                color: 'var(--color-text-primary)',
-                                fontSize: 'var(--font-size-sm)',
-                              }}
+                              className={`w-20 px-2.5 py-1.5 rounded-lg text-sm font-medium text-white border focus:outline-none focus:ring-2 focus:ring-teal-500/30 transition-all tabular-nums ${hasEdit ? 'bg-teal-500/10 border-teal-500/40' : 'bg-slate-900 border-slate-700'}`}
                               id={`stock-input-${p.id}`}
                             />
                           </td>
-                          <td>{p.reorder_point || 0}</td>
-                          <td><span className={`badge ${status.cls}`}>{status.label}</span></td>
-                          <td>
+                          <td className="px-6 py-3 text-slate-500 tabular-nums">{p.reorder_point || 0}</td>
+                          <td className="px-6 py-3">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold border" style={{ backgroundColor: `${status.color}15`, borderColor: `${status.color}30`, color: status.color }}>
+                              {status.label}
+                            </span>
+                          </td>
+                          <td className="px-6 py-3">
                             <button
-                              className="btn btn-sm"
                               disabled={!hasEdit || isSaving}
                               onClick={() => handleSaveStock(p)}
-                              style={{
-                                padding: '4px 12px', fontSize: 'var(--font-size-xs)',
-                                background: hasEdit ? 'var(--color-primary)' : 'var(--color-bg-active)',
-                                color: hasEdit ? '#fff' : 'var(--color-text-muted)',
-                                border: 'none', borderRadius: 'var(--radius-md)',
-                                cursor: hasEdit ? 'pointer' : 'default',
-                                opacity: isSaving ? 0.6 : 1,
-                              }}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${hasEdit ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30 hover:bg-teal-500/30' : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-default'}`}
                               id={`btn-save-${p.id}`}
                             >
+                              {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                               {isSaving ? '...' : 'Save'}
                             </button>
                           </td>
@@ -598,180 +587,92 @@ export default function Upload() {
                 </table>
               </div>
             )}
-          </div>
+          </GlowCard>
 
           {/* ── Add New Product Form ── */}
           {showAddForm && (
-            <div className="glass-card" style={{ marginBottom: 'var(--space-5)' }}>
-              <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 'var(--space-4)' }}>
-                ➕ Add New Product
+            <GlowCard className="p-6" glowColor="#10B981">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-5">
+                <Plus className="w-5 h-5 text-emerald-400" />
+                Add New Product
               </h3>
               <form onSubmit={handleAddProduct}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+                <div className="grid sm:grid-cols-2 gap-4">
                   {/* Product Name */}
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <label style={labelStyle}>Product Name *</label>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Product Name *</label>
                     <input
                       type="text" required value={newProduct.name}
                       onChange={e => setNewProduct(p => ({ ...p, name: e.target.value }))}
                       placeholder="e.g. Paracetamol 500mg"
-                      style={inputStyle} id="input-product-name"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 transition-all text-sm"
+                      id="input-product-name"
                     />
                   </div>
 
-                  {/* Category */}
-                  <div>
-                    <label style={labelStyle}>Category</label>
-                    <select
-                      value={newProduct.category}
-                      onChange={e => setNewProduct(p => ({ ...p, category: e.target.value }))}
-                      style={inputStyle} id="input-category"
-                    >
-                      <option value="Medicines">Medicines</option>
-                      <option value="Supplies">Medical Supplies</option>
-                      <option value="Equipment">Equipment</option>
-                      <option value="Supplements">Supplements</option>
-                      <option value="Grocery">Grocery</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-
-                  {/* Unit */}
-                  <div>
-                    <label style={labelStyle}>Unit</label>
-                    <select
-                      value={newProduct.unit}
-                      onChange={e => setNewProduct(p => ({ ...p, unit: e.target.value }))}
-                      style={inputStyle} id="input-unit"
-                    >
-                      <option value="units">Units</option>
-                      <option value="strips">Strips</option>
-                      <option value="bottles">Bottles</option>
-                      <option value="packets">Packets</option>
-                      <option value="kg">Kilograms</option>
-                      <option value="liters">Liters</option>
-                    </select>
-                  </div>
-
-                  {/* Current Stock */}
-                  <div>
-                    <label style={labelStyle}>Initial Stock *</label>
-                    <input
-                      type="number" min="0" required value={newProduct.current_stock}
-                      onChange={e => setNewProduct(p => ({ ...p, current_stock: parseInt(e.target.value, 10) || 0 }))}
-                      style={inputStyle} id="input-stock"
-                    />
-                  </div>
-
-                  {/* Unit Cost */}
-                  <div>
-                    <label style={labelStyle}>Unit Cost (₹)</label>
-                    <input
-                      type="number" min="0" step="0.01" value={newProduct.unit_cost}
-                      onChange={e => setNewProduct(p => ({ ...p, unit_cost: parseFloat(e.target.value) || 0 }))}
-                      style={inputStyle} id="input-cost"
-                    />
-                  </div>
-
-                  {/* Reorder Point */}
-                  <div>
-                    <label style={labelStyle}>Reorder Point</label>
-                    <input
-                      type="number" min="0" value={newProduct.reorder_point}
-                      onChange={e => setNewProduct(p => ({ ...p, reorder_point: parseInt(e.target.value, 10) || 0 }))}
-                      style={inputStyle} id="input-reorder-point"
-                    />
-                  </div>
-
-                  {/* Safety Stock */}
-                  <div>
-                    <label style={labelStyle}>Safety Stock</label>
-                    <input
-                      type="number" min="0" value={newProduct.safety_stock}
-                      onChange={e => setNewProduct(p => ({ ...p, safety_stock: parseInt(e.target.value, 10) || 0 }))}
-                      style={inputStyle} id="input-safety-stock"
-                    />
-                  </div>
-
-                  {/* Supplier Name */}
-                  <div>
-                    <label style={labelStyle}>Supplier Name</label>
-                    <input
-                      type="text" value={newProduct.supplier_name}
-                      onChange={e => setNewProduct(p => ({ ...p, supplier_name: e.target.value }))}
-                      placeholder="e.g. MedPlus Distributors"
-                      style={inputStyle} id="input-supplier"
-                    />
-                  </div>
-
-                  {/* Lead Time */}
-                  <div>
-                    <label style={labelStyle}>Lead Time (days)</label>
-                    <input
-                      type="number" min="1" value={newProduct.lead_time_days}
-                      onChange={e => setNewProduct(p => ({ ...p, lead_time_days: parseInt(e.target.value, 10) || 1 }))}
-                      style={inputStyle} id="input-lead-time"
-                    />
-                  </div>
-
-                  {/* Expiry Date */}
-                  <div>
-                    <label style={labelStyle}>Expiry Date</label>
-                    <input
-                      type="date" value={newProduct.expiry_date}
-                      onChange={e => setNewProduct(p => ({ ...p, expiry_date: e.target.value }))}
-                      style={inputStyle} id="input-expiry"
-                    />
-                  </div>
-
-                  {/* Supplier Contact */}
-                  <div>
-                    <label style={labelStyle}>Supplier Contact</label>
-                    <input
-                      type="text" value={newProduct.supplier_contact}
-                      onChange={e => setNewProduct(p => ({ ...p, supplier_contact: e.target.value }))}
-                      placeholder="+91-XXXXXXXXXX"
-                      style={inputStyle} id="input-supplier-contact"
-                    />
-                  </div>
+                  {[
+                    { label: 'Category', type: 'select', key: 'category', options: ['Medicines', 'Supplies', 'Equipment', 'Supplements', 'Grocery', 'Other'] },
+                    { label: 'Unit', type: 'select', key: 'unit', options: ['units', 'strips', 'bottles', 'packets', 'kg', 'liters'] },
+                    { label: 'Initial Stock *', type: 'number', key: 'current_stock', min: 0, required: true },
+                    { label: 'Unit Cost (₹)', type: 'number', key: 'unit_cost', min: 0, step: '0.01' },
+                    { label: 'Reorder Point', type: 'number', key: 'reorder_point', min: 0 },
+                    { label: 'Safety Stock', type: 'number', key: 'safety_stock', min: 0 },
+                    { label: 'Supplier Name', type: 'text', key: 'supplier_name', placeholder: 'e.g. MedPlus Distributors' },
+                    { label: 'Lead Time (days)', type: 'number', key: 'lead_time_days', min: 1 },
+                    { label: 'Expiry Date', type: 'date', key: 'expiry_date' },
+                    { label: 'Supplier Contact', type: 'text', key: 'supplier_contact', placeholder: '+91-XXXXXXXXXX' },
+                  ].map((f) => (
+                    <div key={f.key}>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">{f.label}</label>
+                      {f.type === 'select' ? (
+                        <select
+                          value={newProduct[f.key]}
+                          onChange={e => setNewProduct(p => ({ ...p, [f.key]: e.target.value }))}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 transition-all text-sm"
+                          id={`input-${f.key}`}
+                        >
+                          {f.options.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      ) : (
+                        <input
+                          type={f.type}
+                          min={f.min}
+                          step={f.step}
+                          required={f.required}
+                          value={newProduct[f.key]}
+                          onChange={e => {
+                            const val = f.type === 'number' ? (f.step ? parseFloat(e.target.value) || 0 : parseInt(e.target.value, 10) || 0) : e.target.value;
+                            setNewProduct(p => ({ ...p, [f.key]: val }));
+                          }}
+                          placeholder={f.placeholder}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 transition-all text-sm"
+                          id={`input-${f.key}`}
+                        />
+                      )}
+                    </div>
+                  ))}
                 </div>
 
                 {/* Submit */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-4)' }}>
-                  <button type="button" className="btn btn-ghost" onClick={() => setShowAddForm(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary" disabled={addingProduct || !newProduct.name.trim()} id="btn-submit-product">
-                    {addingProduct ? 'Adding...' : '✓ Add Product'}
+                <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddForm(false)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 transition-all"
+                  >
+                    Cancel
                   </button>
+                  <ShimmerButton type="submit" disabled={addingProduct || !newProduct.name.trim()} id="btn-submit-product">
+                    <span className="flex items-center gap-2">
+                      {addingProduct ? <><Loader2 className="w-4 h-4 animate-spin" /> Adding...</> : <><CheckCircle2 className="w-4 h-4" /> Add Product</>}
+                    </span>
+                  </ShimmerButton>
                 </div>
               </form>
-            </div>
+            </GlowCard>
           )}
         </>
       )}
-
-      {/* Spinner animation */}
-      <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }
-
-// Shared inline styles for the form
-const labelStyle = {
-  display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600,
-  color: 'var(--color-text-secondary)', marginBottom: '4px',
-  textTransform: 'uppercase', letterSpacing: '0.04em',
-};
-
-const inputStyle = {
-  width: '100%', padding: '8px 12px',
-  background: 'var(--color-bg-elevated)',
-  border: '1px solid var(--color-border)',
-  borderRadius: 'var(--radius-md)',
-  color: 'var(--color-text-primary)',
-  fontSize: 'var(--font-size-sm)',
-};

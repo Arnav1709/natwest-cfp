@@ -4,6 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import Plot from '../../components/PlotChart.jsx';
 import { inventoryApi, forecastApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
+import GlowCard from '../../components/GlowCard';
+import AnimatedCounter from '../../components/AnimatedCounter';
+import ShimmerButton from '../../components/ShimmerButton';
 
 // Auto-assign icons based on driver name keywords
 function getDriverIcon(name) {
@@ -56,8 +59,13 @@ export default function Forecasting() {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '2rem', marginBottom: 'var(--space-3)', animation: 'pulse 1.5s ease-in-out infinite' }}>📈</div>
-          <p style={{ color: 'var(--color-text-muted)' }}>Loading forecast data...</p>
+          <div style={{
+            width: 64, height: 64, borderRadius: 16, margin: '0 auto 1rem',
+            background: 'linear-gradient(135deg, rgba(56,189,248,0.1), rgba(139,92,246,0.08))',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1.75rem', animation: 'float 2s ease-in-out infinite',
+          }}>🔮</div>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>Loading forecast models...</p>
         </div>
       </div>
     );
@@ -71,12 +79,12 @@ export default function Forecasting() {
   const high = hasForecast ? fc.forecast.map(f => f.high) : [];
   const baseline = fc?.baseline || [];
 
-  /* Main forecast chart */
+  /* Main forecast chart - Neon styled */
   const forecastTraces = hasForecast ? [
     { x: weeks, y: high, type: 'scatter', mode: 'lines', line: { width: 0 }, showlegend: false, hoverinfo: 'skip' },
-    { x: weeks, y: low, type: 'scatter', mode: 'lines', line: { width: 0 }, fill: 'tonexty', fillcolor: 'rgba(13,148,136,0.15)', name: 'Confidence Range', showlegend: true, hoverinfo: 'skip' },
-    { x: weeks, y: likely, type: 'scatter', mode: 'lines+markers', name: 'Forecast', line: { color: '#10B981', width: 3, shape: 'spline' }, marker: { size: 6, color: '#10B981' } },
-    ...(baseline.length > 0 ? [{ x: weeks, y: baseline, type: 'scatter', mode: 'lines', name: 'Baseline', line: { color: '#64748B', width: 2, dash: 'dot' } }] : []),
+    { x: weeks, y: low, type: 'scatter', mode: 'lines', line: { width: 0 }, fill: 'tonexty', fillcolor: 'rgba(56,189,248,0.15)', name: 'Confidence Range', showlegend: true, hoverinfo: 'skip' },
+    { x: weeks, y: likely, type: 'scatter', mode: 'lines+markers', name: 'Forecast', line: { color: '#38BDF8', width: 3, shape: 'spline' }, marker: { size: 6, color: '#38BDF8', line: { color: '#0F172A', width: 2 } } },
+    ...(baseline.length > 0 ? [{ x: weeks, y: baseline, type: 'scatter', mode: 'lines', name: 'Baseline', line: { color: 'rgba(148,163,184,0.5)', width: 2, dash: 'dot' } }] : []),
   ] : [];
 
   const forecastLayout = {
@@ -84,13 +92,12 @@ export default function Forecasting() {
     font: { color: '#94A3B8', family: 'Inter', size: 12 },
     margin: { t: 30, r: 30, b: 50, l: 50 },
     height: 320,
-    xaxis: { title: '', gridcolor: 'rgba(255,255,255,0.05)', tickfont: { color: '#94A3B8' } },
-    yaxis: { title: 'Units', gridcolor: 'rgba(255,255,255,0.05)', tickfont: { color: '#94A3B8' } },
-    legend: { orientation: 'h', y: 1.12, x: 0.5, xanchor: 'center', font: { size: 11 } },
+    xaxis: { title: '', gridcolor: 'rgba(255,255,255,0.05)', tickfont: { color: '#94A3B8' }, zerolinecolor: 'rgba(255,255,255,0.1)' },
+    yaxis: { title: 'Units', gridcolor: 'rgba(255,255,255,0.05)', tickfont: { color: '#94A3B8' }, zerolinecolor: 'rgba(255,255,255,0.1)' },
+    legend: { orientation: 'h', y: 1.12, x: 0.5, xanchor: 'center', font: { size: 11, color: '#F8FAFC' } },
     hovermode: 'x unified',
   };
 
-  // — Bug 1 fix: map backend fields to what the driver-card UI expects —
   const rawDrivers = fc?.driver_details || [];
   const drivers = rawDrivers.map(d => ({
     name: d.name,
@@ -98,16 +105,15 @@ export default function Forecasting() {
     desc: d.description || '',
     value: d.impact_pct != null ? `${d.impact_pct > 0 ? '+' : ''}${d.impact_pct}%` : '',
     positive: (d.impact_pct || 0) >= 0,
+    impactValue: d.impact_pct || 0,
   }));
 
   const accuracy = fc?.accuracy || {};
   const hasAccuracyData = accuracy.accuracy_pct > 0 || accuracy.mape > 0;
 
-  // — Bug 8 fix: expose model info —
   const modelUsed = fc?.model_used || '';
   const dataQuality = fc?.data_quality || '';
 
-  // Model / data quality badge
   const modelBadge = (() => {
     if (modelUsed.includes('prophet')) return { label: 'Prophet AI', cls: 'badge-primary' };
     if (modelUsed.includes('sma')) return { label: 'SMA Fallback', cls: 'badge-warning' };
@@ -116,15 +122,14 @@ export default function Forecasting() {
   })();
 
   const qualityBadge = (() => {
-    if (dataQuality === 'sufficient') return { label: 'Sufficient Data', cls: 'badge-success' };
+    if (dataQuality === 'sufficient') return { label: 'Optimal Data', cls: 'badge-success' };
     if (dataQuality === 'supplemented') return { label: 'Supplemented', cls: 'badge-info' };
-    if (dataQuality === 'proxy_from_similar') return { label: 'Proxy (Similar SKUs)', cls: 'badge-warning' };
+    if (dataQuality === 'proxy_from_similar') return { label: 'Proxy Data', cls: 'badge-warning' };
     if (dataQuality === 'limited_data') return { label: 'Limited Data', cls: 'badge-warning' };
     if (dataQuality === 'insufficient') return { label: 'Insufficient', cls: 'badge-danger' };
     return null;
   })();
 
-  // — Bug 7 fix: accuracy trend indicator —
   const trendIndicator = (() => {
     if (!hasAccuracyData) return null;
     const t = accuracy.trend;
@@ -135,191 +140,191 @@ export default function Forecasting() {
 
   return (
     <div>
-      {/* Header — Bug 9 fix: proper h1 title */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
-        <div>
-          <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary-light)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+        <div style={{ opacity: 0, animation: 'fade-in-up 0.4s forwards' }}>
+          <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-accent)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
             {t('forecast.title')}
           </p>
-          <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, margin: 0 }}>
-            Inventory Forecasting
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-2xl)', fontWeight: 800, margin: 0 }}>
+            Demand Projections
           </h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
-            <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>SKU:</span>
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', opacity: 0, animation: 'fade-in-up 0.4s 0.1s forwards' }}>
+          <div className="custom-select-wrapper">
             <select
               className="form-select"
-              style={{ minWidth: 200, padding: '6px 10px', minHeight: '36px' }}
+              style={{ minWidth: 220, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}
               value={selectedProduct || ''}
               onChange={(e) => setSelectedProduct(Number(e.target.value))}
-              id="select-product-forecast"
             >
               {products.length === 0 && <option value="">No products</option>}
               {products.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
+                <option key={p.id} value={p.id} style={{ background: '#0F172A' }}>{p.name}</option>
               ))}
             </select>
-            {/* Bug 8: Model & data quality badges */}
-            {fc && (
-              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-                <span className={`badge ${modelBadge.cls}`}>{modelBadge.label}</span>
-                {qualityBadge && <span className={`badge ${qualityBadge.cls}`}>{qualityBadge.label}</span>}
-              </div>
-            )}
           </div>
+          {fc && !fcLoading && (
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <span className={`badge ${modelBadge.cls}`} style={{ boxShadow: '0 0 10px rgba(56,189,248,0.2)' }}>{modelBadge.label}</span>
+              {qualityBadge && <span className={`badge ${qualityBadge.cls}`}>{qualityBadge.label}</span>}
+            </div>
+          )}
         </div>
       </div>
 
       {fcError && (
-        <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)', marginBottom: 'var(--space-4)', color: 'var(--color-warning)', fontSize: 'var(--font-size-sm)' }}>
+        <div style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)', marginBottom: 'var(--space-4)', color: 'var(--color-danger)', fontSize: 'var(--font-size-sm)', animation: 'fade-in-up 0.4s forwards' }}>
           ⚠️ {fcError}
         </div>
       )}
 
       {/* Main Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 'var(--space-4)' }}>
-        {/* Left — Chart */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 'var(--space-5)' }}>
+        {/* Left — Chart & Drivers */}
         <div>
-          <div className="chart-container" style={{ marginBottom: 'var(--space-4)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
-              <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600 }}>{t('forecast.demand_projection')}</h2>
+          <GlowCard glowColor="rgba(56,189,248,0.15)" style={{ marginBottom: 'var(--space-5)', padding: 'var(--space-5)', opacity: 0, animation: 'fade-in-up 0.5s 0.2s forwards' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-lg)', fontWeight: 700 }}>{t('forecast.demand_projection')}</h2>
             </div>
             {fcLoading ? (
-              <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--color-text-muted)' }}>
-                Loading forecast...
+              <div style={{ textAlign: 'center', padding: 'var(--space-8) 0', color: 'var(--color-text-muted)' }}>
+                <div style={{ width: 40, height: 40, margin: '0 auto', border: '3px solid rgba(56,189,248,0.2)', borderTopColor: '#38BDF8', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
               </div>
             ) : hasForecast ? (
               <Plot data={forecastTraces} layout={forecastLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%' }} />
             ) : (
               <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--color-text-muted)' }}>
-                <div style={{ fontSize: '2rem', marginBottom: 'var(--space-2)' }}>📈</div>
+                <div style={{ fontSize: '2.5rem', marginBottom: 'var(--space-2)', animation: 'float 3s ease infinite' }}>📉</div>
                 <p>No forecast data available.</p>
-                <p style={{ fontSize: 'var(--font-size-xs)' }}>Upload more sales data to generate predictions.</p>
+                <p style={{ fontSize: 'var(--font-size-xs)' }}>Upload more sales data to generate AI predictions.</p>
               </div>
             )}
-          </div>
+          </GlowCard>
 
-          {/* Driver Cards — Bug 1 fix: use mapped fields */}
+          {/* Driver Cards */}
           {fcLoading ? (
-            /* Bug 6 fix: loading skeleton for drivers */
-            <div style={{ marginBottom: 'var(--space-4)' }}>
-              <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, marginBottom: 'var(--space-3)' }}>
+            <div style={{ marginBottom: 'var(--space-5)' }}>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-base)', fontWeight: 700, marginBottom: 'var(--space-3)' }}>
                 {t('forecast.drivers_title')}
               </h3>
               <div className="grid-3">
                 {[1, 2, 3].map(i => (
-                  <div className="driver-card" key={i}>
-                    <div className="skeleton" style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <div className="skeleton" style={{ width: '70%', height: 14, marginBottom: 6, borderRadius: 4 }} />
-                      <div className="skeleton" style={{ width: '90%', height: 10, borderRadius: 4 }} />
-                    </div>
-                  </div>
+                  <GlowCard key={i} style={{ padding: 'var(--space-4)' }}>
+                    <div className="skeleton" style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', marginBottom: '1rem' }} />
+                    <div className="skeleton" style={{ width: '70%', height: 14, marginBottom: 8, borderRadius: 4 }} />
+                    <div className="skeleton" style={{ width: '90%', height: 10, borderRadius: 4 }} />
+                  </GlowCard>
                 ))}
               </div>
             </div>
           ) : drivers.length > 0 ? (
-            <div style={{ marginBottom: 'var(--space-4)' }}>
-              <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, marginBottom: 'var(--space-3)' }}>
+            <div style={{ marginBottom: 'var(--space-5)' }}>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-base)', fontWeight: 700, marginBottom: 'var(--space-3)', opacity: 0, animation: 'fade-in-up 0.5s 0.3s forwards' }}>
                 {t('forecast.drivers_title')}
               </h3>
               <div className="grid-3">
                 {drivers.map((driver, i) => (
-                  <div className="driver-card" key={i}>
-                    <span className="driver-card-icon">{driver.icon}</span>
-                    <div className="driver-card-info">
-                      <h4>{driver.name}</h4>
-                      <p>{driver.desc}</p>
+                  <GlowCard key={i} glowColor={driver.positive ? 'rgba(16,185,129,0.1)' : 'rgba(244,63,94,0.1)'} style={{ padding: 'var(--space-4)', opacity: 0, animation: `fade-in-up 0.5s ${0.35 + i*0.1}s forwards` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-3)' }}>
+                      <span className="driver-card-icon" style={{ background: 'rgba(255,255,255,0.05)', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-md)', fontSize: '1.25rem' }}>{driver.icon}</span>
+                      <span className={`driver-card-value ${driver.positive ? 'positive' : 'negative'}`} style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+                        <AnimatedCounter value={Math.abs(driver.impactValue)} prefix={driver.positive ? '+' : '-'} suffix="%" />
+                      </span>
                     </div>
-                    <span className={`driver-card-value ${driver.positive ? 'positive' : 'negative'}`}>
-                      {driver.value}
-                    </span>
-                  </div>
+                    <div className="driver-card-info" style={{ marginLeft: 0 }}>
+                      <h4 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>{driver.name}</h4>
+                      <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>{driver.desc}</p>
+                    </div>
+                  </GlowCard>
                 ))}
               </div>
             </div>
           ) : !fcLoading && hasForecast ? (
-            <div style={{ marginBottom: 'var(--space-4)' }}>
-              <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, marginBottom: 'var(--space-3)' }}>
-                {t('forecast.drivers_title')}
-              </h3>
-              <div className="glass-card" style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--color-text-muted)' }}>
-                <p style={{ fontSize: 'var(--font-size-sm)' }}>No external demand drivers detected for this product.</p>
-                <p style={{ fontSize: 'var(--font-size-xs)', marginTop: 'var(--space-1)' }}>Forecast is based on historical sales trends only.</p>
-              </div>
-            </div>
+            <GlowCard style={{ marginBottom: 'var(--space-5)', textAlign: 'center', padding: 'var(--space-6)', opacity: 0, animation: 'fade-in-up 0.5s 0.3s forwards' }}>
+              <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>No external demand drivers strongly influenced this product.</p>
+              <p style={{ fontSize: 'var(--font-size-xs)', marginTop: 'var(--space-1)', color: 'var(--color-text-muted)' }}>Forecast assumes underlying historical trend momentum.</p>
+            </GlowCard>
           ) : null}
 
           {/* Weekly Breakdown Table */}
           {hasForecast && (
-            <div className="glass-card" style={{ padding: 0, overflow: 'auto' }}>
-              <div style={{ padding: 'var(--space-4) var(--space-4) var(--space-2)' }}>
-                <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600 }}>{t('forecast.weekly_breakdown')}</h3>
+            <GlowCard style={{ padding: 0, overflow: 'hidden', opacity: 0, animation: 'fade-in-up 0.5s 0.4s forwards' }}>
+              <div style={{ padding: 'var(--space-4) var(--space-5) var(--space-2)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-base)', fontWeight: 700 }}>{t('forecast.weekly_breakdown')}</h3>
               </div>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Week</th>
-                    <th>Low Bound</th>
-                    <th>Likely Forecast</th>
-                    <th>High Bound</th>
-                    <th>Confidence</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {fc.forecast.map((week, i) => {
-                    {/* Bug 4 fix: guard against division by zero */}
-                    const range = week.high - week.low;
-                    const conf = week.likely > 0
-                      ? Math.max(0, Math.min(100, 100 - ((range / week.likely) * 100))).toFixed(0)
-                      : '0';
-                    return (
-                      <tr key={week.week}>
-                        <td style={{ fontWeight: 600 }}>{week.week} {i === 0 ? <span className="badge badge-primary" style={{ marginLeft: 4 }}>Current</span> : ''}</td>
-                        <td style={{ color: 'var(--color-text-muted)' }}>{week.low?.toLocaleString()}</td>
-                        <td style={{ fontWeight: 700, color: 'var(--color-primary-light)' }}>{week.likely?.toLocaleString()}</td>
-                        <td style={{ color: 'var(--color-text-muted)' }}>{week.high?.toLocaleString()}</td>
-                        <td>
-                          <div style={{
-                            width: 50, height: 6, borderRadius: 'var(--radius-full)', background: 'var(--color-bg-active)', display: 'inline-block', marginRight: 6, verticalAlign: 'middle'
-                          }}>
-                            <div style={{
-                              width: `${conf}%`, height: '100%', borderRadius: 'var(--radius-full)',
-                              background: Number(conf) > 70 ? 'var(--color-success)' : 'var(--color-warning)'
-                            }} />
-                          </div>
-                          <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 600 }}>{conf}%</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--font-size-sm)' }}>
+                  <thead>
+                    <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
+                      <th style={{ padding: '12px 20px', textAlign: 'left', color: 'var(--color-text-muted)', fontWeight: 600 }}>Week</th>
+                      <th style={{ padding: '12px 20px', textAlign: 'right', color: 'var(--color-text-muted)', fontWeight: 600 }}>Low Bound</th>
+                      <th style={{ padding: '12px 20px', textAlign: 'right', color: 'var(--color-accent)', fontWeight: 600 }}>Likely Forecast</th>
+                      <th style={{ padding: '12px 20px', textAlign: 'right', color: 'var(--color-text-muted)', fontWeight: 600 }}>High Bound</th>
+                      <th style={{ padding: '12px 20px', textAlign: 'left', color: 'var(--color-text-muted)', fontWeight: 600 }}>Confidence</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fc.forecast.map((week, i) => {
+                      const range = week.high - week.low;
+                      const conf = week.likely > 0
+                        ? Math.max(0, Math.min(100, 100 - ((range / week.likely) * 100))).toFixed(0)
+                        : '0';
+                      return (
+                        <tr key={week.week} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                          <td style={{ padding: '14px 20px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                            {week.week} 
+                            {i === 0 && <span className="badge badge-accent" style={{ marginLeft: 8, fontSize: '0.65rem' }}>Current</span>}
+                          </td>
+                          <td style={{ padding: '14px 20px', textAlign: 'right', color: 'var(--color-text-muted)' }}>{week.low?.toLocaleString()}</td>
+                          <td style={{ padding: '14px 20px', textAlign: 'right', fontWeight: 700, color: '#38BDF8', textShadow: '0 0 10px rgba(56,189,248,0.3)' }}>{week.likely?.toLocaleString()}</td>
+                          <td style={{ padding: '14px 20px', textAlign: 'right', color: 'var(--color-text-muted)' }}>{week.high?.toLocaleString()}</td>
+                          <td style={{ padding: '14px 20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{
+                                flex: 1, minWidth: 60, height: 6, borderRadius: 'var(--radius-full)', background: 'rgba(255,255,255,0.05)', overflow: 'hidden'
+                              }}>
+                                <div style={{
+                                  width: `${conf}%`, height: '100%', borderRadius: 'var(--radius-full)',
+                                  background: Number(conf) > 70 ? 'var(--color-success)' : Number(conf) > 50 ? 'var(--color-accent)' : 'var(--color-warning)',
+                                  boxShadow: `0 0 10px ${Number(conf) > 70 ? 'var(--color-success)' : Number(conf) > 50 ? 'var(--color-accent)' : 'var(--color-warning)'}`
+                                }} />
+                              </div>
+                              <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-secondary)', minWidth: 28 }}>{conf}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </GlowCard>
           )}
         </div>
 
         {/* Right Sidebar */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          {/* Model Precision — Bug 2 fix: show "No Data" instead of misleading "0%" */}
-          <div className="glass-card" style={{ textAlign: 'center' }}>
-            <h3 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, marginBottom: 'var(--space-3)', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)' }}>
+          {/* Model Precision */}
+          <GlowCard glowColor="rgba(16,185,129,0.15)" style={{ textAlign: 'center', padding: 'var(--space-6)', opacity: 0, animation: 'fade-in-left 0.5s 0.3s forwards' }}>
+            <h3 style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, marginBottom: 'var(--space-4)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-text-muted)' }}>
               {t('forecast.model_precision')}
             </h3>
             {hasAccuracyData ? (
               <>
                 <div style={{
-                  fontSize: 'var(--font-size-4xl)', fontWeight: 800, color: 'var(--color-primary-light)',
-                  lineHeight: 1, marginBottom: 'var(--space-1)'
+                  fontFamily: 'var(--font-display)', fontSize: '3rem', fontWeight: 800, color: 'var(--color-success)',
+                  lineHeight: 1, marginBottom: 'var(--space-2)', textShadow: '0 0 20px rgba(16,185,129,0.3)',
                 }}>
-                  {accuracy.accuracy_pct}%
+                  <AnimatedCounter value={accuracy.accuracy_pct} suffix="%" />
                 </div>
-                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
-                  Accuracy (MAPE: {accuracy.mape}%)
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-3)' }}>
+                  Historic MAPE: {accuracy.mape}%
                 </div>
-                {/* Bug 7 fix: show trend indicator */}
                 {trendIndicator && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-1)', fontSize: 'var(--font-size-xs)', color: trendIndicator.cls }}>
-                    <span>{trendIndicator.icon}</span>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-2)', padding: '6px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius-full)', fontSize: 'var(--font-size-xs)', color: trendIndicator.cls, fontWeight: 600 }}>
+                    <span style={{ fontSize: '1rem' }}>{trendIndicator.icon}</span>
                     <span>{trendIndicator.label}</span>
                   </div>
                 )}
@@ -327,7 +332,7 @@ export default function Forecasting() {
             ) : (
               <>
                 <div style={{
-                  fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-text-muted)',
+                  fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-3xl)', fontWeight: 700, color: 'var(--color-text-muted)',
                   lineHeight: 1, marginBottom: 'var(--space-2)'
                 }}>
                   —
@@ -335,24 +340,34 @@ export default function Forecasting() {
                 <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
                   No accuracy data yet
                 </div>
-                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: 'var(--space-1)' }}>
-                  Accuracy is calculated after forecasts are validated against actual sales.
-                </div>
               </>
             )}
-          </div>
+          </GlowCard>
 
-          {/* Test Scenario Button — Bug 3 fix: use navigate() for SPA routing */}
-          <button
-            className="btn btn-primary btn-lg"
-            style={{ width: '100%' }}
-            onClick={() => navigate('/dashboard/scenarios')}
-            id="btn-test-scenario"
-          >
-            🔮 {t('forecast.test_scenario')}
-          </button>
+          {/* Test Scenario Action */}
+          <GlowCard style={{ padding: 'var(--space-5)', opacity: 0, animation: 'fade-in-left 0.5s 0.4s forwards' }}>
+            <div style={{ width: 48, height: 48, borderRadius: 'var(--radius-lg)', background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))', border: '1px solid rgba(139,92,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', marginBottom: 'var(--space-4)' }}>🧪</div>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-base)', fontWeight: 700, marginBottom: 'var(--space-2)' }}>What-If Scenarios</h3>
+            <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: 'var(--space-4)' }}>
+              Simulate price changes, festivals, and disruptions to see how they impact this forecast.
+            </p>
+            <ShimmerButton
+              style={{ width: '100%', fontSize: '0.9rem' }}
+              onClick={() => navigate('/dashboard/scenarios')}
+            >
+              Launch Simulator →
+            </ShimmerButton>
+          </GlowCard>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 1024px) {
+          div[style*="gridTemplateColumns: '1fr 300px'"] {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
