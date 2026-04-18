@@ -50,7 +50,7 @@ async function forwardToBackend(phone, command, rawMessage) {
     const response = await axios.post(
       url,
       {
-        from: phone,
+        from_number: phone,
         command: command,
         raw_message: rawMessage,
       },
@@ -132,7 +132,7 @@ function startRetryTimer() {
         const response = await axios.post(
           url,
           {
-            from: item.phone,
+            from_number: item.phone,
             command: item.command,
             raw_message: item.rawMessage,
           },
