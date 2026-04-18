@@ -24,6 +24,8 @@ export default function Login() {
       if (result.access_token) {
         localStorage.setItem('stocksense-token', result.access_token);
         localStorage.setItem('stocksense-user', JSON.stringify(result.user));
+        // Notify ProtectedRoute that auth state changed (same-tab event)
+        window.dispatchEvent(new Event('auth-change'));
         navigate('/dashboard/overview');
       } else {
         setError('Login failed. Please try again.');

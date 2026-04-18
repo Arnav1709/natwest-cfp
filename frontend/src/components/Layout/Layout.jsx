@@ -1,6 +1,78 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Component } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+
+/**
+ * Page-level error boundary — wraps <Outlet> so that if any individual page
+ * crashes, only the content area shows the error. The sidebar stays functional
+ * and the user can navigate to a different page without a full reload.
+ */
+class PageErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, info) {
+    console.error('Page crash caught:', error, info?.componentStack);
+  }
+
+  componentDidUpdate(prevProps) {
+    // Reset error when user navigates to a different page
+    if (prevProps.locationKey !== this.props.locationKey && this.state.hasError) {
+      this.setState({ hasError: false, error: null });
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          minHeight: '60vh', padding: '2rem', textAlign: 'center',
+        }}>
+          <div>
+            <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>⚠️</div>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#F8FAFC', marginBottom: '0.5rem' }}>
+              Page failed to load
+            </h2>
+            <p style={{ color: '#94A3B8', fontSize: '0.875rem', marginBottom: '1rem' }}>
+              {this.state.error?.message || 'An error occurred while rendering this page.'}
+            </p>
+            <p style={{ color: '#64748B', fontSize: '0.75rem', marginBottom: '1.5rem' }}>
+              Try navigating to a different page from the sidebar, or reload.
+            </p>
+            <button
+              onClick={() => this.setState({ hasError: false, error: null })}
+              style={{
+                padding: '8px 20px', background: 'linear-gradient(135deg, #0D9488, #10B981)',
+                color: 'white', border: 'none', borderRadius: 8, fontWeight: 600,
+                cursor: 'pointer', fontSize: '0.85rem', marginRight: '0.5rem',
+              }}
+            >
+              ↻ Retry
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                padding: '8px 20px', background: 'rgba(255,255,255,0.1)',
+                color: '#94A3B8', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8,
+                fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem',
+              }}
+            >
+              🔄 Reload
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const navItems = [
   { label: 'nav.dashboard',   path: '/dashboard/overview',    icon: '📊' },
@@ -34,6 +106,7 @@ export default function Layout() {
   const handleLogout = () => {
     localStorage.removeItem('stocksense-token');
     localStorage.removeItem('stocksense-user');
+    window.dispatchEvent(new Event('auth-change'));
     navigate('/login');
   };
 
@@ -141,7 +214,9 @@ export default function Layout() {
 
         {/* Page Content */}
         <main className="page-container">
-          <Outlet />
+          <PageErrorBoundary locationKey={location.key}>
+            <Outlet />
+          </PageErrorBoundary>
         </main>
       </div>
     </div>
