@@ -44,14 +44,19 @@ COLUMN_ALIASES = {
 # Column names that look like identifiers and should NOT be used as
 # the product name when a real name column exists.
 _ID_COLUMN_NAMES = {
-    "product_id", "id", "item_id", "sku_id", "sr", "sr_no",
-    "serial", "serial_no", "s_no", "sno", "sl_no", "index",
+    "product_id", "product id", "id", "item_id", "item id",
+    "sku_id", "sku id", "sr", "sr_no", "sr no",
+    "serial", "serial_no", "serial no", "s_no", "s no",
+    "sno", "sl_no", "sl no", "index",
 }
 
 
 def _detect_column(df_columns: List[str], target: str) -> str | None:
     """
     Find the best matching column name for a target field.
+
+    Normalises whitespace ↔ underscore so that "Product Name" matches
+    the alias "product_name" and vice-versa.
 
     Args:
         df_columns: List of column names from the DataFrame.
@@ -61,11 +66,23 @@ def _detect_column(df_columns: List[str], target: str) -> str | None:
         The matching column name, or None if not found.
     """
     aliases = COLUMN_ALIASES.get(target, [])
-    lower_cols = {col.lower().strip(): col for col in df_columns}
+
+    # Build TWO lookup maps: one with the raw lowered name, one with
+    # spaces replaced by underscores.  This lets "Product Name" match
+    # the alias "product_name" and "expiry_date" match "Expiry Date".
+    lower_cols = {}          # lowered col → original col
+    normalised_cols = {}     # lowered + spaces→underscores → original col
+    for col in df_columns:
+        lc = col.lower().strip()
+        lower_cols[lc] = col
+        normalised_cols[lc.replace(" ", "_")] = col
 
     for alias in aliases:
+        # Try exact match first, then normalised
         if alias in lower_cols:
             return lower_cols[alias]
+        if alias in normalised_cols:
+            return normalised_cols[alias]
 
     return None
 
