@@ -2,8 +2,14 @@
 Forecast schemas — forecast response, scenario request/response.
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional, List
+
+
+# Valid scenario types (accept both short and long forms)
+VALID_SCENARIO_TYPES = {
+    "discount", "surge", "demand_surge", "delay", "supplier_delay", "custom",
+}
 
 
 class ForecastWeek(BaseModel):
@@ -64,8 +70,18 @@ class ForecastAllResponse(BaseModel):
 class ScenarioRequest(BaseModel):
     """Request body for what-if scenario."""
     product_id: int
-    scenario_type: str  # discount, demand_surge, supplier_delay, custom
+    scenario_type: str  # discount, surge/demand_surge, delay/supplier_delay, custom
     value: float  # percentage or days
+
+    @field_validator("scenario_type")
+    @classmethod
+    def validate_scenario_type(cls, v: str) -> str:
+        if v not in VALID_SCENARIO_TYPES:
+            raise ValueError(
+                f"Invalid scenario_type '{v}'. "
+                f"Must be one of: {', '.join(sorted(VALID_SCENARIO_TYPES))}"
+            )
+        return v
 
 
 class ScenarioDelta(BaseModel):

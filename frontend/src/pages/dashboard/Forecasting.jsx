@@ -1,11 +1,30 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import Plot from '../../components/PlotChart.jsx';
 import { inventoryApi, forecastApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 
+// Auto-assign icons based on driver name keywords
+function getDriverIcon(name) {
+  const n = (name || '').toLowerCase();
+  if (n.includes('disease') || n.includes('outbreak') || n.includes('flu') || n.includes('dengue') || n.includes('respiratory'))
+    return '🦠';
+  if (n.includes('festival') || n.includes('diwali') || n.includes('eid') || n.includes('christmas') || n.includes('holi'))
+    return '🎉';
+  if (n.includes('weather') || n.includes('monsoon') || n.includes('rain') || n.includes('summer') || n.includes('winter'))
+    return '🌦️';
+  if (n.includes('trend') && n.includes('up')) return '📈';
+  if (n.includes('trend') && n.includes('declin')) return '📉';
+  if (n.includes('trend')) return '📊';
+  if (n.includes('market') || n.includes('demand')) return '🛒';
+  if (n.includes('season')) return '🗓️';
+  return '⚡';
+}
+
 export default function Forecasting() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const { data: rawProducts, loading: pLoading } = useApi(() => inventoryApi.list(), []);
   const products = Array.isArray(rawProducts) ? rawProducts : (rawProducts?.products || []);
@@ -20,7 +39,7 @@ export default function Forecasting() {
     if (products.length > 0 && !selectedProduct) {
       setSelectedProduct(products[0].id);
     }
-  }, [products]);
+  }, [products, selectedProduct]);
 
   // Fetch forecast when product changes
   useEffect(() => {
@@ -71,18 +90,61 @@ export default function Forecasting() {
     hovermode: 'x unified',
   };
 
-  const drivers = fc?.driver_details || [];
+  // — Bug 1 fix: map backend fields to what the driver-card UI expects —
+  const rawDrivers = fc?.driver_details || [];
+  const drivers = rawDrivers.map(d => ({
+    name: d.name,
+    icon: getDriverIcon(d.name),
+    desc: d.description || '',
+    value: d.impact_pct != null ? `${d.impact_pct > 0 ? '+' : ''}${d.impact_pct}%` : '',
+    positive: (d.impact_pct || 0) >= 0,
+  }));
+
   const accuracy = fc?.accuracy || {};
+  const hasAccuracyData = accuracy.accuracy_pct > 0 || accuracy.mape > 0;
+
+  // — Bug 8 fix: expose model info —
+  const modelUsed = fc?.model_used || '';
+  const dataQuality = fc?.data_quality || '';
+
+  // Model / data quality badge
+  const modelBadge = (() => {
+    if (modelUsed.includes('prophet')) return { label: 'Prophet AI', cls: 'badge-primary' };
+    if (modelUsed.includes('sma')) return { label: 'SMA Fallback', cls: 'badge-warning' };
+    if (modelUsed === 'none') return { label: 'No Model', cls: 'badge-muted' };
+    return { label: modelUsed || '—', cls: 'badge-muted' };
+  })();
+
+  const qualityBadge = (() => {
+    if (dataQuality === 'sufficient') return { label: 'Sufficient Data', cls: 'badge-success' };
+    if (dataQuality === 'supplemented') return { label: 'Supplemented', cls: 'badge-info' };
+    if (dataQuality === 'proxy_from_similar') return { label: 'Proxy (Similar SKUs)', cls: 'badge-warning' };
+    if (dataQuality === 'limited_data') return { label: 'Limited Data', cls: 'badge-warning' };
+    if (dataQuality === 'insufficient') return { label: 'Insufficient', cls: 'badge-danger' };
+    return null;
+  })();
+
+  // — Bug 7 fix: accuracy trend indicator —
+  const trendIndicator = (() => {
+    if (!hasAccuracyData) return null;
+    const t = accuracy.trend;
+    if (t === 'improving') return { icon: '📈', label: 'Improving', cls: 'var(--color-success)' };
+    if (t === 'declining') return { icon: '📉', label: 'Declining', cls: 'var(--color-danger)' };
+    return { icon: '→', label: 'Stable', cls: 'var(--color-text-muted)' };
+  })();
 
   return (
     <div>
-      {/* Header */}
+      {/* Header — Bug 9 fix: proper h1 title */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
         <div>
           <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary-light)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
             {t('forecast.title')}
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+          <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, margin: 0 }}>
+            Inventory Forecasting
+          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
             <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>SKU:</span>
             <select
               className="form-select"
@@ -96,6 +158,13 @@ export default function Forecasting() {
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
+            {/* Bug 8: Model & data quality badges */}
+            {fc && (
+              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                <span className={`badge ${modelBadge.cls}`}>{modelBadge.label}</span>
+                {qualityBadge && <span className={`badge ${qualityBadge.cls}`}>{qualityBadge.label}</span>}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -129,8 +198,26 @@ export default function Forecasting() {
             )}
           </div>
 
-          {/* Driver Cards */}
-          {drivers.length > 0 && (
+          {/* Driver Cards — Bug 1 fix: use mapped fields */}
+          {fcLoading ? (
+            /* Bug 6 fix: loading skeleton for drivers */
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, marginBottom: 'var(--space-3)' }}>
+                {t('forecast.drivers_title')}
+              </h3>
+              <div className="grid-3">
+                {[1, 2, 3].map(i => (
+                  <div className="driver-card" key={i}>
+                    <div className="skeleton" style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div className="skeleton" style={{ width: '70%', height: 14, marginBottom: 6, borderRadius: 4 }} />
+                      <div className="skeleton" style={{ width: '90%', height: 10, borderRadius: 4 }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : drivers.length > 0 ? (
             <div style={{ marginBottom: 'var(--space-4)' }}>
               <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, marginBottom: 'var(--space-3)' }}>
                 {t('forecast.drivers_title')}
@@ -150,7 +237,17 @@ export default function Forecasting() {
                 ))}
               </div>
             </div>
-          )}
+          ) : !fcLoading && hasForecast ? (
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, marginBottom: 'var(--space-3)' }}>
+                {t('forecast.drivers_title')}
+              </h3>
+              <div className="glass-card" style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--color-text-muted)' }}>
+                <p style={{ fontSize: 'var(--font-size-sm)' }}>No external demand drivers detected for this product.</p>
+                <p style={{ fontSize: 'var(--font-size-xs)', marginTop: 'var(--space-1)' }}>Forecast is based on historical sales trends only.</p>
+              </div>
+            </div>
+          ) : null}
 
           {/* Weekly Breakdown Table */}
           {hasForecast && (
@@ -170,7 +267,11 @@ export default function Forecasting() {
                 </thead>
                 <tbody>
                   {fc.forecast.map((week, i) => {
-                    const conf = Math.max(0, 100 - (((week.high - week.low) / week.likely) * 100)).toFixed(0);
+                    {/* Bug 4 fix: guard against division by zero */}
+                    const range = week.high - week.low;
+                    const conf = week.likely > 0
+                      ? Math.max(0, Math.min(100, 100 - ((range / week.likely) * 100))).toFixed(0)
+                      : '0';
                     return (
                       <tr key={week.week}>
                         <td style={{ fontWeight: 600 }}>{week.week} {i === 0 ? <span className="badge badge-primary" style={{ marginLeft: 4 }}>Current</span> : ''}</td>
@@ -199,27 +300,53 @@ export default function Forecasting() {
 
         {/* Right Sidebar */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          {/* Model Precision */}
+          {/* Model Precision — Bug 2 fix: show "No Data" instead of misleading "0%" */}
           <div className="glass-card" style={{ textAlign: 'center' }}>
             <h3 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, marginBottom: 'var(--space-3)', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)' }}>
               {t('forecast.model_precision')}
             </h3>
-            <div style={{
-              fontSize: 'var(--font-size-4xl)', fontWeight: 800, color: 'var(--color-primary-light)',
-              lineHeight: 1, marginBottom: 'var(--space-1)'
-            }}>
-              {accuracy.mape != null ? `${accuracy.mape}%` : '—'}
-            </div>
-            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-              MAPE (Mean Absolute % Error)
-            </div>
+            {hasAccuracyData ? (
+              <>
+                <div style={{
+                  fontSize: 'var(--font-size-4xl)', fontWeight: 800, color: 'var(--color-primary-light)',
+                  lineHeight: 1, marginBottom: 'var(--space-1)'
+                }}>
+                  {accuracy.accuracy_pct}%
+                </div>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
+                  Accuracy (MAPE: {accuracy.mape}%)
+                </div>
+                {/* Bug 7 fix: show trend indicator */}
+                {trendIndicator && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-1)', fontSize: 'var(--font-size-xs)', color: trendIndicator.cls }}>
+                    <span>{trendIndicator.icon}</span>
+                    <span>{trendIndicator.label}</span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div style={{
+                  fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-text-muted)',
+                  lineHeight: 1, marginBottom: 'var(--space-2)'
+                }}>
+                  —
+                </div>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                  No accuracy data yet
+                </div>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: 'var(--space-1)' }}>
+                  Accuracy is calculated after forecasts are validated against actual sales.
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Test Scenario Button */}
+          {/* Test Scenario Button — Bug 3 fix: use navigate() for SPA routing */}
           <button
             className="btn btn-primary btn-lg"
             style={{ width: '100%' }}
-            onClick={() => window.location.href = '/dashboard/scenarios'}
+            onClick={() => navigate('/dashboard/scenarios')}
             id="btn-test-scenario"
           >
             🔮 {t('forecast.test_scenario')}
