@@ -141,8 +141,29 @@ export const anomalyApi = {
 // === Reorder ===
 export const reorderApi = {
   list: () => request('/reorder'),
-  exportCsv: () => `${API_BASE}/reorder/export?format=csv`,
-  exportPdf: () => `${API_BASE}/reorder/export?format=pdf`,
+  exportFile: async (format = 'csv') => {
+    const url = `${API_BASE}/reorder/export?format=${format}`;
+    const token = localStorage.getItem('stocksense-token');
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.status} ${response.statusText}`);
+    }
+    const blob = await response.blob();
+    const filename = response.headers.get('Content-Disposition')
+      ?.match(/filename=(.+)/)?.[1] || `reorder_list.${format}`;
+    // Trigger browser download
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  },
 };
 
 // === Alerts ===

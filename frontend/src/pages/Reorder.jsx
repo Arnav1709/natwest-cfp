@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useApi } from '../hooks/useApi';
 import { reorderApi } from '../services/api';
@@ -10,8 +11,49 @@ const urgencyConfig = {
 
 export default function Reorder() {
   const { t } = useTranslation();
+  const [exportingCsv, setExportingCsv] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [orderedItems, setOrderedItems] = useState(new Set());
+  const [orderedSuppliers, setOrderedSuppliers] = useState(new Set());
 
   const { data: rawData, loading, error } = useApi(() => reorderApi.list(), []);
+
+  // ── Export handlers (authenticated fetch, not bare <a href>) ──
+  const handleExport = async (format) => {
+    const setter = format === 'csv' ? setExportingCsv : setExportingPdf;
+    setter(true);
+    try {
+      await reorderApi.exportFile(format);
+    } catch (err) {
+      alert(`Export failed: ${err.message}`);
+    } finally {
+      setter(false);
+    }
+  };
+
+  // ── Mark single item as ordered (visual feedback) ──
+  const handleOrderItem = (item) => {
+    setOrderedItems((prev) => {
+      const next = new Set(prev);
+      next.add(item.product_id);
+      return next;
+    });
+  };
+
+  // ── Mark entire supplier group as ordered ──
+  const handleOrderSupplier = (supplier, items) => {
+    setOrderedSuppliers((prev) => {
+      const next = new Set(prev);
+      next.add(supplier);
+      return next;
+    });
+    // Also mark all individual items
+    setOrderedItems((prev) => {
+      const next = new Set(prev);
+      items.forEach((item) => next.add(item.product_id));
+      return next;
+    });
+  };
 
   if (loading) {
     return (
@@ -37,8 +79,22 @@ export default function Reorder() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-          <a href={reorderApi.exportCsv()} className="btn btn-secondary" id="btn-export-csv">📥 {t('reorder.export_csv')}</a>
-          <a href={reorderApi.exportPdf()} className="btn btn-secondary" id="btn-export-pdf">📄 {t('reorder.export_pdf')}</a>
+          <button
+            className="btn btn-secondary"
+            id="btn-export-csv"
+            onClick={() => handleExport('csv')}
+            disabled={exportingCsv}
+          >
+            {exportingCsv ? '⏳ Exporting...' : '📥'} {t('reorder.export_csv')}
+          </button>
+          <button
+            className="btn btn-secondary"
+            id="btn-export-pdf"
+            onClick={() => handleExport('pdf')}
+            disabled={exportingPdf}
+          >
+            {exportingPdf ? '⏳ Exporting...' : '📄'} {t('reorder.export_pdf')}
+          </button>
         </div>
       </div>
 
@@ -99,8 +155,9 @@ export default function Reorder() {
             <tbody>
               {reorder_list.map((item) => {
                 const uc = urgencyConfig[item.urgency] || urgencyConfig.low;
+                const isOrdered = orderedItems.has(item.product_id);
                 return (
-                  <tr key={item.product_id}>
+                  <tr key={item.product_id} style={isOrdered ? { opacity: 0.5 } : undefined}>
                     <td style={{ fontWeight: 600 }}>{item.product_name}</td>
                     <td>{item.current_stock}</td>
                     <td>{item.forecast_demand}/week</td>
@@ -118,7 +175,13 @@ export default function Reorder() {
                     <td style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>{item.supplier_name}</td>
                     <td style={{ fontWeight: 600 }}>₹{(item.estimated_cost || 0).toLocaleString()}</td>
                     <td>
-                      <button className="btn btn-primary btn-sm">Order</button>
+                      <button
+                        className={`btn ${isOrdered ? 'btn-secondary' : 'btn-primary'} btn-sm`}
+                        onClick={() => handleOrderItem(item)}
+                        disabled={isOrdered}
+                      >
+                        {isOrdered ? '✓ Marked' : 'Order'}
+                      </button>
                     </td>
                   </tr>
                 );
@@ -137,8 +200,9 @@ export default function Reorder() {
           <div className="grid-2">
             {Object.entries(grouped_by_supplier).map(([supplier, items]) => {
               const total = items.reduce((sum, item) => sum + (item.estimated_cost || 0), 0);
+              const isSupplierOrdered = orderedSuppliers.has(supplier);
               return (
-                <div className="glass-card" key={supplier}>
+                <div className="glass-card" key={supplier} style={isSupplierOrdered ? { opacity: 0.6 } : undefined}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
                     <h4 style={{ fontWeight: 600, fontSize: 'var(--font-size-base)' }}>{supplier}</h4>
                     <span className="badge badge-muted">₹{total.toLocaleString()}</span>
@@ -155,8 +219,13 @@ export default function Reorder() {
                       </span>
                     </div>
                   ))}
-                  <button className="btn btn-secondary btn-sm" style={{ width: '100%', marginTop: 'var(--space-3)' }}>
-                    📧 Send Order to {supplier}
+                  <button
+                    className={`btn ${isSupplierOrdered ? 'btn-secondary' : 'btn-primary'} btn-sm`}
+                    style={{ width: '100%', marginTop: 'var(--space-3)' }}
+                    onClick={() => handleOrderSupplier(supplier, items)}
+                    disabled={isSupplierOrdered}
+                  >
+                    {isSupplierOrdered ? '✓ Order Sent' : `📧 Send Order to ${supplier}`}
                   </button>
                 </div>
               );
