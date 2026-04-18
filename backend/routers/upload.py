@@ -420,6 +420,8 @@ def _handle_image_inventory_import(request: VerifyRequest, user: User, db: Sessi
                 existing.current_stock = item.quantity
             if item.price is not None:
                 existing.unit_cost = item.price
+            if item.category:
+                existing.category = item.category
             if expiry:
                 existing.expiry_date = expiry
                 # Create a new batch for the updated stock
@@ -504,10 +506,26 @@ def _handle_manual_import(request: VerifyRequest, user: User, db: Session) -> Ve
             product = existing
             if item.current_stock is not None:
                 product.current_stock = item.current_stock
+            elif item.quantity is not None:
+                product.current_stock = item.quantity
             if item.price is not None:
                 product.unit_cost = item.price
+            if item.category:
+                product.category = item.category
             if expiry:
                 product.expiry_date = expiry
+                # Also create a batch for existing products with expiry
+                stock = item.current_stock or item.quantity or 0
+                if stock > 0:
+                    batch = ProductBatch(
+                        product_id=product.id,
+                        batch_number=f"BATCH-{product.name[:3].upper()}-{db.query(ProductBatch).filter(ProductBatch.product_id == product.id).count() + 1:03d}",
+                        quantity=stock,
+                        expiry_date=expiry,
+                        purchase_date=date.today(),
+                        unit_cost=product.unit_cost or 0,
+                    )
+                    db.add(batch)
         else:
             product = Product(
                 user_id=user.id,
