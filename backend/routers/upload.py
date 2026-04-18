@@ -138,16 +138,8 @@ async def upload_csv(
             detail="No valid data rows found in the file",
         )
 
-    # Track upload in history
-    upload_record = UploadHistory(
-        user_id=current_user.id,
-        filename=file.filename,
-        upload_type="csv",
-        records=len(products),
-        status="pending",
-    )
-    db.add(upload_record)
-    db.commit()
+    # NOTE: upload history is only created after verification (in the /verify endpoint),
+    # so failed or cancelled uploads do not appear in the history.
 
     # ── AI-powered category inference ──
     # If no category column was found in the CSV, use LLM to classify
@@ -197,16 +189,8 @@ async def upload_image(
     if result.get("error"):
         raise HTTPException(status_code=422, detail=result["error"])
 
-    # Track upload in history
-    upload_record = UploadHistory(
-        user_id=current_user.id,
-        filename=image.filename,
-        upload_type="image",
-        records=len(result["extracted_data"]),
-        status="pending",
-    )
-    db.add(upload_record)
-    db.commit()
+    # NOTE: upload history is only created after verification (in the /verify endpoint),
+    # so failed or cancelled uploads do not appear in the history.
 
     return ImageUploadResponse(
         extracted_data=result["extracted_data"],
@@ -238,19 +222,17 @@ def verify_data(
     else:
         result = _handle_manual_import(request, current_user, db)
 
-    # Mark the most recent pending upload for this user as verified
-    pending_upload = (
-        db.query(UploadHistory)
-        .filter(
-            UploadHistory.user_id == current_user.id,
-            UploadHistory.status == "pending",
-        )
-        .order_by(UploadHistory.created_at.desc())
-        .first()
+    # Create upload history record — only on successful verification
+    records_count = result.products_created + result.sales_records_created + result.products_matched
+    upload_record = UploadHistory(
+        user_id=current_user.id,
+        filename="upload",
+        upload_type=source,
+        records=records_count,
+        status="verified",
     )
-    if pending_upload:
-        pending_upload.status = "verified"
-        db.commit()
+    db.add(upload_record)
+    db.commit()
 
     return result
 

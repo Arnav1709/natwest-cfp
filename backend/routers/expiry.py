@@ -103,6 +103,9 @@ def _batch_risk(days_to_expiry: int) -> str:
 def _batch_to_response(batch: ProductBatch) -> BatchResponse:
     days = (batch.expiry_date - date.today()).days
     cost = batch.unit_cost if batch.unit_cost else (batch.product.unit_cost or 0)
+    # Cap batch quantity to the product's actual current stock to prevent
+    # value-at-risk from exceeding total inventory value.
+    effective_qty = min(batch.quantity, batch.product.current_stock or 0)
     return BatchResponse(
         id=batch.id,
         product_id=batch.product_id,
@@ -115,7 +118,7 @@ def _batch_to_response(batch: ProductBatch) -> BatchResponse:
         unit_cost=cost,
         supplier_name=batch.product.supplier_name,
         days_to_expiry=days,
-        total_value=round(batch.quantity * cost, 2),
+        total_value=round(effective_qty * cost, 2),
         risk=_batch_risk(days),
         notes=batch.notes,
     )

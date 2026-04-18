@@ -32,18 +32,40 @@ export default function ExpiryTracker() {
   const summary = data?.summary || {};
 
   // Group batches by month for calendar view
+  // Merge ALL expired / past-month batches into a single "Expired & Past" card
   const calendarData = useMemo(() => {
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
     const months = {};
+    const expiredBucket = { key: '__expired__', label: 'Expired & Past', items: [], totalValue: 0, totalQty: 0 };
+
     batches.forEach((b) => {
       const d = new Date(b.expiry_date);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const label = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      if (!months[key]) months[key] = { key, label, items: [], totalValue: 0, totalQty: 0 };
-      months[key].items.push(b);
-      months[key].totalValue += b.total_value;
-      months[key].totalQty += b.quantity || 0;
+
+      // If the batch is expired OR the month is in the past, merge into one bucket
+      if (b.risk === 'expired' || key < currentMonthKey) {
+        expiredBucket.items.push(b);
+        expiredBucket.totalValue += b.total_value;
+        expiredBucket.totalQty += b.quantity || 0;
+      } else {
+        const label = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        if (!months[key]) months[key] = { key, label, items: [], totalValue: 0, totalQty: 0 };
+        months[key].items.push(b);
+        months[key].totalValue += b.total_value;
+        months[key].totalQty += b.quantity || 0;
+      }
     });
-    return Object.values(months).sort((a, b) => a.key.localeCompare(b.key));
+
+    const sorted = Object.values(months).sort((a, b) => a.key.localeCompare(b.key));
+
+    // Prepend the expired bucket if it has items
+    if (expiredBucket.items.length > 0) {
+      sorted.unshift(expiredBucket);
+    }
+
+    return sorted;
   }, [batches]);
 
   // Filter batches by risk AND/OR selected month
@@ -53,11 +75,22 @@ export default function ExpiryTracker() {
       result = result.filter((b) => b.risk === riskFilter);
     }
     if (selectedMonth) {
-      result = result.filter((b) => {
-        const d = new Date(b.expiry_date);
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        return key === selectedMonth;
-      });
+      if (selectedMonth === '__expired__') {
+        // Show all expired / past-month batches
+        const now = new Date();
+        const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        result = result.filter((b) => {
+          const d = new Date(b.expiry_date);
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          return b.risk === 'expired' || key < currentMonthKey;
+        });
+      } else {
+        result = result.filter((b) => {
+          const d = new Date(b.expiry_date);
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          return key === selectedMonth;
+        });
+      }
     }
     return result;
   }, [batches, riskFilter, selectedMonth]);
@@ -79,11 +112,14 @@ export default function ExpiryTracker() {
     ? calendarData.find((m) => m.key === selectedMonth)?.label || selectedMonth
     : null;
 
-  // Fetch AI advice
+  // Fetch AI advice — pass the product IDs from currently visible batches
   const handleGetAdvice = async () => {
     setAdviceLoading(true);
     try {
-      const result = await expiryApi.getAdvice();
+      // Collect unique product IDs from the currently visible/filtered batches
+      const targetBatches = filteredBatches.length > 0 ? filteredBatches : batches;
+      const productIds = [...new Set(targetBatches.map((b) => b.product_id))];
+      const result = await expiryApi.getAdvice(productIds.length > 0 ? productIds : null);
       setAdvice(result.advice || []);
       setAiAvailable(result.ai_available !== false);
     } catch (err) {
@@ -190,7 +226,7 @@ export default function ExpiryTracker() {
                   {/* Month Header */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
                     <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: rc.color }}>
-                      {month.label}
+                      {month.key === '__expired__' ? '🔴 Expired & Past' : month.label}
                     </div>
                     <div style={{
                       fontSize: '0.65rem', fontWeight: 600, color: 'var(--color-text-muted)',
