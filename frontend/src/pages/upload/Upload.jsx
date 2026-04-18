@@ -137,10 +137,13 @@ export default function Upload() {
           return;
         }
 
+        // Default to today's date if no date column was found in the CSV
+        const todayISO = new Date().toISOString().split('T')[0];
+
         const verifyData = result.products.map((item, idx) => ({
           id: idx + 1,
           name: item.name || '',
-          date: item.date || '',
+          date: item.date || todayISO,
           quantity: item.quantity || 0,
           price: item.price || 0,
           category: item.category || 'Other',
@@ -148,13 +151,20 @@ export default function Upload() {
           confidence: item.confidence || 1.0,
         }));
 
+        // Determine import source from detected columns:
+        // - If CSV has a date column → it's sales data → 'csv' handler (match existing products)
+        // - Otherwise → inventory data → 'image' handler (creates/updates products + batches)
+        const cols = result.columns_detected || [];
+        const hasSalesDate = cols.includes('date');
+        const importSource = hasSalesDate ? 'csv' : 'image';
+
         navigate('/upload/verify', {
           state: {
             data: verifyData,
-            source: 'csv',
+            source: importSource,
             overallConfidence: 1.0,
             fileName: selectedFile.name,
-            columnsDetected: result.columns_detected,
+            columnsDetected: cols,
           },
         });
       }

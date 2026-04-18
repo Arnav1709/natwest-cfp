@@ -2,6 +2,8 @@
 Upload router — POST /api/upload/csv, /image, /verify, GET /api/upload/history
 """
 
+import json
+import logging
 from datetime import date
 from typing import List, Optional
 
@@ -24,8 +26,71 @@ from schemas.upload import (
     VerifyResponse,
 )
 from services.ocr_service import process_ledger_image
+from services.ai_client import call_llm
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/upload", tags=["upload"])
+
+# Valid categories that the system supports
+_VALID_CATEGORIES = {
+    "medicines", "supplements", "supplies", "equipment", "grocery", "other",
+}
+
+
+def _ai_categorise_products(products: List[ParsedProduct]) -> List[ParsedProduct]:
+    """
+    Use AI to assign a category to each product based on its name.
+    Sends unique names in a single batch prompt for efficiency.
+    Falls back to 'Other' if the AI call fails.
+    """
+    # Collect unique product names that need a category
+    unique_names = list({p.name for p in products if p.name and not p.category})
+    if not unique_names:
+        return products
+
+    prompt = (
+        "You are a product categoriser for a pharmacy / grocery inventory system.\n"
+        "Valid categories are EXACTLY: Medicines, Supplements, Supplies, Equipment, Grocery, Other.\n\n"
+        "For each product name below, return a JSON object mapping the product name to its category.\n"
+        "Return ONLY valid JSON, no markdown, no explanation.\n\n"
+        "Example output:\n"
+        '{"Paracetamol 500mg": "Medicines", "Rice 5kg": "Grocery", "Surgical Gloves": "Supplies"}\n\n'
+        "Product names:\n"
+        + "\n".join(f"- {name}" for name in unique_names)
+    )
+
+    try:
+        response = call_llm(prompt)
+        if not response:
+            logger.warning("AI category inference returned empty — keeping 'Other'")
+            return products
+
+        # Strip markdown fences if present
+        cleaned = response.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+
+        category_map = json.loads(cleaned)
+        logger.info("AI categorised %d products: %s", len(category_map), category_map)
+
+        # Apply categories back
+        for product in products:
+            if product.category:
+                continue
+            ai_cat = category_map.get(product.name, "Other")
+            # Validate against our allowed categories
+            if ai_cat.lower() in _VALID_CATEGORIES:
+                product.category = ai_cat
+            else:
+                product.category = "Other"
+
+    except (json.JSONDecodeError, KeyError, TypeError) as e:
+        logger.warning("Failed to parse AI category response: %s", e)
+    except Exception as e:
+        logger.warning("AI categorisation failed: %s", e)
+
+    return products
 
 
 # ── Response schema for upload history ──
@@ -73,16 +138,14 @@ async def upload_csv(
             detail="No valid data rows found in the file",
         )
 
-    # Track upload in history
-    upload_record = UploadHistory(
-        user_id=current_user.id,
-        filename=file.filename,
-        upload_type="csv",
-        records=len(products),
-        status="pending",
-    )
-    db.add(upload_record)
-    db.commit()
+    # NOTE: upload history is only created after verification (in the /verify endpoint),
+    # so failed or cancelled uploads do not appear in the history.
+
+    # ── AI-powered category inference ──
+    # If no category column was found in the CSV, use LLM to classify
+    # products by name so the user doesn't see "Other" for everything.
+    if "category" not in columns_detected:
+        products = _ai_categorise_products(products)
 
     return CSVUploadResponse(
         products=products,
@@ -126,16 +189,8 @@ async def upload_image(
     if result.get("error"):
         raise HTTPException(status_code=422, detail=result["error"])
 
-    # Track upload in history
-    upload_record = UploadHistory(
-        user_id=current_user.id,
-        filename=image.filename,
-        upload_type="image",
-        records=len(result["extracted_data"]),
-        status="pending",
-    )
-    db.add(upload_record)
-    db.commit()
+    # NOTE: upload history is only created after verification (in the /verify endpoint),
+    # so failed or cancelled uploads do not appear in the history.
 
     return ImageUploadResponse(
         extracted_data=result["extracted_data"],
@@ -167,19 +222,17 @@ def verify_data(
     else:
         result = _handle_manual_import(request, current_user, db)
 
-    # Mark the most recent pending upload for this user as verified
-    pending_upload = (
-        db.query(UploadHistory)
-        .filter(
-            UploadHistory.user_id == current_user.id,
-            UploadHistory.status == "pending",
-        )
-        .order_by(UploadHistory.created_at.desc())
-        .first()
+    # Create upload history record — only on successful verification
+    records_count = result.products_created + result.sales_records_created + result.products_matched
+    upload_record = UploadHistory(
+        user_id=current_user.id,
+        filename="upload",
+        upload_type=source,
+        records=records_count,
+        status="verified",
     )
-    if pending_upload:
-        pending_upload.status = "verified"
-        db.commit()
+    db.add(upload_record)
+    db.commit()
 
     return result
 
@@ -349,6 +402,8 @@ def _handle_image_inventory_import(request: VerifyRequest, user: User, db: Sessi
                 existing.current_stock = item.quantity
             if item.price is not None:
                 existing.unit_cost = item.price
+            if item.category:
+                existing.category = item.category
             if expiry:
                 existing.expiry_date = expiry
                 # Create a new batch for the updated stock
@@ -433,10 +488,26 @@ def _handle_manual_import(request: VerifyRequest, user: User, db: Session) -> Ve
             product = existing
             if item.current_stock is not None:
                 product.current_stock = item.current_stock
+            elif item.quantity is not None:
+                product.current_stock = item.quantity
             if item.price is not None:
                 product.unit_cost = item.price
+            if item.category:
+                product.category = item.category
             if expiry:
                 product.expiry_date = expiry
+                # Also create a batch for existing products with expiry
+                stock = item.current_stock or item.quantity or 0
+                if stock > 0:
+                    batch = ProductBatch(
+                        product_id=product.id,
+                        batch_number=f"BATCH-{product.name[:3].upper()}-{db.query(ProductBatch).filter(ProductBatch.product_id == product.id).count() + 1:03d}",
+                        quantity=stock,
+                        expiry_date=expiry,
+                        purchase_date=date.today(),
+                        unit_cost=product.unit_cost or 0,
+                    )
+                    db.add(batch)
         else:
             product = Product(
                 user_id=user.id,
