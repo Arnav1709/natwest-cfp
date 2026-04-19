@@ -143,6 +143,7 @@ export const anomalyApi = {
 // === Reorder ===
 export const reorderApi = {
   list: () => request('/reorder'),
+  sendOrder: (data) => request('/reorder/send-order', { method: 'POST', body: JSON.stringify(data) }),
   exportFile: async (format = 'csv') => {
     const url = `${API_BASE}/reorder/export?format=${format}`;
     const token = localStorage.getItem('stocksense-token');

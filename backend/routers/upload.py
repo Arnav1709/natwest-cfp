@@ -468,6 +468,28 @@ def _handle_image_inventory_import(request: VerifyRequest, user: User, db: Sessi
 
     db.commit()
 
+    # Auto-calculate reorder points for all products (including newly uploaded ones)
+    # This ensures products don't stay at reorder_point=0 after upload.
+    # Uses fast statistical mode (no AI) to avoid latency during upload.
+    if products_created > 0:
+        try:
+            from services.reorder_point_calculator import calculate_reorder_points
+            rp_result = calculate_reorder_points(db, user.id, use_ai=False)
+            logger.info(
+                "Auto-calculated reorder points after inventory upload: %d updated, %d skipped",
+                rp_result.get("updated", 0), rp_result.get("skipped", 0),
+            )
+        except Exception as e:
+            logger.warning("Auto reorder point calculation failed (non-fatal): %s", e)
+
+    # Invalidate caches since inventory changed
+    from cache import cache_invalidate
+    cache_invalidate(
+        user.id,
+        "inventory_list", "inventory_health", "inventory_expiring",
+        "inventory_product", "reorder",
+    )
+
     return VerifyResponse(
         products_created=products_created,
         sales_records_created=0,

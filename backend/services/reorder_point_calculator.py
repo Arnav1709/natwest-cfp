@@ -306,10 +306,22 @@ def calculate_reorder_points(
         new_reorder_point = calc["reorder_point"]
         new_safety_stock = calc["safety_stock"]
 
-        # Skip if no sales data and current reorder_point is already set
-        if stats["avg_daily"] <= 0 and (p.reorder_point or 0) > 0:
-            skipped += 1
-            continue
+        # Fallback for products with NO sales data:
+        # Use a stock-based heuristic so they don't stay at reorder_point=0.
+        # ROP = ~20% of current stock (min 5 units), safety = lead_time days
+        if stats["avg_daily"] <= 0:
+            current = p.current_stock or 0
+            if current > 0 and (p.reorder_point or 0) <= 0:
+                # No sales data AND no existing ROP → set a sensible default
+                fallback_rop = max(5, round(current * 0.2))
+                fallback_ss = max(2, lead_time)
+                new_reorder_point = fallback_rop
+                new_safety_stock = fallback_ss
+                reasoning = f"Stock-based heuristic (no sales data): 20% of {int(current)} units"
+            elif (p.reorder_point or 0) > 0:
+                # Has an existing ROP already set → keep it, skip
+                skipped += 1
+                continue
 
         # Skip if no change
         old_rp = p.reorder_point or 0
