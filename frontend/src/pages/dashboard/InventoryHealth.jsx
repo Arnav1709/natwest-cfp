@@ -49,6 +49,33 @@ export default function InventoryHealth() {
   const [category, setCategory] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
+  /* Inventory velocity — based on days_remaining (lower = faster moving)
+   * IMPORTANT: This useMemo MUST be called before any early returns so that
+   * the number of hooks is identical on every render (React rules of hooks). */
+  const velocityProducts = useMemo(() => {
+    const withVelocity = products
+      .filter(p => p.current_stock > 0)
+      .map(p => {
+        const days = p.days_remaining;
+        const dailyRate = days != null && days > 0 ? (p.current_stock / days) : 0;
+        let speed = 'No Data';
+        let speedColor = '#64748B';
+        if (dailyRate > 0) {
+          if (dailyRate >= 10) { speed = 'Fast'; speedColor = '#00FFAA'; }
+          else if (dailyRate >= 3) { speed = 'Medium'; speedColor = '#00D0FF'; }
+          else if (dailyRate >= 1) { speed = 'Slow'; speedColor = '#FFB020'; }
+          else { speed = 'Very Slow'; speedColor = '#FF3366'; }
+        }
+        return { ...p, dailyRate: Math.round(dailyRate * 10) / 10, speed, speedColor };
+      })
+      .sort((a, b) => b.dailyRate - a.dailyRate); // Fastest first
+
+    // Show top 3 fastest and top 3 slowest
+    const fastest = withVelocity.filter(p => p.dailyRate > 0).slice(0, 3);
+    const slowest = withVelocity.filter(p => p.dailyRate > 0).reverse().slice(0, 3);
+    return { fastest, slowest };
+  }, [products]);
+
   const filtered = products.filter(p => {
     const matchSearch = (p.name || '').toLowerCase().includes(search.toLowerCase());
     const matchCat = category === 'all' || p.category === category;
@@ -156,30 +183,7 @@ export default function InventoryHealth() {
       }));
   })();
 
-  /* Inventory velocity — based on days_remaining (lower = faster moving) */
-  const velocityProducts = useMemo(() => {
-    const withVelocity = products
-      .filter(p => p.current_stock > 0)
-      .map(p => {
-        const days = p.days_remaining;
-        const dailyRate = days != null && days > 0 ? (p.current_stock / days) : 0;
-        let speed = 'No Data';
-        let speedColor = '#64748B';
-        if (dailyRate > 0) {
-          if (dailyRate >= 10) { speed = 'Fast'; speedColor = '#00FFAA'; }
-          else if (dailyRate >= 3) { speed = 'Medium'; speedColor = '#00D0FF'; }
-          else if (dailyRate >= 1) { speed = 'Slow'; speedColor = '#FFB020'; }
-          else { speed = 'Very Slow'; speedColor = '#FF3366'; }
-        }
-        return { ...p, dailyRate: Math.round(dailyRate * 10) / 10, speed, speedColor };
-      })
-      .sort((a, b) => b.dailyRate - a.dailyRate); // Fastest first
 
-    // Show top 3 fastest and top 3 slowest
-    const fastest = withVelocity.filter(p => p.dailyRate > 0).slice(0, 3);
-    const slowest = withVelocity.filter(p => p.dailyRate > 0).reverse().slice(0, 3);
-    return { fastest, slowest };
-  }, [products]);
 
   /* Category breakdown */
   const categoryMap = {};
