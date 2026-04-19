@@ -96,6 +96,32 @@ def get_whatsapp_status(
         return WhatsAppStatusResponse(connected=False)
 
 
+def _normalize_phone_variants(raw_phone: str) -> list[str]:
+    """
+    WhatsApp sends numbers like '919876543210@c.us'.
+    Generate all plausible formats so we can match against whatever
+    the user stored during registration.
+    """
+    # Strip the @c.us / @s.whatsapp.net suffix
+    phone = raw_phone.split("@")[0].strip()
+
+    variants = set()
+    variants.add(phone)               # e.g. "919876543210"
+    variants.add(f"+{phone}")          # e.g. "+919876543210"
+
+    # If it starts with country code 91 (India), also try without it
+    if phone.startswith("91") and len(phone) > 10:
+        local = phone[2:]              # e.g. "9876543210"
+        variants.add(local)
+        variants.add(f"+91{local}")
+        variants.add(f"0{local}")      # e.g. "09876543210"
+
+    # Also add the original raw value just in case
+    variants.add(raw_phone)
+
+    return list(variants)
+
+
 @router.post("/webhook", response_model=WebhookResponse)
 def whatsapp_webhook(
     request: WebhookRequest,
@@ -107,9 +133,27 @@ def whatsapp_webhook(
     """
     command = request.command.upper().strip()
 
-    # Find user by phone number
-    user = db.query(User).filter(User.phone == request.from_number).first()
+    # Find user by phone number — try multiple format variants
+    phone_variants = _normalize_phone_variants(request.from_number)
+    logger.info(f"Looking up user with phone variants: {phone_variants}")
+
+    # Multiple users might match different phone formats (e.g. "9798464041" and "09798464041").
+    # Prefer the user who has the most products (i.e. the actively-used account).
+    from models.product import Product
+    from sqlalchemy import func as sa_func
+
+    candidates = (
+        db.query(User)
+        .filter(User.phone.in_(phone_variants))
+        .outerjoin(Product, Product.user_id == User.id)
+        .group_by(User.id)
+        .order_by(sa_func.count(Product.id).desc())
+        .all()
+    )
+    user = candidates[0] if candidates else None
+
     if not user:
+        logger.warning(f"No user found for phone: {request.from_number} (tried {phone_variants})")
         return WebhookResponse(reply="❌ User not found. Please register on StockSense first.")
 
     if command == "REORDER":
