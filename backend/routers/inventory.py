@@ -53,6 +53,9 @@ def _batch_avg_daily_sales(db: Session, product_ids: list[int]) -> dict[int, flo
     Compute avg daily sales for multiple products in ONE query
     instead of N+1 per-product queries.
     Returns { product_id: avg_daily_sales }.
+
+    Uses the actual data span (first sale date → today, capped at 30 days)
+    so newer products aren't penalised by dividing by 30 zero-filled days.
     """
     if not product_ids:
         return {}
@@ -63,6 +66,7 @@ def _batch_avg_daily_sales(db: Session, product_ids: list[int]) -> dict[int, flo
         db.query(
             SalesHistory.product_id,
             sql_func.sum(SalesHistory.quantity).label("total_sold"),
+            sql_func.min(SalesHistory.date).label("first_sale_date"),
         )
         .filter(
             SalesHistory.product_id.in_(product_ids),
@@ -76,7 +80,13 @@ def _batch_avg_daily_sales(db: Session, product_ids: list[int]) -> dict[int, flo
     for row in rows:
         total = row.total_sold or 0
         if total > 0:
-            result[row.product_id] = total / 30.0
+            # Use actual data span instead of hardcoded 30 days
+            if row.first_sale_date:
+                data_span = (date.today() - row.first_sale_date).days + 1
+                actual_days = max(1, min(data_span, 30))
+            else:
+                actual_days = 30
+            result[row.product_id] = total / actual_days
     return result
 
 
