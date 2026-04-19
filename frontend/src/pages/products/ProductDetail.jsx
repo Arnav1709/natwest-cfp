@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit3, RefreshCw, Package, Clock, DollarSign, Activity, Truck, Calendar, Shield, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ArrowLeft, Edit3, RefreshCw, Package, Clock, DollarSign, Activity, Truck, Calendar, Shield, TrendingUp, TrendingDown, Minus, X, Save, Loader2, CheckCircle2 } from 'lucide-react';
 import Plot from '../../components/PlotChart.jsx';
 import { useApi } from '../../hooks/useApi';
 import { inventoryApi } from '../../services/api';
@@ -18,7 +19,64 @@ export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const { data: product, loading, error } = useApi(() => inventoryApi.get(id), [id]);
+  const { data: product, loading, error, refetch } = useApi(() => inventoryApi.get(id), [id]);
+
+  // Edit modal state
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [editForm, setEditForm] = useState({});
+
+  const openEditForm = () => {
+    if (!product) return;
+    setEditForm({
+      name: product.name || '',
+      category: product.category || 'Other',
+      unit: product.unit || 'units',
+      current_stock: product.current_stock || 0,
+      reorder_point: product.reorder_point || 0,
+      safety_stock: product.safety_stock || 0,
+      unit_cost: product.unit_cost || 0,
+      supplier_name: product.supplier_name || '',
+      supplier_contact: product.supplier_contact || '',
+      lead_time_days: product.lead_time_days || 3,
+      expiry_date: product.expiry_date || '',
+    });
+    setEditing(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+  };
+
+  const handleEditChange = (field, value) => {
+    setEditForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveEdit = async () => {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const payload = {
+        ...editForm,
+        current_stock: parseInt(editForm.current_stock, 10) || 0,
+        reorder_point: parseInt(editForm.reorder_point, 10) || 0,
+        safety_stock: parseInt(editForm.safety_stock, 10) || 0,
+        unit_cost: parseFloat(editForm.unit_cost) || 0,
+        lead_time_days: parseInt(editForm.lead_time_days, 10) || 1,
+      };
+      await inventoryApi.update(id, payload);
+      setSaveSuccess(true);
+      setTimeout(() => {
+        setEditing(false);
+        setSaveSuccess(false);
+        refetch();
+      }, 1200);
+    } catch (err) {
+      setSaveError(err.message || 'Failed to save changes.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -77,6 +135,20 @@ export default function ProductDetail() {
     }] : [],
   };
 
+  const editFields = [
+    { label: 'Product Name', key: 'name', type: 'text', colSpan: 2, required: true },
+    { label: 'Category', key: 'category', type: 'select', options: ['Medicines', 'Supplements', 'Supplies', 'Equipment', 'Grocery', 'Other'] },
+    { label: 'Unit', key: 'unit', type: 'select', options: ['units', 'strips', 'bottles', 'packets', 'kg', 'liters'] },
+    { label: 'Current Stock', key: 'current_stock', type: 'number', min: 0 },
+    { label: 'Reorder Point', key: 'reorder_point', type: 'number', min: 0 },
+    { label: 'Safety Stock', key: 'safety_stock', type: 'number', min: 0 },
+    { label: 'Unit Cost (₹)', key: 'unit_cost', type: 'number', min: 0, step: '0.01' },
+    { label: 'Supplier Name', key: 'supplier_name', type: 'text', placeholder: 'e.g. MedPlus Distributors' },
+    { label: 'Supplier Contact', key: 'supplier_contact', type: 'text', placeholder: '+91-XXXXXXXXXX' },
+    { label: 'Lead Time (days)', key: 'lead_time_days', type: 'number', min: 1 },
+    { label: 'Expiry Date', key: 'expiry_date', type: 'date' },
+  ];
+
   return (
     <div className="space-y-6 animate-fade-in-up max-w-[1200px] mx-auto">
       {/* Back */}
@@ -115,15 +187,93 @@ export default function ProductDetail() {
             </div>
           </div>
           <div className="flex gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 font-medium border border-slate-700/50 transition-colors">
+            <button
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 font-medium border border-slate-700/50 transition-colors"
+              onClick={openEditForm}
+              id="btn-edit-product"
+            >
               <Edit3 className="w-4 h-4" /> Edit
             </button>
-            <ShimmerButton>
+            <ShimmerButton onClick={() => navigate('/reorder')} id="btn-reorder-product">
               <span className="flex items-center gap-2"><RefreshCw className="w-4 h-4" /> Reorder</span>
             </ShimmerButton>
           </div>
         </div>
       </GlowCard>
+
+      {/* ── Edit Modal ── */}
+      {editing && (
+        <GlowCard className="p-6" glowColor="#3B82F6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <Edit3 className="w-5 h-5 text-blue-400" />
+              Edit Product
+            </h3>
+            <button
+              onClick={() => setEditing(false)}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {saveError && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-5 text-red-400 text-sm">
+              {saveError}
+            </div>
+          )}
+          {saveSuccess && (
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 mb-5 text-emerald-400 text-sm flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" /> Changes saved successfully!
+            </div>
+          )}
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            {editFields.map((f) => (
+              <div key={f.key} className={f.colSpan === 2 ? 'sm:col-span-2' : ''}>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">{f.label}</label>
+                {f.type === 'select' ? (
+                  <select
+                    value={editForm[f.key] || ''}
+                    onChange={e => handleEditChange(f.key, e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-sm"
+                    id={`edit-${f.key}`}
+                  >
+                    {f.options.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                ) : (
+                  <input
+                    type={f.type}
+                    min={f.min}
+                    step={f.step}
+                    required={f.required}
+                    value={editForm[f.key] ?? ''}
+                    onChange={e => handleEditChange(f.key, e.target.value)}
+                    placeholder={f.placeholder}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-sm"
+                    id={`edit-${f.key}`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-800">
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 transition-all"
+            >
+              Cancel
+            </button>
+            <ShimmerButton onClick={handleSaveEdit} disabled={saving} id="btn-save-edit">
+              <span className="flex items-center gap-2">
+                {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Save className="w-4 h-4" /> Save Changes</>}
+              </span>
+            </ShimmerButton>
+          </div>
+        </GlowCard>
+      )}
 
       {/* KPIs */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
