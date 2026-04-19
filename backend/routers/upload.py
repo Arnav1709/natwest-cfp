@@ -379,6 +379,8 @@ def _handle_image_inventory_import(request: VerifyRequest, user: User, db: Sessi
 
     products_created = 0
     new_products = []
+    # Batches to create AFTER flush (for new products whose IDs aren't available yet)
+    pending_batches = []
 
     for item in request.verified_data:
         if not item.name or not item.name.strip():
@@ -406,14 +408,20 @@ def _handle_image_inventory_import(request: VerifyRequest, user: User, db: Sessi
                 existing.expiry_date = expiry
                 stock = item.current_stock or item.quantity or 0
                 if stock > 0:
-                    cnt = batch_counts.get(existing.id, 0) + 1
-                    batch_counts[existing.id] = cnt
-                    db.add(ProductBatch(
-                        product_id=existing.id,
-                        batch_number=f"BATCH-{existing.name[:3].upper()}-{cnt:03d}",
-                        quantity=stock, expiry_date=expiry,
-                        purchase_date=date.today(), unit_cost=existing.unit_cost or 0,
-                    ))
+                    # If this product has an ID (already in DB), create batch now
+                    # If not (just added above but not flushed), defer to after flush
+                    if existing.id is not None:
+                        cnt = batch_counts.get(existing.id, 0) + 1
+                        batch_counts[existing.id] = cnt
+                        db.add(ProductBatch(
+                            product_id=existing.id,
+                            batch_number=f"BATCH-{existing.name[:3].upper()}-{cnt:03d}",
+                            quantity=stock, expiry_date=expiry,
+                            purchase_date=date.today(), unit_cost=existing.unit_cost or 0,
+                        ))
+                    else:
+                        # New product — defer batch creation
+                        pending_batches.append((existing, stock, expiry))
         else:
             product = Product(
                 user_id=user.id, name=item.name, category=item.category,
@@ -429,14 +437,31 @@ def _handle_image_inventory_import(request: VerifyRequest, user: User, db: Sessi
             product_by_name[item.name.lower().strip()] = product
 
     # Flush to get IDs for new products
-    if new_products:
+    if new_products or pending_batches:
         db.flush()
+
+        # Create batches for new products (first occurrence with expiry)
+        batch_counter = {}  # track per-product batch count
         for product, item, expiry in new_products:
             stock = product.current_stock or 0
-            if expiry and stock > 0:
+            if expiry and stock > 0 and product.id is not None:
+                cnt = batch_counter.get(product.id, 0) + 1
+                batch_counter[product.id] = cnt
                 db.add(ProductBatch(
                     product_id=product.id,
-                    batch_number=f"BATCH-{product.name[:3].upper()}-001",
+                    batch_number=f"BATCH-{product.name[:3].upper()}-{cnt:03d}",
+                    quantity=stock, expiry_date=expiry,
+                    purchase_date=date.today(), unit_cost=product.unit_cost or 0,
+                ))
+
+        # Create deferred batches (duplicate rows for newly-created products)
+        for product, stock, expiry in pending_batches:
+            if product.id is not None:
+                cnt = batch_counter.get(product.id, 0) + 1
+                batch_counter[product.id] = cnt
+                db.add(ProductBatch(
+                    product_id=product.id,
+                    batch_number=f"BATCH-{product.name[:3].upper()}-{cnt:03d}",
                     quantity=stock, expiry_date=expiry,
                     purchase_date=date.today(), unit_cost=product.unit_cost or 0,
                 ))
@@ -472,6 +497,7 @@ def _handle_manual_import(request: VerifyRequest, user: User, db: Session) -> Ve
     sales_created = 0
     new_products = []
     bulk_sales = []
+    pending_batches = []
 
     for item in request.verified_data:
         expiry = None
@@ -497,14 +523,17 @@ def _handle_manual_import(request: VerifyRequest, user: User, db: Session) -> Ve
                 product.expiry_date = expiry
                 stock = item.current_stock or item.quantity or 0
                 if stock > 0:
-                    cnt = batch_counts.get(product.id, 0) + 1
-                    batch_counts[product.id] = cnt
-                    db.add(ProductBatch(
-                        product_id=product.id,
-                        batch_number=f"BATCH-{product.name[:3].upper()}-{cnt:03d}",
-                        quantity=stock, expiry_date=expiry,
-                        purchase_date=date.today(), unit_cost=product.unit_cost or 0,
-                    ))
+                    if product.id is not None:
+                        cnt = batch_counts.get(product.id, 0) + 1
+                        batch_counts[product.id] = cnt
+                        db.add(ProductBatch(
+                            product_id=product.id,
+                            batch_number=f"BATCH-{product.name[:3].upper()}-{cnt:03d}",
+                            quantity=stock, expiry_date=expiry,
+                            purchase_date=date.today(), unit_cost=product.unit_cost or 0,
+                        ))
+                    else:
+                        pending_batches.append((product, stock, expiry))
         else:
             product = Product(
                 user_id=user.id, name=item.name, category=item.category,
@@ -528,14 +557,29 @@ def _handle_manual_import(request: VerifyRequest, user: User, db: Session) -> Ve
             sales_created += 1
 
     # Flush to get IDs for new products
-    if new_products:
+    if new_products or pending_batches:
         db.flush()
+
+        batch_counter = {}
         for product, item, expiry in new_products:
             stock = product.current_stock or 0
-            if expiry and stock > 0:
+            if expiry and stock > 0 and product.id is not None:
+                cnt = batch_counter.get(product.id, 0) + 1
+                batch_counter[product.id] = cnt
                 db.add(ProductBatch(
                     product_id=product.id,
-                    batch_number=f"BATCH-{product.name[:3].upper()}-001",
+                    batch_number=f"BATCH-{product.name[:3].upper()}-{cnt:03d}",
+                    quantity=stock, expiry_date=expiry,
+                    purchase_date=date.today(), unit_cost=product.unit_cost or 0,
+                ))
+
+        for product, stock, expiry in pending_batches:
+            if product.id is not None:
+                cnt = batch_counter.get(product.id, 0) + 1
+                batch_counter[product.id] = cnt
+                db.add(ProductBatch(
+                    product_id=product.id,
+                    batch_number=f"BATCH-{product.name[:3].upper()}-{cnt:03d}",
                     quantity=stock, expiry_date=expiry,
                     purchase_date=date.today(), unit_cost=product.unit_cost or 0,
                 ))
