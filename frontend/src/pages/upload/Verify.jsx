@@ -325,8 +325,8 @@ export default function Verify() {
           </button>
 
           {/* Confirmation */}
-          <GlowCard className="p-5 flex flex-wrap items-center justify-between gap-4" glowColor={confirmed ? '#10B981' : undefined}>
-            <label className="flex items-center gap-3 cursor-pointer group">
+          <GlowCard className="p-5" glowColor={confirmed ? '#10B981' : undefined}>
+            <label className="flex items-center gap-3 cursor-pointer group mb-5">
               <input
                 type="checkbox"
                 checked={confirmed}

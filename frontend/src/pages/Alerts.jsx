@@ -124,14 +124,16 @@ export default function Alerts() {
       {/* Alert List */}
       <div className="space-y-4">
         {filtered.length === 0 ? (
-          <GlowCard className="p-12 text-center flex flex-col items-center justify-center">
-            <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mb-4 border border-emerald-500/20">
-              <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+          <GlowCard className="p-12">
+            <div className="flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mb-4 border border-emerald-500/20">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">All Clear</h3>
+              <p className="text-slate-400 max-w-sm mx-auto">
+                {alerts.length === 0 ? 'No alerts yet. Your inventory metrics are perfectly balanced.' : 'No alerts in this specific category.'}
+              </p>
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">All Clear</h3>
-            <p className="text-slate-400 max-w-sm mx-auto">
-              {alerts.length === 0 ? 'No alerts yet. Your inventory metrics are perfectly balanced.' : 'No alerts in this specific category.'}
-            </p>
           </GlowCard>
         ) : (
           filtered.map(alert => {

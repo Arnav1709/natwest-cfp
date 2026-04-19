@@ -717,21 +717,23 @@ export default function RecordSales() {
               </div>
 
               {selectedFile && (
-                <GlowCard className="mt-4 p-4 flex flex-wrap items-center justify-between gap-4" glowColor="#3B82F6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-500/10 border border-blue-500/20">
-                      <FileSpreadsheet className="w-5 h-5 text-blue-400" />
+                <GlowCard className="mt-4 p-4" glowColor="#3B82F6">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-500/10 border border-blue-500/20">
+                        <FileSpreadsheet className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-sm text-white">{selectedFile.name}</div>
+                        <div className="text-xs text-slate-500">{(selectedFile.size / 1024).toFixed(1)} KB</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-semibold text-sm text-white">{selectedFile.name}</div>
-                      <div className="text-xs text-slate-500">{(selectedFile.size / 1024).toFixed(1)} KB</div>
-                    </div>
+                    <ShimmerButton onClick={handleParseCSV} disabled={csvUploading}>
+                      <span className="flex items-center gap-2">
+                        {csvUploading ? <><Loader2 className="w-4 h-4 animate-spin" /> Parsing...</> : <>Parse & Preview <ArrowRight className="w-4 h-4" /></>}
+                      </span>
+                    </ShimmerButton>
                   </div>
-                  <ShimmerButton onClick={handleParseCSV} disabled={csvUploading}>
-                    <span className="flex items-center gap-2">
-                      {csvUploading ? <><Loader2 className="w-4 h-4 animate-spin" /> Parsing...</> : <>Parse & Preview <ArrowRight className="w-4 h-4" /></>}
-                    </span>
-                  </ShimmerButton>
                 </GlowCard>
               )}
             </>

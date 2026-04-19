@@ -354,8 +354,8 @@ export default function Upload() {
 
           {/* Selected File Info */}
           {selectedFile && (
-            <GlowCard className="p-4 flex flex-wrap items-center justify-between gap-4" glowColor="#3B82F6">
-              <div className="flex items-center gap-3">
+            <GlowCard className="p-5" glowColor="#3B82F6">
+              <div className="flex items-center gap-3 mb-5">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-500/10 border border-blue-500/20">
                   {activeMethod === 'csv' ? <FileSpreadsheet className="w-5 h-5 text-blue-400" /> : <Camera className="w-5 h-5 text-violet-400" />}
                 </div>
