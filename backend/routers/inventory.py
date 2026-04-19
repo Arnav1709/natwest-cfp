@@ -41,9 +41,9 @@ def _compute_status(product: Product) -> str:
     """Compute stock status based on current stock vs reorder/safety thresholds."""
     if product.current_stock <= 0:
         return "out_of_stock"
-    if product.current_stock <= product.safety_stock:
+    if (product.safety_stock or 0) > 0 and product.current_stock <= product.safety_stock:
         return "critical"
-    if product.current_stock <= product.reorder_point:
+    if (product.reorder_point or 0) > 0 and product.current_stock <= product.reorder_point:
         return "low_stock"
     return "healthy"
 
