@@ -40,6 +40,10 @@ def _get_daily_sales_stats(
     """
     Compute daily sales statistics for a product over the lookback window.
     Returns { avg_daily, std_daily, total_sold, days_with_sales, max_daily }.
+
+    Uses the actual data span (first sale date → today) instead of the full
+    lookback window so that newer products aren't penalised by dividing their
+    totals by 90 zero-filled days.
     """
     cutoff = date.today() - timedelta(days=lookback_days)
 
@@ -63,15 +67,17 @@ def _get_daily_sales_stats(
     total_sold = sum(daily_quantities)
     days_with_sales = len(daily_quantities)
 
-    # Use the full lookback window for avg (including zero-sale days)
-    actual_days = min(lookback_days, (date.today() - cutoff).days) or 1
+    # Use actual data span: first sale date → today, capped at lookback_days.
+    # This prevents dividing by 90 days for a product that started selling 5 days ago.
+    first_sale_date = min(row.date for row in sales)
+    data_span = (date.today() - first_sale_date).days + 1  # +1 includes both endpoints
+    actual_days = max(1, min(data_span, lookback_days))
     avg_daily = total_sold / actual_days
 
-    # Standard deviation of daily sales (filling zero-sale days)
+    # Standard deviation of daily sales over the actual data span
     all_days = [0.0] * actual_days
-    date_to_idx = {}
-    for i, row in enumerate(sales):
-        day_offset = (row.date - cutoff).days
+    for row in sales:
+        day_offset = (row.date - first_sale_date).days
         if 0 <= day_offset < actual_days:
             all_days[day_offset] = float(row.qty or 0)
 
