@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// StockSense WhatsApp Bot — Configuration
+// SupplySense WhatsApp Bot — Configuration
 // ─────────────────────────────────────────────────────────────
 
 module.exports = {

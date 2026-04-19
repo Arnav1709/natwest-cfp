@@ -1,5 +1,5 @@
 """
-StockSense Configuration
+SupplySense Configuration
 Loads settings from environment variables / .env file.
 """
 
@@ -11,10 +11,10 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     # Database (uses data/ subdir for Docker volume compatibility)
-    DATABASE_URL: str = "sqlite:///./data/stocksense.db"
+    DATABASE_URL: str = "sqlite:///./data/SupplySense.db"
 
     # JWT Auth
-    SECRET_KEY: str = "stocksense-super-secret-key-change-in-production-2026"
+    SECRET_KEY: str = "SupplySense-super-secret-key-change-in-production-2026"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
 
@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     WHATSAPP_BOT_URL: str = "http://localhost:3001"
 
     # App
-    APP_NAME: str = "StockSense"
+    APP_NAME: str = "SupplySense"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = True
 

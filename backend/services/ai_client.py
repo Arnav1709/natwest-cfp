@@ -1,5 +1,5 @@
 """
-Unified AI Client — Single entry point for all AI/LLM calls in StockSense.
+Unified AI Client — Single entry point for all AI/LLM calls in SupplySense.
 
 Fallback chain: Gemini (cloud) → Ollama (local) → OpenRouter (cloud)
 
@@ -36,6 +36,8 @@ _CACHE_TTL = 60  # seconds — re-check provider availability every 60s
 # ---------------------------------------------------------------------------
 _gemini_client = None
 _gemini_available = None
+_gemini_checked_at = 0        # timestamp of last init attempt
+_GEMINI_RETRY_TTL = 60        # retry init after 60 seconds on failure
 _using_new_sdk = False
 
 
@@ -47,7 +49,7 @@ def _get_ollama_config():
     """Get Ollama configuration from environment."""
     return {
         "base_url": os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434"),
-        "model": os.getenv("OLLAMA_MODEL", "gemma3:4b"),
+        "model": os.getenv("OLLAMA_MODEL", "llama3.2:latest"),
         "timeout": int(os.getenv("OLLAMA_TIMEOUT", "300")),
         "vision_timeout": int(os.getenv("OLLAMA_VISION_TIMEOUT", "600")),
     }
@@ -162,18 +164,31 @@ def _call_ollama_vision(image_bytes: bytes, prompt: str, timeout: Optional[int] 
 # ═══════════════════════════════════════════════════════════════════════════
 
 def _init_gemini():
-    """Initialize Gemini client; returns client object or None."""
-    global _gemini_client, _gemini_available, _using_new_sdk
+    """Initialize Gemini client; returns client object or None.
+    
+    Retries initialization after _GEMINI_RETRY_TTL seconds on failure
+    so transient errors don't permanently disable AI.
+    """
+    global _gemini_client, _gemini_available, _using_new_sdk, _gemini_checked_at
 
-    if _gemini_available is False:
-        return None
-    if _gemini_client is not None:
+    # If already successfully initialized, return cached client
+    if _gemini_client is not None and _gemini_available is True:
         return _gemini_client
+
+    # If previously failed, only retry after TTL expires
+    if _gemini_available is False:
+        if (time.time() - _gemini_checked_at) < _GEMINI_RETRY_TTL:
+            return None
+        # TTL expired — reset and retry
+        logger.info("Retrying Gemini initialization after cooldown...")
+        _gemini_available = None
+        _gemini_client = None
 
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key or api_key in ("your-gemini-api-key-here", ""):
         logger.debug("GEMINI_API_KEY not set — Gemini unavailable")
         _gemini_available = False
+        _gemini_checked_at = time.time()
         return None
 
     # Try new google.genai SDK first
@@ -182,6 +197,7 @@ def _init_gemini():
         _gemini_client = genai.Client(api_key=api_key)
         _gemini_available = True
         _using_new_sdk = True
+        _gemini_checked_at = time.time()
         logger.info("✅ Gemini initialized (google.genai SDK)")
         return _gemini_client
     except ImportError:
@@ -196,11 +212,13 @@ def _init_gemini():
         _gemini_client = genai.GenerativeModel("gemini-2.5-flash")
         _gemini_available = True
         _using_new_sdk = False
+        _gemini_checked_at = time.time()
         logger.info("✅ Gemini initialized (legacy google.generativeai SDK)")
         return _gemini_client
     except Exception as e:
         logger.error("Failed to initialize Gemini: %s", e)
         _gemini_available = False
+        _gemini_checked_at = time.time()
         return None
 
 
@@ -214,7 +232,7 @@ def _call_gemini_text(prompt: str, max_retries: int = 3) -> Optional[str]:
         try:
             if _using_new_sdk:
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-2.0-flash",
                     contents=prompt,
                 )
                 return response.text
@@ -228,6 +246,13 @@ def _call_gemini_text(prompt: str, max_retries: int = 3) -> Optional[str]:
                 attempt + 1, max_retries, e, wait,
             )
             time.sleep(wait)
+
+    # All retries exhausted — reset so next call_llm will retry init
+    global _gemini_available, _gemini_client, _gemini_checked_at
+    _gemini_available = None
+    _gemini_client = None
+    _gemini_checked_at = time.time()
+    logger.warning("Gemini exhausted all retries — will retry after cooldown")
     return None
 
 
@@ -282,7 +307,7 @@ def _call_openrouter_text(prompt: str) -> Optional[str]:
                 "Content-Type": "application/json",
             },
             json={
-                "model": "meta-llama/llama-3-8b-instruct:free",
+                "model": "google/gemini-2.0-flash-exp:free",
                 "messages": [{"role": "user", "content": prompt}],
             },
             timeout=30,
@@ -348,7 +373,8 @@ def call_llm(prompt: str) -> Optional[str]:
     """
     Generate text from a prompt using the best available provider.
 
-    Fallback chain: Gemini → Ollama → OpenRouter
+    Fallback chain: Gemini → OpenRouter → Ollama
+    If all fail, returns None (caller falls back to rule-based logic).
 
     Args:
         prompt: The text prompt to send
@@ -356,22 +382,22 @@ def call_llm(prompt: str) -> Optional[str]:
     Returns:
         Response text, or None if all providers fail
     """
-    # 1. Try Gemini (cloud — fast, accurate)
+    # 1. Try Gemini (cloud — primary, fast)
     result = _call_gemini_text(prompt)
     if result:
         logger.debug("AI provider: gemini (text)")
         return result
 
-    # 2. Try Ollama (local fallback)
-    result = _call_ollama_text(prompt)
-    if result:
-        logger.debug("AI provider: ollama (text)")
-        return result
-
-    # 3. Try OpenRouter (cloud)
+    # 2. Try OpenRouter (cloud — fallback)
     result = _call_openrouter_text(prompt)
     if result:
         logger.debug("AI provider: openrouter (text)")
+        return result
+
+    # 3. Try Ollama (local — last resort)
+    result = _call_ollama_text(prompt)
+    if result:
+        logger.debug("AI provider: ollama (text)")
         return result
 
     logger.warning("All AI providers failed for text generation")

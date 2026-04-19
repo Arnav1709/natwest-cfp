@@ -1,4 +1,4 @@
-// StockSense — API Service Layer with Request Deduplication
+// SupplySense — API Service Layer with Request Deduplication
 // In dev: requests go through Vite proxy (/api → backend:8000)
 // In Docker/prod: requests go through nginx (/api → backend:8000)
 
@@ -22,7 +22,7 @@ async function request(endpoint, options = {}) {
   };
 
   // Add auth token if available
-  const token = localStorage.getItem('stocksense-token');
+  const token = localStorage.getItem('SupplySense-token');
   if (token) {
     config.headers['Authorization'] = `Bearer ${token}`;
   }
@@ -54,8 +54,8 @@ async function _doFetch(url, config, endpoint) {
       if (response.status === 401) {
         // Skip auto-logout for auth endpoints (login/register)
         if (!endpoint.startsWith('/auth/')) {
-          localStorage.removeItem('stocksense-token');
-          localStorage.removeItem('stocksense-user');
+          localStorage.removeItem('SupplySense-token');
+          localStorage.removeItem('SupplySense-user');
           window.dispatchEvent(new Event('auth-change'));
           window.location.href = '/login';
           throw new Error('Session expired. Please log in again.');
@@ -146,7 +146,7 @@ export const reorderApi = {
   sendOrder: (data) => request('/reorder/send-order', { method: 'POST', body: JSON.stringify(data) }),
   exportFile: async (format = 'csv') => {
     const url = `${API_BASE}/reorder/export?format=${format}`;
-    const token = localStorage.getItem('stocksense-token');
+    const token = localStorage.getItem('SupplySense-token');
     const headers = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -227,9 +227,9 @@ export const expiryApi = {
   },
   addBatch: (data) => request('/expiry/batches', { method: 'POST', body: JSON.stringify(data) }),
   deleteBatch: (id) => request(`/expiry/batches/${id}`, { method: 'DELETE' }),
-  getAdvice: (productIds) =>
+  getAdvice: (productIds, batchIds) =>
     request('/expiry/advice', {
       method: 'POST',
-      body: JSON.stringify({ product_ids: productIds || null }),
+      body: JSON.stringify({ product_ids: productIds || null, batch_ids: batchIds || null }),
     }),
 };

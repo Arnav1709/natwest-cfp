@@ -1,5 +1,5 @@
 """
-StockSense — In-Memory Cache Manager
+SupplySense — In-Memory Cache Manager
 
 Lightweight per-user TTL cache for read-heavy API endpoints.
 Uses cachetools TTLCache (no Redis/external dependency needed).

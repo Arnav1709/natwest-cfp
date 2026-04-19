@@ -78,7 +78,7 @@ class AppErrorBoundary extends Component {
  * Simple synchronous localStorage check (original behavior).
  */
 function ProtectedRoute({ children }) {
-  const token = localStorage.getItem('stocksense-token');
+  const token = localStorage.getItem('SupplySense-token');
   if (!token) {
     return <Navigate to="/login" replace />;
   }

@@ -1,4 +1,4 @@
-# StockSense — UI Design Document
+# SupplySense — UI Design Document
 
 > **AI-Powered Inventory Management & Demand Forecasting**
 > *NatWest Hackathon — AI Predictive Forecasting Track*
@@ -411,11 +411,11 @@ All charts use **Plotly.js** for interactivity and mobile responsiveness.
 ## Stitch Project Reference
 
 - **Project ID:** `6258293335931284497`
-- **Project URL:** [StockSense Stitch Project](https://stitch.google.com/projects/6258293335931284497)
+- **Project URL:** [SupplySense Stitch Project](https://stitch.google.com/projects/6258293335931284497)
 - **Total Screens:** 16
 - **Model Used:** Gemini 3.1 Pro
 - **Device Types:** 15 Desktop + 1 Mobile
 
 ---
 
-> **StockSense** — *"From notebook to forecast in 60 seconds."*
+> **SupplySense** — *"From notebook to forecast in 60 seconds."*

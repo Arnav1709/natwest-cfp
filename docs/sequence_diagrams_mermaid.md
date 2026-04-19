@@ -1,4 +1,4 @@
-# StockSense — Sequence Diagrams (Mermaid)
+# SupplySense — Sequence Diagrams (Mermaid)
 
 > All interaction flows rendered as Mermaid sequence diagrams.
 
@@ -350,7 +350,7 @@ sequenceDiagram
         DB-->>Worker: Upcoming events
 
         Worker->>Gemini: Compose briefing prompt<br/>in user's language
-        Note over Gemini: Generate localized message:<br/>"🌅 Good Morning — StockSense Daily Brief<br/>✅ 47 products — Good<br/>🟡 4 products — Low stock<br/>🦟 Dengue season active..."
+        Note over Gemini: Generate localized message:<br/>"🌅 Good Morning — SupplySense Daily Brief<br/>✅ 47 products — Good<br/>🟡 4 products — Low stock<br/>🦟 Dengue season active..."
         Gemini-->>Worker: Formatted briefing message
 
         Worker->>WA: Send message to user's phone
@@ -590,7 +590,7 @@ sequenceDiagram
     API->>Gemini: Generate daily briefing in Hindi
     Gemini-->>API: Briefing message
     API->>WA: Send to user's phone
-    WA-->>User: 🌅 Good Morning — StockSense Daily Brief...
+    WA-->>User: 🌅 Good Morning — SupplySense Daily Brief...
 ```
 
 ---

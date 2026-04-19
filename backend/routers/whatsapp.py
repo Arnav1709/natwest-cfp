@@ -110,14 +110,14 @@ def whatsapp_webhook(
     # Find user by phone number
     user = db.query(User).filter(User.phone == request.from_number).first()
     if not user:
-        return WebhookResponse(reply="❌ User not found. Please register on StockSense first.")
+        return WebhookResponse(reply="❌ User not found. Please register on SupplySense first.")
 
     if command == "REORDER":
         reorder_data = generate_reorder_list(db, user.id)
         if not reorder_data.reorder_list:
             return WebhookResponse(reply="✅ No items need reordering right now!")
 
-        lines = ["📦 *StockSense Reorder List*\n"]
+        lines = ["📦 *SupplySense Reorder List*\n"]
         for idx, item in enumerate(reorder_data.reorder_list, 1):
             lines.append(
                 f"{idx}. *{item.product_name}* — {int(item.reorder_qty)} units"
@@ -137,7 +137,7 @@ def whatsapp_webhook(
         out = sum(1 for p in products if (p.current_stock or 0) <= 0)
 
         reply = (
-            f"📋 *StockSense Status*\n\n"
+            f"📋 *SupplySense Status*\n\n"
             f"✅ {healthy} products — Healthy\n"
             f"🟡 {low} products — Low Stock\n"
             f"🔴 {out} products — Out of Stock\n\n"
@@ -148,7 +148,7 @@ def whatsapp_webhook(
     elif command == "REPORT" or command == "FULL":
         return WebhookResponse(
             reply=(
-                "📊 *StockSense Forecast Report*\n\n"
+                "📊 *SupplySense Forecast Report*\n\n"
                 "Visit your dashboard for detailed forecasts:\n"
                 "🔗 http://localhost:5173/dashboard/forecasting\n\n"
                 "Reply REORDER for reorder list."
@@ -185,7 +185,7 @@ def whatsapp_webhook(
     elif command == "HELP":
         return WebhookResponse(
             reply=(
-                "🤖 *StockSense Commands*\n\n"
+                "🤖 *SupplySense Commands*\n\n"
                 "REORDER — Get reorder list\n"
                 "LIST — Inventory status\n"
                 "STATUS — Stock health summary\n"

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { alertsApi } from '../../services/api';
 
 const navItems = [
   { section: 'Main' },
@@ -26,21 +27,39 @@ export default function Layout() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [alertCount, setAlertCount] = useState(3);
+  const [alertCount, setAlertCount] = useState(0);
 
   const user = (() => {
-    try { return JSON.parse(localStorage.getItem('stocksense-user')) || {}; } catch { return {}; }
+    try { return JSON.parse(localStorage.getItem('SupplySense-user')) || {}; } catch { return {}; }
   })();
 
   const handleLogout = () => {
-    localStorage.removeItem('stocksense-token');
-    localStorage.removeItem('stocksense-user');
+    localStorage.removeItem('SupplySense-token');
+    localStorage.removeItem('SupplySense-user');
     navigate('/login');
   };
 
   // Close mobile sidebar on route change
   useEffect(() => {
     setMobileOpen(false);
+  }, [location.pathname]);
+
+  // Fetch real alert count from API
+  useEffect(() => {
+    let cancelled = false;
+    const fetchAlerts = async () => {
+      try {
+        const data = await alertsApi.list({ status: 'active' });
+        if (!cancelled) {
+          const alerts = Array.isArray(data) ? data : (data?.alerts || []);
+          setAlertCount(alerts.filter(a => !a.dismissed).length);
+        }
+      } catch {
+        // Silently fail — badge just shows 0
+      }
+    };
+    fetchAlerts();
+    return () => { cancelled = true; };
   }, [location.pathname]);
 
   // Get page title from current route
@@ -68,7 +87,7 @@ export default function Layout() {
         <div className="sidebar-brand">
           <div className="sidebar-brand-icon">📦</div>
           <div className="sidebar-brand-text">
-            Stock<span style={{ color: 'var(--color-primary-light)' }}>Sense</span>
+            Supply<span style={{ color: 'var(--color-primary-light)' }}>Sense</span>
             <span className="sidebar-brand-sub">AI Inventory</span>
           </div>
         </div>

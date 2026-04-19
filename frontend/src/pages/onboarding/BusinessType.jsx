@@ -45,7 +45,7 @@ export default function BusinessType() {
   const [selected, setSelected] = useState('pharmacy');
 
   const handleContinue = () => {
-    localStorage.setItem('stocksense-business', selected);
+    localStorage.setItem('SupplySense-business', selected);
     navigate('/onboarding/setup');
   };
 

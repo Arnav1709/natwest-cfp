@@ -1,6 +1,6 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────────
-# StockSense — Seed Database with Sample Data
+# SupplySense — Seed Database with Sample Data
 # ─────────────────────────────────────────────────────────────
 
 echo "🌱 Seeding database with sample data..."

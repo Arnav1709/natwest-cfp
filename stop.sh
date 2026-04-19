@@ -1,8 +1,8 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────────
-# StockSense — Stop All Services
+# SupplySense — Stop All Services
 # ─────────────────────────────────────────────────────────────
 
-echo "🛑 Stopping StockSense..."
+echo "🛑 Stopping SupplySense..."
 docker compose down "$@"
 echo "✅ All services stopped."

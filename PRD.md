@@ -1,4 +1,4 @@
-# StockSense — Product Requirements Document
+# SupplySense — Product Requirements Document
 
 > **AI-Powered Inventory Management & Demand Forecasting**
 > *NatWest Hackathon — AI Predictive Forecasting Track*
@@ -30,7 +30,7 @@
 
 ### One-Line Pitch
 
-> *"StockSense turns any business's sales data — from a CSV or a photo of a notebook — into a continuously-updated inventory dashboard and 6-week AI demand forecast, managed entirely through WhatsApp in your language."*
+> *"SupplySense turns any business's sales data — from a CSV or a photo of a notebook — into a continuously-updated inventory dashboard and 6-week AI demand forecast, managed entirely through WhatsApp in your language."*
 
 ### What It Is
 
@@ -67,7 +67,7 @@ Indian small businesses — kirana stores, pharmacies, medical shops — manage 
 
 **Larger businesses** have data but no accessible, affordable tool to act on it intelligently.
 
-**StockSense solves both** — accepting data in any format (digital or handwritten), producing actionable forecasts in plain language, and delivering alerts through WhatsApp.
+**SupplySense solves both** — accepting data in any format (digital or handwritten), producing actionable forecasts in plain language, and delivering alerts through WhatsApp.
 
 ---
 
@@ -164,7 +164,7 @@ Indian small businesses — kirana stores, pharmacies, medical shops — manage 
 ### Site Map
 
 ```
-StockSense Web App
+SupplySense Web App
 │
 ├── / (Landing Page)
 │   └── Hero, value prop, CTA → Sign Up / Login
@@ -471,7 +471,7 @@ WhatsApp is a **primary interface**, not just a notification channel. Users can 
 #### 🔴 Stockout Alert (Immediate)
 
 ```
-🚨 *StockSense Alert*
+🚨 *SupplySense Alert*
 
 *Paracetamol 500mg* is OUT OF STOCK.
 
@@ -487,7 +487,7 @@ Reply *REORDER* to generate order slip.
 #### 🟡 Daily Briefing (8 AM)
 
 ```
-🌅 *Good Morning — StockSense Daily Brief*
+🌅 *Good Morning — SupplySense Daily Brief*
 📅 Saturday, 12 April
 
 *Today's Stock Health*
@@ -508,7 +508,7 @@ Reply *REPORT* for full details.
 #### 📊 Weekly Summary (Sunday 7 PM)
 
 ```
-📊 *StockSense Weekly Summary*
+📊 *SupplySense Weekly Summary*
 Week of 7–13 April
 
 *Performance*
@@ -915,7 +915,7 @@ CREATE TABLE festival_calendar (
 
 ## 14. Hackathon Judging Criteria Mapping
 
-| Criterion | How StockSense Covers It | Section |
+| Criterion | How SupplySense Covers It | Section |
 |---|---|---|
 | **Forecast with uncertainty range** | Low / Likely / High confidence bands on every product forecast | §6.3 |
 | **Baseline comparison** | Naive "same as last period" baseline always shown alongside AI forecast | §6.3 |
@@ -930,7 +930,7 @@ CREATE TABLE festival_calendar (
 
 ## 15. Constraints & Known Limitations
 
-| Constraint | How StockSense Handles It |
+| Constraint | How SupplySense Handles It |
 |---|---|
 | **OCR errors from messy handwriting** | User verifies extracted table before forecasting runs. Editable cells for corrections. |
 | **Sparse or new product data** | Fallback heuristics — category-level averages and seasonal priors fill gaps until enough product-level data accumulates. |
@@ -1021,11 +1021,11 @@ WHATSAPP_ENABLED=true
 # App config
 APP_PORT=8000
 FRONTEND_PORT=5173
-DATABASE_PATH=./stocksense.db
+DATABASE_PATH=./SupplySense.db
 DEFAULT_LANGUAGE=en
 DEFAULT_FORECAST_WEEKS=6
 ```
 
 ---
 
-> **StockSense** — *"From notebook to forecast in 60 seconds."*
+> **SupplySense** — *"From notebook to forecast in 60 seconds."*

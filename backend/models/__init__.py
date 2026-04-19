@@ -1,5 +1,5 @@
 """
-StockSense Models Package
+SupplySense Models Package
 Imports all models so they are registered with SQLAlchemy Base.
 """
 

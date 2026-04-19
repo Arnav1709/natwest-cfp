@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// StockSense WhatsApp Bot — WhatsApp Client
+// SupplySense WhatsApp Bot — WhatsApp Client
 // whatsapp-web.js setup with QR pairing and auto-reconnect.
 // ─────────────────────────────────────────────────────────────
 

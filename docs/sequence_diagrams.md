@@ -1,4 +1,4 @@
-# StockSense — Sequence Diagrams
+# SupplySense — Sequence Diagrams
 
 > **Detailed interaction flows for all major system operations.**
 > Companion to the [High-Level Design (HLD)](./HLD.md)

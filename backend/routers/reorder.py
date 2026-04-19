@@ -141,7 +141,7 @@ def send_reorder_via_whatsapp(
 
     # Build a human-readable reorder message
     lines = [
-        "📦 *StockSense Reorder Request*",
+        "📦 *SupplySense Reorder Request*",
         "",
         f"Hi *{body.supplier_name}*,",
         "We need to reorder the following items:",
@@ -156,7 +156,7 @@ def send_reorder_via_whatsapp(
     lines.append(f"💰 Estimated total: ₹{total_cost:,.0f}")
     lines.append("")
     lines.append("Please confirm availability and delivery date.")
-    lines.append(f"— {current_user.shop_name or 'StockSense'} (Auto-Reorder)")
+    lines.append(f"— {current_user.shop_name or 'SupplySense'} (Auto-Reorder)")
 
     message = "\n".join(lines)
 

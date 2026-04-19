@@ -112,14 +112,14 @@ export default function ExpiryTracker() {
     ? calendarData.find((m) => m.key === selectedMonth)?.label || selectedMonth
     : null;
 
-  // Fetch AI advice — pass the product IDs from currently visible batches
+  // Fetch AI advice — pass the batch IDs from currently visible batches
+  // so recommendations match exactly what the user sees (not all batches for those products)
   const handleGetAdvice = async () => {
     setAdviceLoading(true);
     try {
-      // Collect unique product IDs from the currently visible/filtered batches
       const targetBatches = filteredBatches.length > 0 ? filteredBatches : batches;
-      const productIds = [...new Set(targetBatches.map((b) => b.product_id))];
-      const result = await expiryApi.getAdvice(productIds.length > 0 ? productIds : null);
+      const batchIds = targetBatches.map((b) => b.id);
+      const result = await expiryApi.getAdvice(null, batchIds.length > 0 ? batchIds : null);
       setAdvice(result.advice || []);
       setAiAvailable(result.ai_available !== false);
     } catch (err) {

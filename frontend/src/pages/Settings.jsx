@@ -16,11 +16,11 @@ export default function Settings() {
   
   const [profile, setProfile] = useState({
     name: 'Priya Admin',
-    email: 'priya@stocksense.in',
+    email: 'priya@SupplySense.in',
     phone: '+91 9876543210',
-    businessName: JSON.parse(localStorage.getItem('stocksense-shop') || '{}').shopName || 'Priya Medical Store',
-    city: JSON.parse(localStorage.getItem('stocksense-shop') || '{}').city || 'Hyderabad',
-    state: JSON.parse(localStorage.getItem('stocksense-shop') || '{}').state || 'Telangana',
+    businessName: JSON.parse(localStorage.getItem('SupplySense-shop') || '{}').shopName || 'Priya Medical Store',
+    city: JSON.parse(localStorage.getItem('SupplySense-shop') || '{}').city || 'Hyderabad',
+    state: JSON.parse(localStorage.getItem('SupplySense-shop') || '{}').state || 'Telangana',
   });
 
   // ── WhatsApp state ──
@@ -195,7 +195,7 @@ export default function Settings() {
               <select
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white appearance-none focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all font-medium"
                 value={i18n.language}
-                onChange={(e) => { i18n.changeLanguage(e.target.value); localStorage.setItem('stocksense-lang', e.target.value); }}
+                onChange={(e) => { i18n.changeLanguage(e.target.value); localStorage.setItem('SupplySense-lang', e.target.value); }}
                 id="setting-language"
               >
                 <option value="en">English</option>
@@ -422,7 +422,7 @@ export default function Settings() {
               </div>
               <h2 className="text-2xl font-bold text-red-400">WhatsApp Bot Offline</h2>
               <p className="text-slate-400 max-w-lg mx-auto text-sm leading-relaxed">
-                The WhatsApp bot service is not running. Make sure the Docker container <code className="bg-slate-800 px-1.5 py-0.5 rounded text-xs text-white">stocksense-whatsapp</code> is up on port 3001.
+                The WhatsApp bot service is not running. Make sure the Docker container <code className="bg-slate-800 px-1.5 py-0.5 rounded text-xs text-white">SupplySense-whatsapp</code> is up on port 3001.
               </p>
               <ShimmerButton onClick={handleGenerateQR} id="btn-retry-whatsapp">
                 <span className="flex items-center gap-2"><RefreshCw className="w-4 h-4" /> Retry Connection</span>

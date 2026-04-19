@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// StockSense WhatsApp Bot — Inbound Message Handler
+// SupplySense WhatsApp Bot — Inbound Message Handler
 // Parses incoming WhatsApp messages and routes to commands.
 // ─────────────────────────────────────────────────────────────
 
@@ -67,7 +67,7 @@ async function forwardToBackend(phone, command, rawMessage) {
     }
 
     log('WARN', `Backend response missing "reply" field`, response.data);
-    return '⚠️ Received a response from StockSense, but it was empty. Please try again.';
+    return '⚠️ Received a response from SupplySense, but it was empty. Please try again.';
   } catch (error) {
     log('ERROR', `Backend unreachable for command: ${command}`, {
       message: error.message,
@@ -78,7 +78,7 @@ async function forwardToBackend(phone, command, rawMessage) {
     queueMessage(phone, command, rawMessage);
 
     return (
-      '⏳ StockSense backend is temporarily unavailable.\n' +
+      '⏳ SupplySense backend is temporarily unavailable.\n' +
       'Your request has been queued and will be processed shortly.'
     );
   }

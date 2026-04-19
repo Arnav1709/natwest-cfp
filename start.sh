@@ -1,11 +1,11 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────────
-# StockSense — Start All Services
+# SupplySense — Start All Services
 # ─────────────────────────────────────────────────────────────
 
 set -e
 
-echo "🧠 StockSense — AI-Powered Inventory Management"
+echo "🧠 SupplySense — AI-Powered Inventory Management"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "🚀 Starting all services..."

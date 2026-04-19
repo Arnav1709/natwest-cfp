@@ -67,6 +67,7 @@ class BatchListResponse(BaseModel):
 
 class AdviceRequest(BaseModel):
     product_ids: Optional[List[int]] = None  # if None, advise on all expiring
+    batch_ids: Optional[List[int]] = None    # if set, advise on only these specific batches
 
 
 class AdviceItem(BaseModel):
@@ -249,6 +250,9 @@ def get_expiry_advice(
     if request.product_ids:
         query = query.filter(Product.id.in_(request.product_ids))
 
+    if request.batch_ids:
+        query = query.filter(ProductBatch.id.in_(request.batch_ids))
+
     batches = query.all()
 
     if not batches:
@@ -357,6 +361,15 @@ Return ONLY the JSON array, no markdown formatting."""
         logger.warning("AI returned invalid JSON for expiry advice: %s", e)
     except Exception as e:
         logger.warning("Expiry advice AI call failed: %s", e)
+        # Reset Gemini availability flag so next call will retry
+        # (handles transient errors like network timeouts, rate limits)
+        try:
+            from services.ai_client import _gemini_available
+            import services.ai_client as _ai_mod
+            _ai_mod._gemini_available = None
+            _ai_mod._gemini_client = None
+        except Exception:
+            pass
 
     # Fallback — basic rule-based advice if AI unavailable
     advice = []

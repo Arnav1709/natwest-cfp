@@ -1,5 +1,5 @@
 """
-StockSense Database Configuration
+SupplySense Database Configuration
 SQLAlchemy engine, session factory, and Base declarative class.
 Supports both SQLite (local dev) and PostgreSQL (Supabase cloud).
 """

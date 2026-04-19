@@ -1,4 +1,4 @@
-# StockSense — API Contracts
+# SupplySense — API Contracts
 
 > Single source of truth for all REST API endpoints.
 > Frontend (Agent 1) consumes these. Backend (Agent 2) implements these.

@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// StockSense WhatsApp Bot — Express Server Entry Point
+// SupplySense WhatsApp Bot — Express Server Entry Point
 // Port 3001 | Sidecar service for WhatsApp messaging
 // ─────────────────────────────────────────────────────────────
 
@@ -148,7 +148,7 @@ app.get('/qr', (req, res) => {
 // ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({
-    service: 'stocksense-whatsapp-bot',
+    service: 'SupplySense-whatsapp-bot',
     status: 'running',
     timestamp: new Date().toISOString(),
     whatsapp: getStatus().connected ? 'connected' : 'disconnected',
@@ -187,7 +187,7 @@ async function start() {
   app.listen(config.PORT, () => {
     console.log('');
     console.log('╔══════════════════════════════════════════════════════╗');
-    console.log('║       🟢 StockSense WhatsApp Bot — Running         ║');
+    console.log('║       🟢 SupplySense WhatsApp Bot — Running         ║');
     console.log('╠══════════════════════════════════════════════════════╣');
     console.log(`║  HTTP API:  http://localhost:${config.PORT}                 ║`);
     console.log(`║  Backend:   ${config.BACKEND_URL}               ║`);

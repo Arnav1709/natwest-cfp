@@ -55,8 +55,8 @@ export default function ShopSetup() {
         result = await authApi.login({ phone: form.phone, password: form.password });
       } else {
         // Register new user
-        const businessType = localStorage.getItem('stocksense-business') || 'pharmacy';
-        const language = localStorage.getItem('stocksense-language') || 'en';
+        const businessType = localStorage.getItem('SupplySense-business') || 'pharmacy';
+        const language = localStorage.getItem('SupplySense-language') || 'en';
 
         result = await authApi.register({
           shop_name: form.shopName || 'My Shop',
@@ -72,9 +72,9 @@ export default function ShopSetup() {
 
       // Store the JWT token
       if (result.access_token) {
-        localStorage.setItem('stocksense-token', result.access_token);
-        localStorage.setItem('stocksense-user', JSON.stringify(result.user));
-        localStorage.setItem('stocksense-shop', JSON.stringify(form));
+        localStorage.setItem('SupplySense-token', result.access_token);
+        localStorage.setItem('SupplySense-user', JSON.stringify(result.user));
+        localStorage.setItem('SupplySense-shop', JSON.stringify(form));
         navigate('/dashboard/overview');
       } else {
         setError('No token received. Please try again.');

@@ -1,5 +1,5 @@
 """
-StockSense Backend — FastAPI Application Entry Point.
+SupplySense Backend — FastAPI Application Entry Point.
 
 Run with: uvicorn main:app --reload --port 8000
 """
@@ -117,7 +117,7 @@ async def lifespan(app: FastAPI):
     yield
 
     scheduler.shutdown(wait=False)
-    logger.info("StockSense shutting down")
+    logger.info("SupplySense shutting down")
 
 
 app = FastAPI(

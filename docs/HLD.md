@@ -1,4 +1,4 @@
-# StockSense — High-Level Design (HLD)
+# SupplySense — High-Level Design (HLD)
 
 > **AI-Powered Inventory Management & Demand Forecasting**
 > *NatWest Hackathon — AI Predictive Forecasting Track*
@@ -51,7 +51,7 @@
               └─────────────────────┼─────────────────────┘
                                     │
                        ┌────────────▼────────────┐
-                       │     StockSense System   │
+                       │     SupplySense System   │
                        │  ┌──────────────────┐   │
                        │  │  React Frontend  │   │
                        │  └────────┬─────────┘   │
@@ -75,7 +75,7 @@
 
 ## 3. Architecture Overview
 
-StockSense follows a **modular monolith** architecture internally — logically separated service layers running in a single deployable backend process — with the escape hatch to split into microservices if scale demands it.
+SupplySense follows a **modular monolith** architecture internally — logically separated service layers running in a single deployable backend process — with the escape hatch to split into microservices if scale demands it.
 
 ### 3.1 Logical Architecture
 
@@ -619,7 +619,7 @@ class ProphetEngine:
 
 ```
 ┌──────────────────────────────────────────────────┐
-│                StockSense Backend                 │
+│                SupplySense Backend                 │
 │                                                   │
 │  WhatsAppService (Python)                         │
 │    │                                              │
@@ -685,7 +685,7 @@ class ProphetEngine:
 │  │  WhatsApp Bot: node index.js (port 3001)   │  │
 │  └────────────────────────────────────────────┘  │
 │  ┌────────────────────────────────────────────┐  │
-│  │  SQLite: ./stocksense.db                   │  │
+│  │  SQLite: ./SupplySense.db                   │  │
 │  └────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────┘
 ```

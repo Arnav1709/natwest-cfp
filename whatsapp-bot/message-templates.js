@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// StockSense WhatsApp Bot — Message Templates
+// SupplySense WhatsApp Bot — Message Templates
 // All outbound message formatters per PRD §8.4
 // ─────────────────────────────────────────────────────────────
 
@@ -15,7 +15,7 @@ function formatStockoutAlert({
   supplier_name,
   supplier_contact,
 }) {
-  let msg = `🚨 *StockSense Alert*\n\n`;
+  let msg = `🚨 *SupplySense Alert*\n\n`;
   msg += `*${product_name}* is OUT OF STOCK.\n\n`;
   msg += `Your last ${last_qty} units were sold today.\n`;
   if (intelligence_note) {
@@ -39,7 +39,7 @@ function formatLowStockWarning({
   days_remaining,
   reorder_qty,
 }) {
-  let msg = `⚠️ *StockSense Alert*\n\n`;
+  let msg = `⚠️ *SupplySense Alert*\n\n`;
   msg += `*${product_name}* is running low.\n\n`;
   msg += `Current stock: ${current_stock} ${unit}\n`;
   msg += `Reorder point: ${reorder_point} ${unit}\n`;
@@ -60,7 +60,7 @@ function formatDailyBriefing({
   intelligence_items = '',
   top_action = '',
 }) {
-  let msg = `🌅 *Good Morning — StockSense Daily Brief*\n`;
+  let msg = `🌅 *Good Morning — SupplySense Daily Brief*\n`;
   msg += `📅 ${date}\n\n`;
   msg += `*Today's Stock Health*\n`;
   msg += `✅ ${healthy_count} products — Good\n`;
@@ -90,7 +90,7 @@ function formatWeeklySummary({
   top_movers = '',
   next_week_warnings = '',
 }) {
-  let msg = `📊 *StockSense Weekly Summary*\n`;
+  let msg = `📊 *SupplySense Weekly Summary*\n`;
   msg += `Week of ${week_range}\n\n`;
   msg += `*Performance*\n`;
   msg += `📈 Forecast accuracy: ${accuracy}%\n`;
@@ -155,7 +155,7 @@ function formatAnomalyAlert({
  * 📋 Help text — sent locally without backend call.
  */
 function formatHelpMessage() {
-  let msg = `📋 *StockSense — Available Commands*\n\n`;
+  let msg = `📋 *SupplySense — Available Commands*\n\n`;
   msg += `*REORDER* — Get your AI-generated reorder list\n`;
   msg += `*LIST* — View current inventory status\n`;
   msg += `*REPORT* — Get today's forecast report\n`;

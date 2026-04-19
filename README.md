@@ -135,7 +135,7 @@ docker compose up --build
 
 # 5. (First run only) Seed the database with demo data
 #    In a new terminal:
-docker exec stocksense-backend python seed_data.py
+docker exec SupplySense-backend python seed_data.py
 ```
 
 Once running, access the application at:
@@ -193,7 +193,7 @@ Create `backend/.env` using `.env.example` as a template. **Never commit real AP
 |:---|:---:|:---|:---|
 | `GEMINI_API_KEY` | ✅ | — | Primary AI — OCR, forecasting intelligence, NLP |
 | `SECRET_KEY` | ✅ | *(preset)* | JWT authentication signing key |
-| `DATABASE_URL` | ⬜ | `sqlite:///./data/stocksense.db` | Database connection string |
+| `DATABASE_URL` | ⬜ | `sqlite:///./data/SupplySense.db` | Database connection string |
 | `SERPER_API_KEY` | ⬜ | — | Live web search for disease/festival intelligence |
 | `OPENROUTER_API_KEY` | ⬜ | — | Cloud AI fallback provider |
 | `OLLAMA_BASE_URL` | ⬜ | `http://host.docker.internal:11434` | Local Ollama AI inference |
@@ -433,7 +433,7 @@ graph TB
     end
 
     subgraph "Data Layer"
-        DB[("💾 SQLite<br/>stocksense.db")]
+        DB[("💾 SQLite<br/>SupplySense.db")]
         LOOKUP["📁 Lookup JSONs<br/>diseases · festivals · weather"]
     end
 

@@ -20,8 +20,8 @@ export default function Login() {
     try {
       const data = await authApi.login({ phone, password });
       if (!data.access_token) throw new Error('No token received');
-      localStorage.setItem('stocksense-token', data.access_token);
-      localStorage.setItem('stocksense-user', JSON.stringify(data.user));
+      localStorage.setItem('SupplySense-token', data.access_token);
+      localStorage.setItem('SupplySense-user', JSON.stringify(data.user));
       navigate('/dashboard/overview');
     } catch (err) {
       setError(err.message);

@@ -21,7 +21,7 @@ const steps = [
 ];
 
 const testimonials = [
-  { name: 'Rajesh Kumar', role: 'Kirana Owner, Delhi', text: 'StockSense reduced my wastage by 30%. The AI predictions are surprisingly accurate for my small shop.', avatar: 'RK' },
+  { name: 'Rajesh Kumar', role: 'Kirana Owner, Delhi', text: 'SupplySense reduced my wastage by 30%. The AI predictions are surprisingly accurate for my small shop.', avatar: 'RK' },
   { name: 'Priya Sharma', role: 'Pharmacy Owner, Mumbai', text: 'Expiry alerts alone saved me ₹15,000 last month. This tool pays for itself.', avatar: 'PS' },
   { name: 'Arun Patel', role: 'General Store, Ahmedabad', text: 'The photo upload feature is magic. No more manual data entry after a long day.', avatar: 'AP' },
 ];
@@ -166,7 +166,7 @@ export default function Landing() {
             }} />
             <img
               src="/hero-dashboard.png"
-              alt="StockSense AI Dashboard"
+              alt="SupplySense AI Dashboard"
               style={{
                 width: '100%', borderRadius: 16,
                 border: '1px solid rgba(255,255,255,0.08)',
@@ -388,7 +388,7 @@ export default function Landing() {
           background: 'linear-gradient(90deg, transparent, rgba(16,185,129,0.15), rgba(139,92,246,0.08), transparent)',
         }} />
         <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-          © 2025 StockSense — AI-Powered Inventory Intelligence for Bharat
+          © 2025 SupplySense — AI-Powered Inventory Intelligence for Bharat
         </p>
       </footer>
 

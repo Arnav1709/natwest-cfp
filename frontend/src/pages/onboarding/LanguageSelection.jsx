@@ -49,7 +49,7 @@ export default function LanguageSelection() {
 
   const handleContinue = () => {
     i18n.changeLanguage(selected);
-    localStorage.setItem('stocksense-lang', selected);
+    localStorage.setItem('SupplySense-lang', selected);
     navigate('/onboarding/business-type');
   };
 

@@ -1,5 +1,5 @@
 /* ============================================
-   StockSense — Layout System
+   SupplySense — Layout System
    Sidebar, Topbar, Content Shell
    ============================================ */
 
@@ -8,6 +8,7 @@
   display: flex;
   min-height: 100vh;
   position: relative;
+  overflow-x: hidden;
 }
 
 .app-layout-content {
@@ -15,8 +16,10 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-width: 0; /* prevent flex child from overflowing */
   margin-left: var(--sidebar-width);
   transition: margin-left var(--transition-base);
+  overflow-x: hidden;
 }
 
 .app-layout.sidebar-collapsed .app-layout-content {
@@ -38,7 +41,8 @@
   flex-direction: column;
   z-index: var(--z-sticky);
   transition: width var(--transition-base), transform var(--transition-base);
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: visible;
   padding-top: var(--space-4);
 }
 
@@ -455,9 +459,9 @@
 .main-content {
   flex: 1;
   padding: var(--space-6);
-  max-width: 1400px;
-  margin: 0 auto;
+  max-width: 100%;
   width: 100%;
+  box-sizing: border-box;
   animation: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 

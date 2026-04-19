@@ -18,7 +18,7 @@ i18n.use(initReactI18next).init({
     bn: { translation: bn },
     gu: { translation: gu },
   },
-  lng: localStorage.getItem('stocksense-lang') || 'en',
+  lng: localStorage.getItem('SupplySense-lang') || 'en',
   fallbackLng: 'en',
   interpolation: { escapeValue: false },
 });
