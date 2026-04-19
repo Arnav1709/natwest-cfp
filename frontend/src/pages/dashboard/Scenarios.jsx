@@ -30,7 +30,7 @@ const SCENARIO_BADGES = {
 };
 
 export default function Scenarios() {
-  const { data: rawProducts, loading: pLoading } = useApi(() => inventoryApi.list(), []);
+  const { data: rawProducts, loading: pLoading } = useApi(() => inventoryApi.list({ per_page: 1000 }), []);
   const products = Array.isArray(rawProducts) ? rawProducts : (rawProducts?.products || []);
 
   const [productId, setProductId] = useState('');

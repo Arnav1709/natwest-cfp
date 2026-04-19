@@ -113,6 +113,17 @@ export default function Reorder() {
         </div>
       </div>
 
+      {/* Auto-update info banner */}
+      <GlowCard className="mb-4" style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(0,208,255,0.03)', borderColor: 'rgba(0,208,255,0.15)' }}>
+        <div style={{ width: 32, height: 32, borderRadius: '8px', background: 'rgba(0,208,255,0.1)', border: '1px solid rgba(0,208,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>🤖</div>
+        <div style={{ flex: 1 }}>
+          <span style={{ fontSize: '0.825rem', fontWeight: 600, color: '#00D0FF' }}>AI-Powered Auto-Reorder</span>
+          <span style={{ fontSize: '0.775rem', color: 'var(--color-text-muted)', marginLeft: '8px' }}>
+            Reorder points update automatically after each sale using: <code style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.05)', padding: '1px 4px', borderRadius: '3px' }}>ROP = (avg_daily × lead_time) + safety_stock</code>
+          </span>
+        </div>
+      </GlowCard>
+
       {error && (
         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3 text-red-400">
           <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />

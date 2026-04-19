@@ -22,7 +22,7 @@ export default function ProductCatalog() {
   const [category, setCategory] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const { data: rawData, loading, error } = useApi(() => inventoryApi.list(), []);
+  const { data: rawData, loading, error } = useApi(() => inventoryApi.list({ per_page: 1000 }), []);
   const products = Array.isArray(rawData) ? rawData : (rawData?.products || []);
 
   const productNames = useMemo(

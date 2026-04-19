@@ -300,31 +300,25 @@ def _fuzzy_match_product(name: str, products: list[Product], threshold: float = 
 
 def _handle_csv_sales_import(request: VerifyRequest, user: User, db: Session) -> VerifyResponse:
     """
-    CSV sales history import —
-      • Match each row to an EXISTING product (fuzzy name match)
-      • Create SalesHistory records only
-      • NEVER create new products or modify current_stock
+    CSV sales history import — BULK OPTIMIZED.
+      • Load all products once, build name→product dict
+      • Bulk-add SalesHistory, single commit
     """
-    # Load all user's products once for fuzzy matching
     user_products = db.query(Product).filter(Product.user_id == user.id).all()
+    product_by_name = {p.name.lower().strip(): p for p in user_products}
 
     sales_created = 0
     products_matched = 0
     products_skipped = 0
     matched_ids = set()
+    bulk_sales = []
 
     for item in request.verified_data:
         if not item.name or not item.name.strip():
             products_skipped += 1
             continue
 
-        # Try exact match first, then fuzzy
-        product = (
-            db.query(Product)
-            .filter(Product.user_id == user.id, Product.name == item.name)
-            .first()
-        )
-
+        product = product_by_name.get(item.name.lower().strip())
         if not product:
             product = _fuzzy_match_product(item.name, user_products)
 
@@ -332,27 +326,26 @@ def _handle_csv_sales_import(request: VerifyRequest, user: User, db: Session) ->
             products_skipped += 1
             continue
 
-        # Track unique matched products
         if product.id not in matched_ids:
             matched_ids.add(product.id)
             products_matched += 1
 
-        # Create sales history record if date and quantity provided
         if item.quantity and item.quantity > 0:
             try:
                 sale_date = date.fromisoformat(item.date) if item.date else date.today()
             except ValueError:
                 sale_date = date.today()
 
-            sales_record = SalesHistory(
+            bulk_sales.append(SalesHistory(
                 product_id=product.id,
                 date=sale_date,
                 quantity=item.quantity,
                 revenue=(item.quantity * item.price) if item.price else None,
-            )
-            db.add(sales_record)
+            ))
             sales_created += 1
 
+    if bulk_sales:
+        db.add_all(bulk_sales)
     db.commit()
 
     return VerifyResponse(
@@ -367,20 +360,30 @@ def _handle_csv_sales_import(request: VerifyRequest, user: User, db: Session) ->
 
 def _handle_image_inventory_import(request: VerifyRequest, user: User, db: Session) -> VerifyResponse:
     """
-    Image/OCR inventory import —
-      • Create or update products with stock levels from OCR
-      • Do NOT create sales records (inventory snapshot ≠ a sale)
-      • Auto-create ProductBatch if expiry_date is provided
+    Image/OCR inventory import — BULK OPTIMIZED.
+      • Load all products + batch counts in 2 queries
+      • Single commit at end
     """
     from models.product_batch import ProductBatch
+    from sqlalchemy import func as sql_func
+
+    user_products = db.query(Product).filter(Product.user_id == user.id).all()
+    product_by_name = {p.name.lower().strip(): p for p in user_products}
+
+    # Pre-load batch counts in one query
+    pid_list = [p.id for p in user_products]
+    batch_counts = {}
+    if pid_list:
+        for pid, cnt in db.query(ProductBatch.product_id, sql_func.count(ProductBatch.id)).filter(ProductBatch.product_id.in_(pid_list)).group_by(ProductBatch.product_id).all():
+            batch_counts[pid] = cnt
 
     products_created = 0
+    new_products = []
 
     for item in request.verified_data:
         if not item.name or not item.name.strip():
             continue
 
-        # Parse expiry_date if provided
         expiry = None
         if item.expiry_date:
             try:
@@ -388,14 +391,9 @@ def _handle_image_inventory_import(request: VerifyRequest, user: User, db: Sessi
             except ValueError:
                 pass
 
-        existing = (
-            db.query(Product)
-            .filter(Product.user_id == user.id, Product.name == item.name)
-            .first()
-        )
+        existing = product_by_name.get(item.name.lower().strip())
 
         if existing:
-            # Update stock and price from OCR
             if item.current_stock is not None:
                 existing.current_stock = item.current_stock
             elif item.quantity is not None:
@@ -406,47 +404,42 @@ def _handle_image_inventory_import(request: VerifyRequest, user: User, db: Sessi
                 existing.category = item.category
             if expiry:
                 existing.expiry_date = expiry
-                # Create a new batch for the updated stock
                 stock = item.current_stock or item.quantity or 0
                 if stock > 0:
-                    batch = ProductBatch(
+                    cnt = batch_counts.get(existing.id, 0) + 1
+                    batch_counts[existing.id] = cnt
+                    db.add(ProductBatch(
                         product_id=existing.id,
-                        batch_number=f"BATCH-{existing.name[:3].upper()}-{db.query(ProductBatch).filter(ProductBatch.product_id == existing.id).count() + 1:03d}",
-                        quantity=stock,
-                        expiry_date=expiry,
-                        purchase_date=date.today(),
-                        unit_cost=existing.unit_cost or 0,
-                    )
-                    db.add(batch)
+                        batch_number=f"BATCH-{existing.name[:3].upper()}-{cnt:03d}",
+                        quantity=stock, expiry_date=expiry,
+                        purchase_date=date.today(), unit_cost=existing.unit_cost or 0,
+                    ))
         else:
             product = Product(
-                user_id=user.id,
-                name=item.name,
-                category=item.category,
+                user_id=user.id, name=item.name, category=item.category,
                 unit=item.unit or "units",
                 current_stock=item.current_stock or item.quantity or 0,
                 reorder_point=item.reorder_point or 0,
                 unit_cost=item.price or 0,
-                supplier_name=item.supplier_name,
-                expiry_date=expiry,
+                supplier_name=item.supplier_name, expiry_date=expiry,
             )
             db.add(product)
-            db.commit()
-            db.refresh(product)
+            new_products.append((product, item, expiry))
             products_created += 1
+            product_by_name[item.name.lower().strip()] = product
 
-            # Auto-create batch if expiry_date provided
+    # Flush to get IDs for new products
+    if new_products:
+        db.flush()
+        for product, item, expiry in new_products:
             stock = product.current_stock or 0
             if expiry and stock > 0:
-                batch = ProductBatch(
+                db.add(ProductBatch(
                     product_id=product.id,
                     batch_number=f"BATCH-{product.name[:3].upper()}-001",
-                    quantity=stock,
-                    expiry_date=expiry,
-                    purchase_date=date.today(),
-                    unit_cost=product.unit_cost or 0,
-                )
-                db.add(batch)
+                    quantity=stock, expiry_date=expiry,
+                    purchase_date=date.today(), unit_cost=product.unit_cost or 0,
+                ))
 
     db.commit()
 
@@ -460,17 +453,27 @@ def _handle_image_inventory_import(request: VerifyRequest, user: User, db: Sessi
 
 def _handle_manual_import(request: VerifyRequest, user: User, db: Session) -> VerifyResponse:
     """
-    Manual / legacy import — keeps backwards compatibility.
-    Creates products AND sales records (original behavior).
-    Auto-creates ProductBatch if expiry_date is provided.
+    Manual / legacy import — BULK OPTIMIZED.
+    Creates products AND sales records.
     """
     from models.product_batch import ProductBatch
+    from sqlalchemy import func as sql_func
+
+    user_products = db.query(Product).filter(Product.user_id == user.id).all()
+    product_by_name = {p.name.lower().strip(): p for p in user_products}
+
+    pid_list = [p.id for p in user_products]
+    batch_counts = {}
+    if pid_list:
+        for pid, cnt in db.query(ProductBatch.product_id, sql_func.count(ProductBatch.id)).filter(ProductBatch.product_id.in_(pid_list)).group_by(ProductBatch.product_id).all():
+            batch_counts[pid] = cnt
 
     products_created = 0
     sales_created = 0
+    new_products = []
+    bulk_sales = []
 
     for item in request.verified_data:
-        # Parse expiry_date if provided
         expiry = None
         if item.expiry_date:
             try:
@@ -478,11 +481,7 @@ def _handle_manual_import(request: VerifyRequest, user: User, db: Session) -> Ve
             except ValueError:
                 pass
 
-        existing = (
-            db.query(Product)
-            .filter(Product.user_id == user.id, Product.name == item.name)
-            .first()
-        )
+        existing = product_by_name.get((item.name or "").lower().strip())
 
         if existing:
             product = existing
@@ -496,62 +495,57 @@ def _handle_manual_import(request: VerifyRequest, user: User, db: Session) -> Ve
                 product.category = item.category
             if expiry:
                 product.expiry_date = expiry
-                # Also create a batch for existing products with expiry
                 stock = item.current_stock or item.quantity or 0
                 if stock > 0:
-                    batch = ProductBatch(
+                    cnt = batch_counts.get(product.id, 0) + 1
+                    batch_counts[product.id] = cnt
+                    db.add(ProductBatch(
                         product_id=product.id,
-                        batch_number=f"BATCH-{product.name[:3].upper()}-{db.query(ProductBatch).filter(ProductBatch.product_id == product.id).count() + 1:03d}",
-                        quantity=stock,
-                        expiry_date=expiry,
-                        purchase_date=date.today(),
-                        unit_cost=product.unit_cost or 0,
-                    )
-                    db.add(batch)
+                        batch_number=f"BATCH-{product.name[:3].upper()}-{cnt:03d}",
+                        quantity=stock, expiry_date=expiry,
+                        purchase_date=date.today(), unit_cost=product.unit_cost or 0,
+                    ))
         else:
             product = Product(
-                user_id=user.id,
-                name=item.name,
-                category=item.category,
+                user_id=user.id, name=item.name, category=item.category,
                 unit=item.unit or "units",
                 current_stock=item.current_stock or item.quantity or 0,
                 reorder_point=item.reorder_point or 0,
                 unit_cost=item.price or 0,
-                supplier_name=item.supplier_name,
-                expiry_date=expiry,
+                supplier_name=item.supplier_name, expiry_date=expiry,
             )
             db.add(product)
-            db.commit()
-            db.refresh(product)
+            new_products.append((product, item, expiry))
             products_created += 1
-
-            # Auto-create batch if expiry_date provided
-            stock = product.current_stock or 0
-            if expiry and stock > 0:
-                batch = ProductBatch(
-                    product_id=product.id,
-                    batch_number=f"BATCH-{product.name[:3].upper()}-001",
-                    quantity=stock,
-                    expiry_date=expiry,
-                    purchase_date=date.today(),
-                    unit_cost=product.unit_cost or 0,
-                )
-                db.add(batch)
+            product_by_name[(item.name or "").lower().strip()] = product
 
         if item.date and item.quantity:
             try:
                 sale_date = date.fromisoformat(item.date)
             except ValueError:
                 sale_date = date.today()
-
-            sales_record = SalesHistory(
-                product_id=product.id,
-                date=sale_date,
-                quantity=item.quantity,
-                revenue=(item.quantity * item.price) if item.price else None,
-            )
-            db.add(sales_record)
+            bulk_sales.append((product, sale_date, item.quantity, item.price))
             sales_created += 1
+
+    # Flush to get IDs for new products
+    if new_products:
+        db.flush()
+        for product, item, expiry in new_products:
+            stock = product.current_stock or 0
+            if expiry and stock > 0:
+                db.add(ProductBatch(
+                    product_id=product.id,
+                    batch_number=f"BATCH-{product.name[:3].upper()}-001",
+                    quantity=stock, expiry_date=expiry,
+                    purchase_date=date.today(), unit_cost=product.unit_cost or 0,
+                ))
+
+    # Bulk-add sales
+    for product, sale_date, qty, price in bulk_sales:
+        db.add(SalesHistory(
+            product_id=product.id, date=sale_date,
+            quantity=qty, revenue=(qty * price) if price else None,
+        ))
 
     db.commit()
 

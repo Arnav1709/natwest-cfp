@@ -258,12 +258,42 @@ def get_expiring(
     return result
 
 
+@router.post("/calculate-reorder-points")
+def calculate_reorder_points_endpoint(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    AI-powered reorder point calculation for all products.
+
+    Uses sales history + lead time + AI context analysis to set optimal
+    reorder_point and safety_stock on every product.
+
+    Formula: reorder_point = (avg_daily × lead_time) + safety_stock
+    Where:   safety_stock  = z_score × std_dev_daily × sqrt(lead_time)
+    AI adjusts z_score (service level) per product category/criticality.
+    """
+    from services.reorder_point_calculator import calculate_reorder_points
+
+    result = calculate_reorder_points(db, current_user.id, use_ai=True)
+
+    # Invalidate caches since reorder points changed
+    if result["updated"] > 0:
+        cache_invalidate(
+            current_user.id,
+            "inventory_list", "inventory_health", "inventory_expiring",
+            "inventory_product", "reorder",
+        )
+
+    return result
+
+
 @router.get("", response_model=ProductListResponse)
 def list_products(
     category: Optional[str] = None,
     status: Optional[str] = None,
     page: int = Query(default=1, ge=1),
-    per_page: int = Query(default=20, ge=1, le=100),
+    per_page: int = Query(default=20, ge=1, le=5000),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):

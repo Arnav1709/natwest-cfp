@@ -45,6 +45,7 @@ class ForecastResponse(BaseModel):
     baseline: List[float]
     drivers: str = ""
     driver_details: List[DriverDetail] = []
+    trend_explanation: str = ""  # AI-generated explanation of WHY trends are changing
     accuracy: ForecastAccuracyInfo = ForecastAccuracyInfo()
     data_quality: str = "sufficient"  # sufficient, limited, insufficient
     model_used: str = "prophet"  # prophet, sma, stub

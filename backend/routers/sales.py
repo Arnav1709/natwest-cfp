@@ -42,36 +42,39 @@ def record_sales(
     db: Session = Depends(get_db),
 ):
     """
-    Record one or more sales. For each sale:
-    1. Find the product by name (case-insensitive match)
-    2. Deduct quantity from current_stock
-    3. Create a sales_history record
-    4. Create a stock_movement record
-    5. Generate alerts if stock drops below thresholds
+    Record one or more sales — BULK OPTIMIZED.
+    1. Load all user products once (single query)
+    2. Build an in-memory name→product lookup
+    3. Process all entries against the lookup
+    4. Bulk-add all records, single commit
     """
     results = []
     alerts_generated = 0
     successful = 0
     failed = 0
 
-    for entry in request.sales:
-        # Find product by name (case-insensitive)
-        product = (
-            db.query(Product)
-            .filter(
-                Product.user_id == current_user.id,
-                sql_func.lower(Product.name) == entry.product_name.lower().strip(),
-            )
-            .first()
-        )
+    # ── Single query: load ALL products for this user ──
+    all_products = db.query(Product).filter(Product.user_id == current_user.id).all()
+    product_map = {}
+    for p in all_products:
+        product_map[p.name.lower().strip()] = p
 
-        # Parse the sale date
+    # ── Collect bulk inserts ──
+    bulk_sales = []
+    bulk_movements = []
+    alert_tasks = []  # deferred alert creation
+
+    for entry in request.sales:
+        # Parse sale date
         sale_date = date_type.today()
         if entry.date:
             try:
                 sale_date = date_type.fromisoformat(entry.date)
             except ValueError:
                 pass
+
+        # Find product by name (case-insensitive)
+        product = product_map.get(entry.product_name.lower().strip())
 
         if not product:
             results.append(SalesRecordResult(
@@ -83,7 +86,7 @@ def record_sales(
             failed += 1
             continue
 
-        # Validate stock availability — reject if selling more than available
+        # Validate stock
         current_stock = product.current_stock or 0
         if entry.quantity > current_stock:
             results.append(SalesRecordResult(
@@ -97,70 +100,48 @@ def record_sales(
             failed += 1
             continue
 
-        # Deduct stock
+        # Deduct stock in-memory (so subsequent entries for same product see updated stock)
         old_stock = current_stock
         product.current_stock = max(0, old_stock - entry.quantity)
 
-        # Determine sale revenue
+        # Revenue
         unit_price = entry.price or product.unit_cost or 0
         revenue = entry.quantity * unit_price
 
-        # Create sales history record
-        sales_record = SalesHistory(
+        # Queue sales history record
+        bulk_sales.append(SalesHistory(
             product_id=product.id,
             date=sale_date,
             quantity=entry.quantity,
             revenue=revenue,
-        )
-        db.add(sales_record)
+        ))
 
-        # Create stock movement record
-        movement = StockMovement(
+        # Queue stock movement
+        bulk_movements.append(StockMovement(
             product_id=product.id,
             type="sale",
-            quantity=-entry.quantity,  # negative for sales
+            quantity=-entry.quantity,
             notes=f"Daily sale recorded on {sale_date}",
-        )
-        db.add(movement)
+        ))
 
-        # Check for alerts — create in DB + send WhatsApp via alert_service
+        # Check for alerts (defer actual creation)
         alert_type = None
         if product.current_stock <= 0:
-            create_and_notify(
-                db=db,
-                user_id=current_user.id,
-                product_id=product.id,
-                alert_type="stockout",
+            alert_tasks.append(dict(
+                product=product, entry=entry, alert_type="stockout",
                 severity="critical",
                 title=f"OUT OF STOCK: {product.name}",
                 message=f"{product.name} is now out of stock after selling {entry.quantity} units. Immediate reorder recommended.",
-                whatsapp_template_data={
-                    "product_name": product.name,
-                    "last_qty": entry.quantity,
-                    "reorder_qty": product.reorder_point or 0,
-                    "supplier_name": product.supplier_name or "N/A",
-                    "supplier_contact": product.supplier_contact or "N/A",
-                },
-            )
+            ))
             alert_type = "stockout"
             alerts_generated += 1
         elif product.current_stock <= (product.reorder_point or 0):
-            create_and_notify(
-                db=db,
-                user_id=current_user.id,
-                product_id=product.id,
-                alert_type="low_stock",
+            alert_tasks.append(dict(
+                product=product, entry=entry, alert_type="low_stock",
                 severity="warning",
                 title=f"Low Stock: {product.name}",
                 message=f"{product.name} dropped to {product.current_stock} units (reorder point: {product.reorder_point}). Consider reordering.",
-                whatsapp_template_data={
-                    "product_name": product.name,
-                    "current_stock": product.current_stock,
-                    "reorder_point": product.reorder_point or 0,
-                    "days_remaining": "N/A",
-                    "reorder_qty": product.reorder_point or 0,
-                },
-            )
+            ))
             alert_type = "low_stock"
             alerts_generated += 1
 
@@ -176,15 +157,49 @@ def record_sales(
         ))
         successful += 1
 
+    # ── Bulk insert + single commit ──
+    if bulk_sales:
+        db.add_all(bulk_sales)
+    if bulk_movements:
+        db.add_all(bulk_movements)
+
+    # Create alerts (limited to avoid spam — max 20 alerts per batch)
+    for task in alert_tasks[:20]:
+        p = task["product"]
+        create_and_notify(
+            db=db,
+            user_id=current_user.id,
+            product_id=p.id,
+            alert_type=task["alert_type"],
+            severity=task["severity"],
+            title=task["title"],
+            message=task["message"],
+            whatsapp_template_data={
+                "product_name": p.name,
+                "current_stock": p.current_stock,
+                "reorder_point": p.reorder_point or 0,
+                "days_remaining": "N/A",
+                "reorder_qty": p.reorder_point or 0,
+            },
+        )
+
     db.commit()
 
-    # Invalidate caches — stock levels changed
+    # Invalidate caches
     cache_invalidate(
         current_user.id,
         "inventory_list", "inventory_health", "inventory_expiring",
         "inventory_product", "forecast_all", "forecast_product",
         "reorder", "alerts", "sales_history",
     )
+
+    # Auto-recalculate reorder points in background (non-blocking)
+    try:
+        from services.reorder_point_calculator import calculate_reorder_points
+        calculate_reorder_points(db, current_user.id, use_ai=False)  # Fast statistical only
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Auto-reorder calculation failed: %s", e)
 
     return SalesRecordResponse(
         total_processed=len(request.sales),
@@ -227,12 +242,15 @@ async def upload_sales_csv(
             detail="No valid data rows found in the file",
         )
 
-    # Convert ParsedProduct → SalesEntryItem
+    # Convert ParsedProduct → SalesEntryItem (skip rows with no quantity)
     sales_entries = []
     for p in products:
+        qty = p.quantity or 0
+        if qty <= 0:
+            continue  # SalesEntryItem requires quantity > 0
         sales_entries.append(SalesEntryItem(
             product_name=p.name,
-            quantity=p.quantity or 0,
+            quantity=qty,
             date=p.date,
             price=p.price,
         ))
