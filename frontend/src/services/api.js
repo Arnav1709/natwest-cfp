@@ -121,6 +121,7 @@ export const inventoryApi = {
   update: (id, data) => request(`/inventory/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   health: () => request('/inventory/health'),
   expiring: (days = 7) => request(`/inventory/expiring?days=${days}`),
+  calculateReorderPoints: () => request('/inventory/calculate-reorder-points', { method: 'POST' }),
 };
 
 // === Forecasting ===

@@ -29,7 +29,7 @@ export default function Forecasting() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const { data: rawProducts, loading: pLoading } = useApi(() => inventoryApi.list(), []);
+  const { data: rawProducts, loading: pLoading } = useApi(() => inventoryApi.list({ per_page: 1000 }), []);
   const products = Array.isArray(rawProducts) ? rawProducts : (rawProducts?.products || []);
 
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -332,17 +332,40 @@ export default function Forecasting() {
             ) : (
               <>
                 <div style={{
-                  fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-3xl)', fontWeight: 700, color: 'var(--color-text-muted)',
-                  lineHeight: 1, marginBottom: 'var(--space-2)'
+                  fontFamily: 'var(--font-display)', fontSize: '2.5rem', fontWeight: 700,
+                  lineHeight: 1, marginBottom: 'var(--space-2)',
+                  color: modelUsed.includes('prophet') ? 'var(--color-accent)' : modelUsed.includes('sma') ? '#FFB020' : 'var(--color-text-muted)',
                 }}>
-                  —
+                  {modelUsed.includes('prophet') ? '🤖' : modelUsed.includes('sma') ? '📊' : '—'}
+                </div>
+                <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', fontWeight: 600, marginBottom: 'var(--space-2)' }}>
+                  {modelBadge.label}
                 </div>
                 <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                  No accuracy data yet
+                  {modelUsed.includes('prophet') ? 'AI time-series forecasting active' :
+                   modelUsed.includes('sma') ? 'Moving average — add more sales data for AI' :
+                   'Upload sales data to enable forecasting'}
                 </div>
               </>
             )}
           </GlowCard>
+
+          {/* AI Trend Explanation */}
+          {fc?.trend_explanation && (
+            <GlowCard glowColor="rgba(56,189,248,0.12)" style={{ padding: 'var(--space-5)', opacity: 0, animation: 'fade-in-left 0.5s 0.35s forwards' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-3)' }}>
+                <div style={{ width: 32, height: 32, borderRadius: '8px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>💡</div>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-sm)', fontWeight: 700, color: 'var(--color-text-primary)' }}>AI Trend Analysis</h3>
+              </div>
+              <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                {fc.trend_explanation}
+              </p>
+              <div style={{ marginTop: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#38BDF8', boxShadow: '0 0 8px rgba(56,189,248,0.4)' }}></span>
+                <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>Powered by AI intelligence</span>
+              </div>
+            </GlowCard>
+          )}
 
           {/* Test Scenario Action */}
           <GlowCard style={{ padding: 'var(--space-5)', opacity: 0, animation: 'fade-in-left 0.5s 0.4s forwards' }}>

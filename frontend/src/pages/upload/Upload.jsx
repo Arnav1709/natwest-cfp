@@ -59,7 +59,7 @@ export default function Upload() {
     setLoadingProducts(true);
     setUpdateError(null);
     try {
-      const result = await inventoryApi.list();
+      const result = await inventoryApi.list({ per_page: 1000 });
       const list = Array.isArray(result) ? result : (result?.products || []);
       setProducts(list);
     } catch (err) {
@@ -115,6 +115,7 @@ export default function Upload() {
           quantity: item.quantity || 0,
           price: item.price || 0,
           category: item.category || 'Other',
+          expiry_date: item.expiry_date || '',
           confidence: item.confidence || 0.5,
         }));
 

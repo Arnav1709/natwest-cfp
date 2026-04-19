@@ -524,7 +524,39 @@ def generate_forecast(
     # Build drivers string
     drivers_text = ", ".join(driver_strings) if driver_strings else "Historical trend analysis"
 
-    # 9. Store forecasts in DB for future reference
+    # 9. Generate AI trend explanation (WHY trends are changing)
+    trend_explanation = ""
+    if num_weeks_data >= 2:
+        try:
+            from services.ai_client import call_llm
+            avg_weekly = df["y"].mean()
+            recent_avg = df.tail(4)["y"].mean() if num_weeks_data >= 4 else avg_weekly
+            trend_dir = "upward" if trend_pct > 5 else "downward" if trend_pct < -5 else "stable"
+
+            driver_summary = "; ".join([d.get("name", "") + ": " + d.get("description", "") for d in driver_details[:5]]) if driver_details else "No specific external factors identified"
+
+            explanation_prompt = f"""You are an inventory analytics AI. Explain WHY the demand for this product is trending the way it is.
+
+Product: "{product_name}" (category: {category})
+Location: {state if state else "India"}
+Current date: {date.today().isoformat()}
+Trend: {trend_dir} ({trend_pct:+.0f}% change)
+Average weekly demand: {avg_weekly:.1f} units → recent: {recent_avg:.1f} units
+External factors detected: {driver_summary}
+Model used: {model_used}
+
+Give a concise 2-3 sentence explanation of WHY this trend is happening. Be specific — mention diseases, weather, festivals, market conditions, or seasonal patterns that explain the numbers. If data is from similar products, mention that.
+
+Do NOT use generic phrases. Be specific to this product, location, and time period.
+Return ONLY the explanation text, no JSON, no markdown."""
+
+            explanation = call_llm(explanation_prompt)
+            if explanation:
+                trend_explanation = explanation.strip()[:500]  # Cap at 500 chars
+        except Exception as e:
+            logger.warning("AI trend explanation failed for %s: %s", product_name, e)
+
+    # 10. Store forecasts in DB for future reference
     try:
         for fw in forecast_weeks:
             week_start_date = datetime.strptime(fw.week_start, "%Y-%m-%d").date()
@@ -554,6 +586,7 @@ def generate_forecast(
         baseline=baseline,
         drivers=drivers_text,
         driver_details=driver_details,
+        trend_explanation=trend_explanation,
         accuracy=accuracy,
         data_quality=data_quality,
         model_used=model_used,

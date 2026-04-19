@@ -113,6 +113,46 @@ def _normalize_date(date_str: str) -> str:
     return date_str  # Return as-is if unable to parse
 
 
+def _normalize_expiry_date(date_str: str) -> str:
+    """
+    Normalize expiry date formats to ISO format (YYYY-MM-DD).
+    Handles short formats common on handwritten registers:
+      MM/YY, MM-YY, MM/YYYY, MM-YYYY, YYYY-MM-DD, N/A, etc.
+    For MM/YY style, returns the first day of the month.
+    """
+    if not date_str:
+        return ""
+
+    date_str = date_str.strip()
+    date_str = _convert_hindi_numerals(date_str)
+
+    # Handle N/A, None, -, etc.
+    if date_str.upper() in ("N/A", "NA", "NONE", "-", "--", ""):
+        return ""
+
+    # Try MM/YY or MM-YY (e.g. "12/25", "08/26", "01-26")
+    import re as _re
+    short_match = _re.match(r'^(\d{1,2})[/\-](\d{2})$', date_str)
+    if short_match:
+        month = int(short_match.group(1))
+        year_short = int(short_match.group(2))
+        year = 2000 + year_short if year_short < 100 else year_short
+        if 1 <= month <= 12:
+            return f"{year:04d}-{month:02d}-01"
+
+    # Try MM/YYYY or MM-YYYY (e.g. "12/2025", "08-2026")
+    long_match = _re.match(r'^(\d{1,2})[/\-](\d{4})$', date_str)
+    if long_match:
+        month = int(long_match.group(1))
+        year = int(long_match.group(2))
+        if 1 <= month <= 12:
+            return f"{year:04d}-{month:02d}-01"
+
+    # Fall back to the general date normalizer
+    result = _normalize_date(date_str)
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Response parsing
 # ---------------------------------------------------------------------------
@@ -163,6 +203,7 @@ def _parse_entry(entry: dict) -> ParsedProduct:
     price = entry.get("price", entry.get("unit_price", entry.get("Price", entry.get("amount", 0))))
     category = entry.get("category", entry.get("Category", None))
     confidence = entry.get("confidence", entry.get("Confidence", 0.8))
+    expiry_date = entry.get("expiry_date", entry.get("expiry", entry.get("Expiry", entry.get("exp_date", None))))
 
     # Handle Hindi number words in quantity
     if isinstance(quantity, str):
@@ -190,6 +231,12 @@ def _parse_entry(entry: dict) -> ParsedProduct:
     if isinstance(date_str, str):
         date_str = _normalize_date(date_str)
 
+    # Normalize expiry_date (handles MM/YY format like "12/25")
+    if expiry_date and isinstance(expiry_date, str):
+        expiry_date = _normalize_expiry_date(expiry_date)
+    else:
+        expiry_date = None
+
     # Ensure confidence is a float between 0 and 1
     if isinstance(confidence, (int, float)):
         if confidence > 1:
@@ -211,6 +258,7 @@ def _parse_entry(entry: dict) -> ParsedProduct:
         quantity=float(quantity) if quantity else 0,
         price=float(price) if price else 0,
         category=category,
+        expiry_date=expiry_date if expiry_date else None,
         confidence=round(confidence, 2),
     )
 
@@ -264,6 +312,7 @@ Return a JSON array where each entry has these fields:
   "quantity": numeric quantity sold or in stock (convert Hindi numerals if needed),
   "price": numeric unit price or total amount (remove ₹ symbol),
   "category": one of exactly these: "Medicines", "Supplements", "Supplies", "Equipment", "Grocery", "Other",
+  "expiry_date": "expiry/expiration date if visible, in YYYY-MM-DD or MM/YY format",
   "confidence": your confidence in this extraction from 0.0 to 1.0
 }}
 
@@ -281,6 +330,8 @@ Critical rules:
 - Convert Hindi/Devanagari numerals (०-९) to Arabic digits (0-9).
 - Convert Hindi number words to digits: एक=1, दो=2, तीन=3, चार=4, पांच=5, छह=6, सात=7, आठ=8, नौ=9, दस=10, बारह=12, बीस=20, पचास=50, सौ=100
 - Normalize ALL dates to ISO format YYYY-MM-DD. If only day/month visible, use current year.
+- Look for expiry dates ("Expiry", "Exp", "Best Before", "Valid Until" columns). If the expiry date is in MM/YY format (e.g., 12/25, 08/26), return it exactly as-is — the system will normalize it.
+- If a product has "N/A" or no expiry date, set expiry_date to null.
 - If handwriting is unclear, set confidence lower (0.3-0.6).
 - If you're very confident, set 0.8-1.0.
 - If the image shows a printed receipt/invoice, extract line items.
