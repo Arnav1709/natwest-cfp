@@ -65,30 +65,49 @@ The following features are **fully implemented and functional** in the current c
 - **Context-aware demand forecasting** — 6-week rolling forecasts using Facebook Prophet with confidence bands (low / likely / high at 80% interval width), with real-world context overlays for festivals, diseases, and weather patterns
 - **External factor integration** — Curated lookup tables for 30+ Indian festivals, seasonal disease patterns, and weather heuristics that automatically adjust forecast multipliers
 - **AI intelligence pipeline** — 3-stage pipeline: Serper API web search → Gemini AI analysis → boost multiplier calculation; gracefully degrades to hardcoded JSON lookup tables if APIs are unavailable
+- **Embedding-based cold-start forecasting** — For products with no sales history, ChromaDB-powered product embeddings find similar products and use their sales patterns as a proxy forecast (Prophet+embeddings or SMA+embeddings)
 - **SMA fallback** — Graceful degradation to Simple Moving Average when fewer than 8 weeks of sales history are available
 - **Z-score anomaly detection** — Statistical analysis on forecast residuals to catch demand spikes (Z > 2.0), drops (Z < -2.0), and structural pattern shifts (3+ consecutive weeks in same direction), with plain-English explanations
-- **Explainable forecasts** — Every prediction includes a human-readable explanation of *why* the forecast looks the way it does (e.g., "Dengue season active in Nagpur → Paracetamol +25%")
-- **Smart reorder engine** — AI-calculated reorder quantities ranked by urgency (days-to-stockout), grouped by supplier, with CSV/PDF export
-- **3-provider AI fallback chain** — Ollama (local) → Gemini API → OpenRouter, with hardcoded JSON as final fallback if all providers fail
-- **Scenario planning** — "What if I run a 20% discount?" / "What if demand grows 15%?" — side-by-side forecast comparison
+- **Explainable forecasts** — Every prediction includes a human-readable explanation of *why* the forecast looks the way it does (e.g., "Dengue season active in Nagpur → Paracetamol +25%"), generated via Gemini AI with context-specific reasoning
+- **Statistical reorder engine** — Auto-calculated reorder points using `(avg_daily × lead_time) + safety_stock` formula with Z-score service levels; recalculates in real-time after every sale
+- **AI-enhanced reorder points** — Optional Gemini-driven adjustment layer that overrides statistical defaults based on product category, expiry status, and business criticality
+- **Smart reorder list** — AI-calculated reorder quantities ranked by urgency (days-to-stockout), grouped by supplier, with CSV/PDF export
+- **3-provider AI fallback chain** — Gemini (primary) → OpenRouter (fallback) → Ollama (local), with rule-based logic as final fallback if all providers fail
+- **Scenario planning** — "What if I run a 20% discount?" / "What if demand grows 15%?" / "What if my supplier delays by 5 days?" — side-by-side forecast comparison
+
+### Expiry Tracking & Disposal Intelligence
+- **Batch-level expiry tracking** — Track individual product batches with expiry dates, quantities, and value-at-risk calculations
+- **Expiry calendar timeline** — Visual calendar view grouped by month with risk-coded cards (expired / <30 days / 30–90 days / 90+ days)
+- **AI disposal recommendations** — Gemini-powered disposal strategy suggestions (discount sale, return to supplier, bundle promotion, donate, write-off) with estimated value recovery percentages
+- **Rule-based fallback** — Automatic rule-based disposal suggestions when AI providers are unavailable
+- **Auto-batch creation** — Batches are automatically created from product uploads and data ingestion flows
+- **Auto-migration** — On startup, automatically populates `product_batches` from existing products with expiry dates (handles databases seeded before the batch feature)
 
 ### Data Ingestion
 - **Handwriting OCR** — Photograph a handwritten ledger and Gemini Vision extracts product names, quantities, prices, and dates; handles mixed Hindi/English text and Hindi numerals (१,२,३ → 1,2,3)
-- **CSV/Excel upload** — Auto-detects columns and parses sales history; supports bulk import
+- **CSV/Excel upload** — Auto-detects columns (with space/underscore normalization), parses sales history, and supports bulk import; AI-powered product category inference for CSV files without a category column
 - **Manual data entry** — Form-based product and sales input
 - **Mandatory verification step** — All OCR-extracted and parsed data must be human-reviewed before entering the forecast pipeline (trust layer, not blind automation)
+- **Stock validation** — Sales that exceed available stock are rejected with clear error feedback
+- **Upload history tracking** — All uploads (CSV, image, manual) are tracked with record counts and verification status; only verified uploads appear in history
 
-### Frontend (16 Screens)
-- **Landing page** with value proposition and CTAs
+### AI Translation
+- **Real-time product name transliteration** — AI-powered transliteration of product names into Hindi (Devanagari), Tamil, Telugu, Marathi, Bengali, and Gujarati scripts
+- **DB-cached translations** — Translations are stored in a `translation_cache` table to avoid redundant AI calls for previously translated text
+- **Graceful fallback** — Returns original text if AI is unavailable
+
+### Frontend (19 Screens)
+- **Landing page** with value proposition, animated particle backgrounds, aurora effects, and CTAs
 - **Onboarding flow** — Language selection (English, Hindi), business type, shop setup
-- **Dashboard** — Overview KPIs, forecasting charts (Plotly.js), inventory health heatmaps, scenario planning
+- **Dashboard** — Overview KPIs, forecasting charts (Plotly.js) with AI trend explanations, inventory health heatmaps, scenario planning
 - **Product catalog** with individual product detail pages and per-product forecasts
-- **Upload & verify** pages for CSV and image ingestion
-- **Record sales** page with OCR-from-image and CSV upload
-- **AI reorder list** with urgency tiers and export
-- **Alerts feed** with active and historical alerts
+- **Upload & verify** pages for CSV and image ingestion with smart source detection
+- **Record sales** page with multi-modal entry: manual, CSV upload, and OCR-from-image
+- **AI reorder list** with urgency tiers, supplier grouping, and CSV/PDF export
+- **Expiry tracker** — Calendar timeline, batch table, risk-coded cards, and AI disposal recommendations
+- **Alerts feed** with real-time active alert count in sidebar badge
 - **Settings** — Profile, notification preferences, language
-- **Dark-mode-first UI** with responsive mobile layout
+- **Dark-mode-first glassmorphism UI** with animated components (shimmer buttons, glow cards, animated counters), responsive mobile layout, and an error boundary crash recovery screen
 
 ### WhatsApp Bot
 - **2-way WhatsApp integration** via whatsapp-web.js (Node.js sidecar)
@@ -98,12 +117,15 @@ The following features are **fully implemented and functional** in the current c
 
 ### Platform
 - **JWT authentication** with protected routes
-- **RESTful API** with 10 routers and auto-generated Swagger docs at `/docs`
+- **RESTful API** with 13 routers and auto-generated Swagger docs at `/docs`
 - **Docker Compose** — One-command full-stack launch (backend + frontend + WhatsApp bot + Nginx)
 - **Nginx reverse proxy** — Unified access on port 80
 - **i18n** — English and Hindi translation files via react-i18next (other languages listed in UI as selectable but only these two have full translation coverage)
-- **SQLite database** with SQLAlchemy ORM (PostgreSQL-compatible schema)
+- **PostgreSQL database** via Supabase (cloud-hosted) with SQLAlchemy ORM; SQLite fallback for fully offline local development
+- **In-memory caching** — TTL-based cache (via `cachetools`) for reorder lists, health metrics, forecasts, alerts, and anomalies to maintain performance
+- **Background scheduler** — APScheduler jobs for daily briefings (8:00 AM), anomaly scans (8:30 AM), seasonal checks (Monday 9:00 AM), and weekly summaries (Sunday 7:00 PM)
 - **Seed data script** for demo with pre-populated products and sales history
+- **Top-level error boundary** — React `AppErrorBoundary` catches crashes and shows a styled recovery page instead of a blank white screen
 
 ---
 
@@ -135,7 +157,7 @@ docker compose up --build
 
 # 5. (First run only) Seed the database with demo data
 #    In a new terminal:
-docker exec stocksense-backend python seed_data.py
+docker exec supplysense-backend python seed_data.py
 ```
 
 Once running, access the application at:
@@ -191,14 +213,19 @@ Create `backend/.env` using `.env.example` as a template. **Never commit real AP
 
 | Variable | Required | Default | Purpose |
 |:---|:---:|:---|:---|
-| `GEMINI_API_KEY` | ✅ | — | Primary AI — OCR, forecasting intelligence, NLP |
+| `GEMINI_API_KEY` | ✅ | — | Primary AI — OCR, forecasting intelligence, NLP, translations |
 | `SECRET_KEY` | ✅ | *(preset)* | JWT authentication signing key |
-| `DATABASE_URL` | ⬜ | `sqlite:///./data/stocksense.db` | Database connection string |
+| `DATABASE_URL` | ⬜ | `sqlite:///./data/SupplySense.db` | Database connection string (supports PostgreSQL via Supabase) |
 | `SERPER_API_KEY` | ⬜ | — | Live web search for disease/festival intelligence |
-| `OPENROUTER_API_KEY` | ⬜ | — | Cloud AI fallback provider |
-| `OLLAMA_BASE_URL` | ⬜ | `http://host.docker.internal:11434` | Local Ollama AI inference |
+| `OPENROUTER_API_KEY` | ⬜ | — | Cloud AI fallback provider (#2 in chain) |
+| `OLLAMA_BASE_URL` | ⬜ | `http://host.docker.internal:11434` | Local Ollama AI inference URL |
 | `OLLAMA_MODEL` | ⬜ | `gemma3:4b` | Ollama model name |
+| `OLLAMA_TIMEOUT` | ⬜ | `300` | Timeout in seconds for Ollama text generation |
+| `OLLAMA_VISION_TIMEOUT` | ⬜ | `600` | Timeout in seconds for Ollama vision/image calls |
 | `WHATSAPP_BOT_URL` | ⬜ | `http://localhost:3001` | WhatsApp bot sidecar URL |
+| `APP_NAME` | ⬜ | `SupplySense` | Application display name |
+| `APP_VERSION` | ⬜ | `1.0.0` | Application version string |
+| `DEBUG` | ⬜ | `true` | Enable debug logging and SQLAlchemy echo |
 
 > 💡 **Minimum setup**: Only `GEMINI_API_KEY` is required. All other services have graceful fallbacks.
 
@@ -209,14 +236,20 @@ Create `backend/.env` using `.env.example` as a template. **Never commit real AP
 | Layer | Technology | Version | Purpose |
 |:---|:---|:---|:---|
 | **Forecasting** | Facebook Prophet | ≥1.1.6 | Time-series demand prediction with confidence bands |
-| **AI / NLP** | Google Gemini 2.5 Flash | via `google-genai` | OCR, demand factor analysis, forecast explanations |
+| **AI / NLP** | Google Gemini 2.0 Flash | via `google-genai` | OCR, demand factor analysis, forecast explanations, disposal advice, translations |
+| **AI Fallback** | OpenRouter + Ollama | REST / local | Cloud fallback (Gemini via OpenRouter) + local inference (gemma3:4b) |
 | **Web Search** | Serper API | REST | Real-time disease/festival/weather signal detection |
 | **Anomaly Detection** | NumPy + SciPy | ≥1.26 | Z-score spike/drop/pattern analysis |
+| **Reorder Engine** | Statistical + AI | — | Z-score safety stock + AI-driven service level adjustment |
+| **Embeddings** | ChromaDB | ≥0.4.0 | Product similarity embeddings for cold-start forecasting |
 | **Backend** | Python + FastAPI | 3.11 / 0.115 | Async REST API with auto-generated Swagger docs |
-| **ORM** | SQLAlchemy | 2.0 | Database abstraction (SQLite, PostgreSQL-compatible) |
-| **Database** | SQLite | — | Zero-config file-based storage |
+| **ORM** | SQLAlchemy | 2.0 | Database abstraction (PostgreSQL, SQLite-compatible) |
+| **Database** | PostgreSQL (Supabase) | — | Cloud-hosted relational database (SQLite fallback for local dev) |
+| **Scheduler** | APScheduler | ≥3.10 | Background jobs for alerts, anomaly scans, briefings |
+| **Caching** | cachetools | ≥5.3 | In-memory TTL cache for expensive queries |
 | **Frontend** | React + Vite | 19 / 8.0 | Component-based SPA with hot module replacement |
 | **Charts** | Plotly.js + react-plotly.js | 3.5 | Interactive forecast charts with confidence bands |
+| **Animations** | anime.js + Lucide React | 4.3 / 1.8 | Micro-animations, shimmer effects, icon library |
 | **Routing** | React Router | 6.30 | Client-side routing with protected routes |
 | **i18n** | i18next + react-i18next | 26 / 17 | Multilingual UI (English, Hindi) |
 | **WhatsApp** | whatsapp-web.js + Express | 1.26 / 4.21 | Node.js sidecar for 2-way WhatsApp messaging |
@@ -227,8 +260,10 @@ Create `backend/.env` using `.env.example` as a template. **Never commit real AP
 ### Why These Choices
 
 - **Prophet over ARIMA/LSTM**: Prophet handles missing data, holiday effects, and changepoints natively — ideal for messy small-business sales data with irregular gaps.
-- **Gemini over GPT**: Free 1M tokens/day tier, native multimodal vision for OCR, and multilingual generation in Indian languages without fine-tuning.
-- **SQLite over PostgreSQL**: Zero-config for hackathon demos; the SQLAlchemy ORM makes it one config change to switch to PostgreSQL in production.
+- **Gemini over GPT**: Free tier available, native multimodal vision for OCR, and multilingual generation in Indian languages without fine-tuning.
+- **3-provider fallback**: Gemini → OpenRouter → Ollama ensures AI is always available; rule-based logic provides a final safety net.
+- **ChromaDB for cold-start**: New products with zero sales history still get meaningful forecasts by leveraging sales patterns from similar products via embedding similarity.
+- **PostgreSQL (Supabase)**: Cloud-hosted for reliability; SQLAlchemy ORM makes it one config change to switch to any SQL database. SQLite is supported for fully offline local development.
 - **whatsapp-web.js over Business API**: Free, no business verification needed, and scan-to-connect in seconds — ideal for hackathon demos.
 
 ---
@@ -248,7 +283,6 @@ https://github.com/user-attachments/assets/9b176a24-03f8-416d-b1c8-35b35fc12d24
 ![WhatsApp Image 2026-04-12 at 10 45 24 PM](https://github.com/user-attachments/assets/73c6db30-0cd1-4443-99fb-c33cd04c00c6)
 ![WhatsApp Image 2026-04-12 at 10 45 28 PM](https://github.com/user-attachments/assets/92d7c11f-8eae-4b14-8469-cb3666966baa)
 ![WhatsApp Image 2026-04-12 at 10 45 15 PM](https://github.com/user-attachments/assets/41ace838-4012-46b0-9031-a949d4b43b2d)
-
 
 
 
@@ -364,7 +398,67 @@ curl http://localhost:8000/api/reorder
 curl http://localhost:8000/api/reorder/export?format=csv -o reorder_list.csv
 ```
 
-#### 6. Check AI Provider Status
+#### 6. Get Expiry Batches
+
+```bash
+curl http://localhost:8000/api/expiry/batches
+```
+
+**Sample Response:**
+
+```json
+{
+  "batches": [
+    {
+      "id": 1,
+      "product_name": "Paracetamol 500mg",
+      "batch_number": "BATCH-PAR-A",
+      "quantity": 30,
+      "expiry_date": "2026-05-01",
+      "days_to_expiry": 8,
+      "total_value": 450.0,
+      "risk": "critical"
+    }
+  ],
+  "summary": {
+    "expired": 2,
+    "critical": 5,
+    "warning": 8,
+    "safe": 12,
+    "total": 27,
+    "total_value_at_risk": 12500.00
+  }
+}
+```
+
+#### 7. Get AI Disposal Recommendations
+
+```bash
+curl -X POST http://localhost:8000/api/expiry/advice \
+  -H "Content-Type: application/json" \
+  -d '{"product_ids": [1, 2]}'
+```
+
+#### 8. Translate Product Names
+
+```bash
+curl -X POST http://localhost:8000/api/translate \
+  -H "Content-Type: application/json" \
+  -d '{"texts": ["Paracetamol", "Cough Syrup"], "target_lang": "hi"}'
+```
+
+**Sample Response:**
+
+```json
+{
+  "translations": {
+    "Paracetamol": "पैरासिटामोल",
+    "Cough Syrup": "कफ सिरप"
+  }
+}
+```
+
+#### 9. Check AI Provider Status
 
 ```bash
 curl http://localhost:8000/api/ai-status
@@ -374,9 +468,10 @@ curl http://localhost:8000/api/ai-status
 
 ```json
 {
-  "primary": { "provider": "ollama", "status": "available", "model": "gemma3:4b" },
-  "fallback_1": { "provider": "gemini", "status": "available" },
-  "fallback_2": { "provider": "openrouter", "status": "not_configured" }
+  "primary": { "provider": "gemini", "configured": true, "available": true },
+  "fallback_1": { "provider": "ollama", "model": "gemma3:4b", "available": false },
+  "fallback_2": { "provider": "openrouter", "configured": true },
+  "active_provider": "gemini"
 }
 ```
 
@@ -420,12 +515,22 @@ graph TB
         OCR["📷 Vision OCR<br/>Handwriting Extraction"]
         INTEL["🦠 Intelligence<br/>Disease + Festival + Weather"]
         REORDER["📦 Reorder Engine<br/>Smart Procurement"]
+        EMBED["🧬 Embeddings<br/>Cold-Start Similarity"]
     end
 
     subgraph "AI Providers (Fallback Chain)"
-        OLLAMA["🏠 Ollama / Gemma<br/>(Local Fallback)"]
-        GEMINI["☁️ Gemini 2.5 Flash<br/>(Primary Cloud)"]
+        GEMINI["☁️ Gemini 2.0 Flash<br/>(Primary Cloud)"]
         OPENROUTER["☁️ OpenRouter<br/>(Cloud Fallback)"]
+        OLLAMA["🏠 Ollama / Gemma<br/>(Local Fallback)"]
+    end
+
+    subgraph "Expiry Intelligence"
+         EXPIRY["📅 Expiry Tracker<br/>Batch-level tracking"]
+         DISPOSAL["🤖 Disposal Engine<br/>AI recommendations"]
+    end
+
+    subgraph "Translation Layer"
+         TRANSLATE["🌐 Transliteration<br/>AI + DB cache"]
     end
 
     subgraph "External Intelligence"
@@ -433,7 +538,8 @@ graph TB
     end
 
     subgraph "Data Layer"
-        DB[("💾 SQLite<br/>stocksense.db")]
+        DB[("💾 PostgreSQL<br/>Supabase Cloud")]
+        CHROMADB[("🧬 ChromaDB<br/>Embeddings")]
         LOOKUP["📁 Lookup JSONs<br/>diseases · festivals · weather"]
     end
 
@@ -446,13 +552,17 @@ graph TB
     API --> OCR
     API --> INTEL
     API --> REORDER
+    API --> EMBED
+    API --> EXPIRY
+    API --> TRANSLATE
     API --> DB
 
+    EMBED --> CHROMADB
     OCR --> GEMINI
     INTEL --> SERPER
     INTEL --> GEMINI
-    OCR -.-> OLLAMA
     OCR -.-> OPENROUTER
+    OCR -.-> OLLAMA
     INTEL -.-> LOOKUP
 
     PROPHET --> DB
@@ -465,9 +575,9 @@ graph TB
     classDef data fill:#1E293B,stroke:#334155,color:#F8FAFC
 
     class API,BOT primary
-    class PROPHET,ANOMALY,OCR,INTEL,REORDER ai
+    class PROPHET,ANOMALY,OCR,INTEL,REORDER,EMBED ai
     class GEMINI,OLLAMA,OPENROUTER,SERPER external
-    class DB,LOOKUP data
+    class DB,CHROMADB,LOOKUP data
 ```
 
 ### Folder Structure
@@ -478,55 +588,68 @@ supplysense/
 ├── .env.example                  # Environment variable template (no secrets)
 ├── docker-compose.yml            # Development orchestration (4 services)
 ├── docker-compose.prod.yml       # Production build variant
+├── start.sh / stop.sh / logs.sh  # Helper scripts for Docker management
+├── seed.sh                       # Quick-seed script
 ├── nginx/
 │   └── nginx.conf                # Reverse proxy configuration
 │
 ├── backend/                      # Python FastAPI backend
-│   ├── main.py                   # Application entry point + lifespan
+│   ├── main.py                   # Application entry point + lifespan + auto-migration
 │   ├── config.py                 # Pydantic-based settings from env vars
-│   ├── database.py               # SQLAlchemy engine + session factory
+│   ├── database.py               # SQLAlchemy engine + session factory (PG + SQLite)
+│   ├── cache.py                  # In-memory TTL cache manager (cachetools)
 │   ├── seed_data.py              # Demo data seeder (products + sales)
 │   ├── requirements.txt          # Python dependencies
 │   ├── Dockerfile                # Backend container image
-│   ├── routers/                  # API endpoint handlers
+│   ├── routers/                  # API endpoint handlers (13 routers)
 │   │   ├── auth.py               #   JWT login/register
-│   │   ├── inventory.py          #   Product CRUD + stock management
-│   │   ├── upload.py             #   CSV/image upload + OCR
+│   │   ├── inventory.py          #   Product CRUD + stock management + health analytics
+│   │   ├── upload.py             #   CSV/image upload + OCR + category inference
 │   │   ├── forecast.py           #   Forecast generation + retrieval
 │   │   ├── anomalies.py          #   Anomaly detection endpoints
-│   │   ├── reorder.py            #   Smart reorder list + export
+│   │   ├── reorder.py            #   Smart reorder list + export (CSV/PDF)
 │   │   ├── alerts.py             #   Alert feed management
-│   │   ├── sales.py              #   Sales recording
+│   │   ├── sales.py              #   Sales recording with stock validation
 │   │   ├── settings.py           #   User preferences
-│   │   └── whatsapp.py           #   WhatsApp webhook + bot control
-│   ├── models/                   # SQLAlchemy ORM models
+│   │   ├── whatsapp.py           #   WhatsApp webhook + bot control
+│   │   ├── translate.py          #   AI transliteration + DB cache
+│   │   └── expiry.py             #   Batch-level expiry tracking + AI disposal advice
+│   ├── models/                   # SQLAlchemy ORM models (13 models)
 │   │   ├── user.py               #   User / shop profile
 │   │   ├── product.py            #   Product catalog + inventory
 │   │   ├── sales.py              #   Sales history records
-│   │   ├── forecast.py           #   Stored forecast data
+│   │   ├── forecast.py           #   Stored forecast data + accuracy tracking
 │   │   ├── anomaly.py            #   Detected anomaly records
 │   │   ├── alert.py              #   Alert notifications
-│   │   └── ...                   #   Stock movements, notifications, etc.
+│   │   ├── stock_movement.py     #   Stock movement audit trail
+│   │   ├── lookup.py             #   Disease seasons + festival calendar
+│   │   ├── notification.py       #   Notification preferences
+│   │   ├── upload_history.py     #   Upload tracking (CSV/image/manual)
+│   │   ├── translation_cache.py  #   AI translation cache
+│   │   └── product_batch.py      #   Batch-level expiry tracking
 │   ├── schemas/                  # Pydantic request/response schemas
 │   │   ├── inventory.py          #   Product + stock schemas
 │   │   ├── forecast.py           #   Forecast response schemas
 │   │   ├── upload.py             #   OCR/CSV upload schemas
-│   │   └── ...                   #   Auth, sales, settings, etc.
+│   │   ├── sales.py              #   Sales recording schemas
+│   │   └── ...                   #   Auth, alert, anomaly, reorder, settings
 │   ├── services/                 # AI/ML business logic
-│   │   ├── ai_client.py          #   3-provider fallback AI client
-│   │   ├── forecast_service.py   #   Prophet-based forecasting engine
+│   │   ├── ai_client.py          #   3-provider fallback AI client (Gemini → OpenRouter → Ollama)
+│   │   ├── forecast_service.py   #   Prophet-based forecasting engine with embedding cold-start
 │   │   ├── anomaly_service.py    #   Z-score anomaly detection
-│   │   ├── intelligence_service.py # Disease/festival/weather signals
+│   │   ├── intelligence_service.py # Disease/festival/weather signals + Serper/Gemini pipeline
 │   │   ├── ocr_service.py        #   Handwriting OCR via vision AI
-│   │   ├── reorder_service.py    #   Smart reorder calculations
-│   │   ├── embedding_service.py  #   Product similarity embeddings
+│   │   ├── reorder_service.py    #   Smart reorder calculations + supplier grouping
+│   │   ├── reorder_point_calculator.py # Statistical + AI reorder point engine
+│   │   ├── alert_service.py      #   Background alert jobs (daily briefing, anomaly scan, etc.)
+│   │   ├── embedding_service.py  #   ChromaDB product similarity for cold-start forecasting
 │   │   └── lookup_data/          #   Curated intelligence datasets
 │   │       ├── disease_seasons.json
 │   │       ├── festival_calendar.json
 │   │       └── weather_heuristics.json
 │   └── utils/                    # Shared utilities
 │       ├── auth.py               #   JWT token helpers
-│       ├── csv_parser.py         #   CSV column detection + parsing
+│       ├── csv_parser.py         #   CSV column detection + parsing + space/underscore normalization
 │       └── pdf_generator.py      #   ReportLab PDF export
 │
 ├── frontend/                     # React 19 + Vite SPA
@@ -535,20 +658,39 @@ supplysense/
 │   ├── vite.config.js            # Vite dev server + proxy config
 │   ├── Dockerfile                # Frontend container image
 │   └── src/
-│       ├── App.jsx               # Router + protected routes
+│       ├── App.jsx               # Router + protected routes + error boundary
 │       ├── main.jsx              # React DOM entry point
 │       ├── components/           # Shared UI components
-│       │   ├── Layout/           #   Sidebar + top nav layout
-│       │   └── PlotChart.jsx     #   Reusable Plotly chart wrapper
-│       ├── pages/                # 16 page components
-│       │   ├── Landing.jsx       #   Public landing page
+│       │   ├── Layout/           #   Sidebar + top nav layout with alert badge
+│       │   ├── PlotChart.jsx     #   Reusable Plotly chart wrapper
+│       │   ├── AnimatedCounter.jsx  # Smooth number animations
+│       │   ├── AnimatedText.jsx     # Text reveal animations
+│       │   ├── AuroraBackground.jsx # Aurora gradient effect
+│       │   ├── GlowCard.jsx         # Hover glow card effect
+│       │   ├── ParticleBackground.jsx # Animated particle canvas
+│       │   └── ShimmerButton.jsx    # Shimmer-effect CTA buttons
+│       ├── pages/                # 19 page components
+│       │   ├── Landing.jsx       #   Public landing page with animations
 │       │   ├── Login.jsx         #   Authentication
 │       │   ├── onboarding/       #   3-step onboarding flow
-│       │   ├── dashboard/        #   Overview, Forecasting, Inventory, Scenarios
+│       │   │   ├── LanguageSelection.jsx
+│       │   │   ├── BusinessType.jsx
+│       │   │   └── ShopSetup.jsx
+│       │   ├── dashboard/        #   Overview, Forecasting, Inventory Health, Scenarios
+│       │   │   ├── Overview.jsx
+│       │   │   ├── Forecasting.jsx
+│       │   │   ├── InventoryHealth.jsx
+│       │   │   └── Scenarios.jsx
 │       │   ├── products/         #   Catalog + detail pages
+│       │   │   ├── ProductCatalog.jsx
+│       │   │   └── ProductDetail.jsx
 │       │   ├── upload/           #   Upload + verification pages
-│       │   ├── sales/            #   RecordSales (OCR + CSV)
+│       │   │   ├── Upload.jsx
+│       │   │   └── Verify.jsx
+│       │   ├── sales/            #   Multi-modal sales entry
+│       │   │   └── RecordSales.jsx
 │       │   ├── Reorder.jsx       #   AI reorder list
+│       │   ├── ExpiryTracker.jsx #   Expiry calendar + AI disposal
 │       │   ├── Alerts.jsx        #   Alert feed
 │       │   └── Settings.jsx      #   User preferences
 │       ├── services/
@@ -563,7 +705,8 @@ supplysense/
 │       └── styles/               # CSS design system
 │           ├── index.css         #   Global styles + CSS variables
 │           ├── layout.css        #   Layout + responsive grid
-│           └── components.css    #   Component-level styles
+│           ├── components.css    #   Component-level styles
+│           └── animations.css    #   Micro-animations + transitions
 │
 ├── whatsapp-bot/                 # Node.js WhatsApp sidecar
 │   ├── index.js                  # Express server + bot lifecycle
@@ -599,24 +742,32 @@ sequenceDiagram
     participant FE as 🖥️ React Frontend
     participant API as ⚙️ FastAPI
     participant FC as 📈 Forecast Service
+    participant EMBED as 🧬 Embedding Service
     participant INTEL as 🦠 Intelligence Service
     participant SERPER as 🔍 Serper API
     participant GEMINI as ☁️ Gemini AI
     participant PROPHET as 📊 Facebook Prophet
-    participant DB as 💾 SQLite
+    participant DB as 💾 PostgreSQL
 
     U->>FE: View product forecast
     FE->>API: GET /api/forecast/{product_id}
     API->>FC: generate_forecast(product_id)
 
     FC->>DB: Fetch sales_history
-    DB-->>FC: 8+ weeks of weekly data
+    DB-->>FC: Weekly sales data
 
     alt Sufficient Data (≥8 weeks)
         FC->>PROPHET: Fit model (sliding window)
         PROPHET-->>FC: yhat, yhat_lower, yhat_upper
     else Insufficient Data (<8 weeks)
-        FC->>FC: SMA fallback (4-week average)
+        FC->>EMBED: find_similar_products()
+        EMBED-->>FC: Similar products + proxy sales
+        alt Proxy data available
+            FC->>PROPHET: Fit on merged data (70% own + 30% proxy)
+            PROPHET-->>FC: Proxy-boosted forecast
+        else No proxy data
+            FC->>FC: SMA fallback (4-week average)
+        end
     end
 
     FC->>FC: Compute naive baseline
@@ -629,11 +780,12 @@ sequenceDiagram
     INTEL-->>FC: boost_multiplier=1.25, drivers
 
     FC->>FC: Apply boost to forecast bands
-    FC->>FC: Detect sales trend (↑/↓)
+    FC->>GEMINI: Generate AI trend explanation
+    GEMINI-->>FC: "Dengue season active..."
     FC->>DB: Store forecast records (upsert)
 
     FC-->>API: ForecastResponse
-    API-->>FE: JSON with confidence bands + drivers
+    API-->>FE: JSON with confidence bands + drivers + explanation
     FE->>U: Render Plotly chart + explanation
 ```
 
@@ -641,16 +793,16 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    REQ["🔄 AI Request<br/>(Text or Vision)"] --> OLLAMA{"🏠 Ollama (Local)<br/>gemma model running?"}
+    REQ["🔄 AI Request<br/>(Text or Vision)"] --> GEMINI{"☁️ Gemini 2.0 Flash<br/>API Key configured?"}
 
-    OLLAMA -->|"✅ Success"| RES["✅ Response"]
-    OLLAMA -->|"❌ Failed / Offline"| GEMINI{"☁️ Gemini 2.5 Flash<br/>API Key configured?"}
-
-    GEMINI -->|"✅ Success"| RES
-    GEMINI -->|"❌ Failed / No Key"| OPENROUTER{"☁️ OpenRouter<br/>API Key configured?"}
+    GEMINI -->|"✅ Success"| RES["✅ Response"]
+    GEMINI -->|"❌ Failed / Quota"| OPENROUTER{"☁️ OpenRouter<br/>API Key configured?"}
 
     OPENROUTER -->|"✅ Success"| RES
-    OPENROUTER -->|"❌ All Failed"| FAIL["⚠️ Graceful Degradation<br/>Hardcoded JSON fallback"]
+    OPENROUTER -->|"❌ Failed / No Key"| OLLAMA{"🏠 Ollama (Local)<br/>Model running?"}
+
+    OLLAMA -->|"✅ Success"| RES
+    OLLAMA -->|"❌ All Failed"| FAIL["⚠️ Graceful Degradation<br/>Rule-based fallback"]
 
     classDef success fill:#10B981,stroke:#059669,color:#fff
     classDef fail fill:#EF4444,stroke:#DC2626,color:#fff
@@ -671,7 +823,7 @@ sequenceDiagram
     participant API as ⚙️ FastAPI
     participant OCR as 📷 OCR Service
     participant AI as ☁️ AI Vision
-    participant DB as 💾 SQLite
+    participant DB as 💾 PostgreSQL
 
     U->>FE: 📸 Photograph handwritten ledger
     FE->>API: POST /api/upload/image (multipart)
@@ -694,8 +846,8 @@ sequenceDiagram
 
     U->>FE: ✅ "I've reviewed and confirmed"
     FE->>API: POST /api/upload/verify
-    API->>DB: Create products + sales records
-    API->>API: Trigger forecast generation
+    API->>DB: Create products + sales + batches
+    API->>API: Trigger forecast generation + reorder recalculation
     API-->>FE: {products_created, forecast_triggered}
 ```
 
@@ -707,14 +859,13 @@ The following are honest descriptions of what is **not fully implemented** or ha
 
 | Area | Limitation |
 |:---|:---|
-| **i18n coverage** | The UI offers 7 language options (Hindi, Tamil, Telugu, Marathi, Bengali, Gujarati), but only English and Hindi have complete translation files. Selecting other languages currently falls back to English. |
+| **i18n coverage** | The UI offers 7 language options (Hindi, Tamil, Telugu, Marathi, Bengali, Gujarati), but only English and Hindi have complete translation files. Selecting other languages currently falls back to English. Product names can be transliterated to all 6 Indian languages via the AI translation API. |
 | **WhatsApp bot pairing** | Uses `whatsapp-web.js` which requires a running Chromium instance; the session may disconnect if the Docker container restarts. The QR code must be re-scanned after session expiry. |
 | **Forecast accuracy tracking** | MAPE is computed when sufficient history exists, but the "predicted vs actual" overlay chart on the forecasting page uses calculated data rather than stored historical predictions. |
-| **Multi-user support** | The system is designed for single-tenant use (one shop per instance). Multi-user role-based access is not implemented. |
+| **Multi-user support** | The system supports multiple users with JWT auth, but role-based access control (owner/staff/distributor) is not implemented. |
 | **Email notifications** | The settings page shows email notification preferences, but email delivery is not wired up — WhatsApp and in-app alerts are the only active channels. |
-| **Expiry date tracking** | Products support an `expiry_date` field in the database, but the expiry timeline calendar view is not yet connected to live data. |
+| **AI quota limits** | Gemini free tier has rate limits; the system uses `gemini-2.0-flash` with exponential backoff retries and falls back to OpenRouter → Ollama when quota is exhausted. |
 | **Test coverage** | The project does not currently include automated unit or integration tests. |
-| **Production deployment** | The application runs locally via Docker Compose. It has not been deployed to a cloud hosting provider. |
 
 ---
 
@@ -725,13 +876,11 @@ With more time, we would prioritise:
 1. **Complete multilingual coverage** — Full translation files for Tamil, Telugu, Marathi, Bengali, and Gujarati
 2. **Automated test suite** — pytest for backend services (especially forecast and anomaly logic), React Testing Library for frontend components
 3. **Multi-tenant architecture** — Role-based access for shop owners, distributors, and staff
-4. **PostgreSQL migration** — For production scalability (schema is already ORM-compatible)
-5. **Scheduled forecast refresh** — Background job (via APScheduler or Celery) to auto-regenerate forecasts nightly
-6. **WhatsApp Business API** — Replace whatsapp-web.js with the official Meta Business API for production reliability
-7. **Historical prediction tracking** — Store each generated forecast snapshot to compute true MAPE over time
-8. **Cloud deployment** — Docker-based deployment to AWS/GCP with CI/CD pipeline
-9. **Barcode scanning** — Camera-based product identification for faster stock updates
-10. **Supplier portal** — Direct integration for automatic order placement
+4. **WhatsApp Business API** — Replace whatsapp-web.js with the official Meta Business API for production reliability
+5. **Historical prediction tracking** — Store each generated forecast snapshot to compute true MAPE over time
+6. **Cloud deployment** — Docker-based deployment to AWS/GCP with CI/CD pipeline
+7. **Barcode scanning** — Camera-based product identification for faster stock updates
+8. **Supplier portal** — Direct integration for automatic order placement
 
 ---
 
@@ -739,14 +888,14 @@ With more time, we would prioritise:
 
 | NatWest Criteria | SupplySense Implementation |
 |:---|:---|
-| **AI-powered forecasting** | Prophet + external factor overlays (disease, festival, weather) |
+| **AI-powered forecasting** | Prophet + external factor overlays (disease, festival, weather) + embedding cold-start |
 | **Uncertainty quantification** | Confidence bands (low/likely/high) with 80% interval |
 | **Anomaly detection** | Z-score analysis on forecast residuals (spike/drop/pattern) |
 | **Baseline comparison** | Naive "same as last period" dotted line overlay |
-| **Explainability** | Plain-language driver text: "Dengue season active (+25%)" |
+| **Explainability** | AI-generated trend explanations: "Dengue season active (+25%)" |
 | **Non-expert usability** | WhatsApp-first, multilingual, mobile-first dark UI |
 | **Real-world applicability** | Designed for 12M+ Indian small businesses |
-| **Technical innovation** | Handwriting OCR + disease intelligence + WhatsApp integration |
+| **Technical innovation** | Handwriting OCR + disease intelligence + WhatsApp + embedding cold-start + expiry disposal AI |
 
 ---
 
