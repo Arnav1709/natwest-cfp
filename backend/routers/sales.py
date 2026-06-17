@@ -174,13 +174,6 @@ def record_sales(
             severity=task["severity"],
             title=task["title"],
             message=task["message"],
-            whatsapp_template_data={
-                "product_name": p.name,
-                "current_stock": p.current_stock,
-                "reorder_point": p.reorder_point or 0,
-                "days_remaining": "N/A",
-                "reorder_qty": p.reorder_point or 0,
-            },
         )
 
     db.commit()

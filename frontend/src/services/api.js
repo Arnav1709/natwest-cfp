@@ -1,8 +1,10 @@
 // StockSense — API Service Layer with Request Deduplication
-// In dev: requests go through Vite proxy (/api → backend:8000)
-// In Docker/prod: requests go through nginx (/api → backend:8000)
+// In dev / Docker (nginx): leave VITE_API_BASE_URL unset → relative "/api"
+//   is proxied to the backend on the same origin.
+// In split cloud deploys (e.g. frontend on Vercel, backend on Render):
+//   set VITE_API_BASE_URL to the backend, e.g. "https://your-backend.onrender.com/api".
 
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 // ── Request Deduplication ──────────────────────────────────
 // If the same GET endpoint is already in-flight, return the
@@ -143,7 +145,6 @@ export const anomalyApi = {
 // === Reorder ===
 export const reorderApi = {
   list: () => request('/reorder'),
-  sendOrder: (data) => request('/reorder/send-order', { method: 'POST', body: JSON.stringify(data) }),
   exportFile: async (format = 'csv') => {
     const url = `${API_BASE}/reorder/export?format=${format}`;
     const token = localStorage.getItem('stocksense-token');
@@ -182,12 +183,6 @@ export const alertsApi = {
 export const settingsApi = {
   getNotifications: () => request('/notifications/settings'),
   updateNotifications: (data) => request('/notifications/settings', { method: 'PUT', body: JSON.stringify(data) }),
-};
-
-// === WhatsApp ===
-export const whatsappApi = {
-  connect: () => request('/whatsapp/connect', { method: 'POST' }),
-  status: () => request('/whatsapp/status'),
 };
 
 // === Sales ===

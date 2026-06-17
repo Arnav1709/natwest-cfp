@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Download, FileText, ShoppingCart, Box, DollarSign, Clock, AlertTriangle, Activity, Package, Send, CheckCircle2, MessageCircle, Wifi, WifiOff, Settings, Edit3, Phone, Loader2, XCircle } from 'lucide-react';
+import { Download, FileText, ShoppingCart, Box, DollarSign, Clock, AlertTriangle, Activity, Package, CheckCircle2, Edit3, Phone } from 'lucide-react';
 import { useApi } from '../hooks/useApi';
 import { useTransliterate } from '../hooks/useTransliterate';
-import { reorderApi, whatsappApi } from '../services/api';
+import { reorderApi } from '../services/api';
 import GlowCard from '../components/GlowCard';
 import AnimatedCounter from '../components/AnimatedCounter';
 import ShimmerButton from '../components/ShimmerButton';
@@ -16,12 +16,6 @@ export default function Reorder() {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [orderedItems, setOrderedItems] = useState(new Set());
   const [orderedSuppliers, setOrderedSuppliers] = useState(new Set());
-  const [sendingSupplier, setSendingSupplier] = useState(null);
-  const [sendErrors, setSendErrors] = useState({});
-
-  // WhatsApp connection status
-  const [waConnected, setWaConnected] = useState(null); // null = loading, true/false = result
-  const [waPhone, setWaPhone] = useState(null);
 
   const { data: rawData, loading, error } = useApi(() => reorderApi.list(), []);
 
@@ -33,20 +27,6 @@ export default function Reorder() {
     [reorder_list]
   );
   const { translatedMap } = useTransliterate(productNames);
-
-  // Check WhatsApp status on mount
-  useEffect(() => {
-    const checkWA = async () => {
-      try {
-        const status = await whatsappApi.status();
-        setWaConnected(status.connected || false);
-        setWaPhone(status.phone || null);
-      } catch {
-        setWaConnected(false);
-      }
-    };
-    checkWA();
-  }, []);
 
   // Split suppliers into "ready" (has contact) and "missing" (no contact)
   const grouped_by_supplier = reorderData.grouped_by_supplier || {};
@@ -94,45 +74,18 @@ export default function Reorder() {
     });
   };
 
-  // Send reorder via WhatsApp
-  const handleSendOrder = async (supplier, items) => {
-    // Get supplier contact from items
-    const contact = items.find(i => i.supplier_contact)?.supplier_contact;
-    if (!contact) return;
-
-    setSendingSupplier(supplier);
-    setSendErrors(prev => ({ ...prev, [supplier]: null }));
-
-    try {
-      const result = await reorderApi.sendOrder({
-        supplier_name: supplier,
-        supplier_contact: contact,
-        items: items.map(item => ({
-          product_name: item.product_name,
-          reorder_qty: item.reorder_qty,
-          estimated_cost: item.estimated_cost || 0,
-        })),
-      });
-
-      if (result.success) {
-        setOrderedSuppliers(prev => {
-          const next = new Set(prev);
-          next.add(supplier);
-          return next;
-        });
-        setOrderedItems(prev => {
-          const next = new Set(prev);
-          items.forEach(item => next.add(item.product_id));
-          return next;
-        });
-      } else {
-        setSendErrors(prev => ({ ...prev, [supplier]: result.message }));
-      }
-    } catch (err) {
-      setSendErrors(prev => ({ ...prev, [supplier]: err.message || 'Failed to send order' }));
-    } finally {
-      setSendingSupplier(null);
-    }
+  // Mark a supplier's items as ordered (local only)
+  const handleMarkOrdered = (supplier, items) => {
+    setOrderedSuppliers(prev => {
+      const next = new Set(prev);
+      next.add(supplier);
+      return next;
+    });
+    setOrderedItems(prev => {
+      const next = new Set(prev);
+      items.forEach(item => next.add(item.product_id));
+      return next;
+    });
   };
 
   if (loading) {
@@ -181,42 +134,6 @@ export default function Reorder() {
           </button>
         </div>
       </div>
-
-      {/* WhatsApp Status Banner */}
-      {waConnected !== null && (
-        <GlowCard className="p-0" glowColor={waConnected ? '#22C55E' : '#EF4444'}>
-          <div className="flex items-center gap-3 px-5 py-3">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${waConnected ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
-              {waConnected ? <Wifi className="w-4 h-4 text-emerald-400" /> : <WifiOff className="w-4 h-4 text-red-400" />}
-            </div>
-            <div className="flex-1 min-w-0">
-              {waConnected ? (
-                <>
-                  <span className="text-sm font-semibold text-emerald-400">WhatsApp Connected</span>
-                  <span className="text-xs text-slate-500 ml-2">
-                    {waPhone ? `as ${waPhone}` : ''} — Ready to send supplier orders
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="text-sm font-semibold text-red-400">WhatsApp Disconnected</span>
-                  <span className="text-xs text-slate-500 ml-2">
-                    Connect WhatsApp to send reorder messages to suppliers
-                  </span>
-                </>
-              )}
-            </div>
-            {!waConnected && (
-              <button
-                onClick={() => navigate('/settings')}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 transition-all shrink-0"
-              >
-                <Settings className="w-3.5 h-3.5" /> Connect
-              </button>
-            )}
-          </div>
-        </GlowCard>
-      )}
 
       {/* Auto-update info banner */}
       <GlowCard className="mb-4" style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(0,208,255,0.03)', borderColor: 'rgba(0,208,255,0.15)' }}>
@@ -302,17 +219,15 @@ export default function Reorder() {
       {Object.keys(readySuppliers).length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 px-1 text-slate-300">
-            <MessageCircle className="w-5 h-5 text-emerald-400" />
-            <h3 className="text-lg font-bold">Ready to Order via WhatsApp</h3>
+            <ShoppingCart className="w-5 h-5 text-emerald-400" />
+            <h3 className="text-lg font-bold">Ready to Order</h3>
             <span className="text-xs text-slate-500 ml-1">— Suppliers with contact info</span>
           </div>
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
             {Object.entries(readySuppliers).map(([supplier, items]) => {
               const total = items.reduce((sum, item) => sum + (item.estimated_cost || 0), 0);
               const isSupplierOrdered = orderedSuppliers.has(supplier);
-              const isSending = sendingSupplier === supplier;
               const contact = items.find(i => i.supplier_contact)?.supplier_contact;
-              const supplierError = sendErrors[supplier];
 
               return (
                 <GlowCard key={supplier} className={`transition-all duration-300 ${isSupplierOrdered ? 'opacity-60 scale-[0.98]' : ''}`} glowColor="#10B981">
@@ -345,32 +260,19 @@ export default function Reorder() {
                       )}
                     </div>
 
-                    {supplierError && (
-                      <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2 mb-3 text-xs text-red-400 flex items-start gap-2">
-                        <XCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                        <span>{supplierError}</span>
-                      </div>
-                    )}
-                    
                     <button
                       className={`w-full py-2.5 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${
-                        isSupplierOrdered 
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' 
-                          : !waConnected
-                            ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
-                            : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 border border-emerald-500/50'
+                        isSupplierOrdered
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 border border-emerald-500/50'
                       }`}
-                      onClick={() => handleSendOrder(supplier, items)}
-                      disabled={isSupplierOrdered || isSending || !waConnected}
+                      onClick={() => handleMarkOrdered(supplier, items)}
+                      disabled={isSupplierOrdered}
                     >
                       {isSupplierOrdered ? (
-                        <><CheckCircle2 className="w-5 h-5" /> Order Sent via WhatsApp</>
-                      ) : isSending ? (
-                        <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</>
-                      ) : !waConnected ? (
-                        <><WifiOff className="w-4 h-4" /> WhatsApp Not Connected</>
+                        <><CheckCircle2 className="w-5 h-5" /> Marked as Ordered</>
                       ) : (
-                        <><MessageCircle className="w-4 h-4" /> Send Order via WhatsApp</>
+                        <><ShoppingCart className="w-4 h-4" /> Mark as Ordered</>
                       )}
                     </button>
                   </div>
@@ -387,7 +289,7 @@ export default function Reorder() {
           <div className="flex items-center gap-2 px-1 text-slate-300">
             <AlertTriangle className="w-5 h-5 text-amber-400" />
             <h3 className="text-lg font-bold">Missing Supplier Contact</h3>
-            <span className="text-xs text-slate-500 ml-1">— Add phone number to enable WhatsApp ordering</span>
+            <span className="text-xs text-slate-500 ml-1">— Add phone number to complete supplier details</span>
           </div>
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
             {Object.entries(missingSuppliers).map(([supplier, items]) => {

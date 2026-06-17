@@ -33,7 +33,7 @@
 
 **The problem it solves:** India's 12 million+ small retailers — kirana stores, pharmacies, general shops — manage inventory on gut feel and handwritten ledgers. They have no affordable, accessible tool to anticipate demand shifts from festivals, seasons, or disease outbreaks. This results in ₹1.4 trillion in inventory waste annually: medicines expire on shelves while others run out during peak need.
 
-**Who it's for:** Small business owners (kirana stores, pharmacies, distributors) who need AI-powered forecasting delivered through interfaces they already use — a simple web dashboard and WhatsApp.
+**Who it's for:** Small business owners (kirana stores, pharmacies, distributors) who need AI-powered forecasting delivered through a simple, multilingual web dashboard.
 
 ---
 
@@ -47,13 +47,13 @@
 >
 > *He photographs his notebook. AI reads his handwriting — even the Hindi numerals and messy dates. In 60 seconds, his 15 years of paper records become a digital dataset.*
 >
-> *Three weeks before monsoon peak, SupplySense detects rising dengue reports in Nagpur via live web search. It automatically boosts Paracetamol's forecast by 25%, sends Ramesh a WhatsApp alert in Hindi:*
+> *Three weeks before monsoon peak, SupplySense detects rising dengue reports in Nagpur via live web search. It automatically boosts Paracetamol's forecast by 25% and raises an alert on his dashboard in Hindi:*
 >
 > **"⚠️ डेंगू का मौसम शुरू हो रहा है। पेरासिटामोल का स्टॉक 3 दिन में खत्म हो जाएगा। अभी 200 यूनिट ऑर्डर करें।"**
 >
-> *This time, Ramesh is ready. He replies "REORDER" on WhatsApp, gets a sorted procurement list grouped by supplier, and places his order — all without opening a single app.*
+> *This time, Ramesh is ready. He opens the AI reorder list, sees a sorted procurement list grouped by supplier, and places his order with confidence.*
 
-**That's SupplySense.** From notebook → to dataset → to AI forecast → to WhatsApp alert — in the language you speak, for the reality you live.
+**That's SupplySense.** From notebook → to dataset → to AI forecast → to action — in the language you speak, for the reality you live.
 
 ---
 
@@ -109,21 +109,16 @@ The following features are **fully implemented and functional** in the current c
 - **Settings** — Profile, notification preferences, language
 - **Dark-mode-first glassmorphism UI** with animated components (shimmer buttons, glow cards, animated counters), responsive mobile layout, and an error boundary crash recovery screen
 
-### WhatsApp Bot
-- **2-way WhatsApp integration** via whatsapp-web.js (Node.js sidecar)
-- **Inbound commands**: `REORDER`, `LIST`, `REPORT`, `STATUS`, `HELP`
-- **Outbound notifications**: Stockout alerts, low-stock warnings, daily briefings
-- **QR code authentication** — Scan with any WhatsApp account
-
 ### Platform
 - **JWT authentication** with protected routes
-- **RESTful API** with 13 routers and auto-generated Swagger docs at `/docs`
-- **Docker Compose** — One-command full-stack launch (backend + frontend + WhatsApp bot + Nginx)
+- **RESTful API** with 12 routers and auto-generated Swagger docs at `/docs`
+- **Docker Compose** — One-command full-stack launch (backend + frontend + Nginx)
+- **Cloud-deployable** — Frontend on Vercel + backend on Render (Docker) with Postgres; see [DEPLOYMENT.md](DEPLOYMENT.md)
 - **Nginx reverse proxy** — Unified access on port 80
 - **i18n** — English and Hindi translation files via react-i18next (other languages listed in UI as selectable but only these two have full translation coverage)
-- **PostgreSQL database** via Supabase (cloud-hosted) with SQLAlchemy ORM; SQLite fallback for fully offline local development
+- **PostgreSQL database** with SQLAlchemy ORM; SQLite fallback for fully offline local development
 - **In-memory caching** — TTL-based cache (via `cachetools`) for reorder lists, health metrics, forecasts, alerts, and anomalies to maintain performance
-- **Background scheduler** — APScheduler jobs for daily briefings (8:00 AM), anomaly scans (8:30 AM), seasonal checks (Monday 9:00 AM), and weekly summaries (Sunday 7:00 PM)
+- **Background scheduler** — APScheduler jobs for anomaly scans (8:30 AM daily) and seasonal checks (Monday 9:00 AM)
 - **Seed data script** for demo with pre-populated products and sales history
 - **Top-level error boundary** — React `AppErrorBoundary` catches crashes and shows a styled recovery page instead of a blank white screen
 
@@ -152,7 +147,7 @@ cp .env.example backend/.env
 nano backend/.env
 #    → Replace "your-gemini-api-key-here" with your actual key
 
-# 4. Launch the full stack (builds all 4 services)
+# 4. Launch the full stack (builds backend + frontend + nginx)
 docker compose up --build
 
 # 5. (First run only) Seed the database with demo data
@@ -167,7 +162,6 @@ Once running, access the application at:
 | 🖥️ **Frontend** | http://localhost:5173 | React web application |
 | ⚙️ **Backend API** | http://localhost:8000 | FastAPI REST endpoints |
 | 📖 **API Docs** | http://localhost:8000/docs | Interactive Swagger UI |
-| 📱 **WhatsApp Bot** | http://localhost:3001 | Bot status & QR code |
 | 🌐 **Unified (Nginx)** | http://localhost | All services via reverse proxy |
 
 To stop all services:
@@ -198,13 +192,6 @@ cd frontend
 npm install
 npm run dev
 # → Opens at http://localhost:5173
-
-# ── WhatsApp Bot (new terminal, optional) ─────────────────────
-cd whatsapp-bot
-npm install
-node index.js
-# → Runs at http://localhost:3001
-# → Scan the QR code in terminal with your WhatsApp app
 ```
 
 ### Environment Variables
@@ -215,19 +202,46 @@ Create `backend/.env` using `.env.example` as a template. **Never commit real AP
 |:---|:---:|:---|:---|
 | `GEMINI_API_KEY` | ✅ | — | Primary AI — OCR, forecasting intelligence, NLP, translations |
 | `SECRET_KEY` | ✅ | *(preset)* | JWT authentication signing key |
-| `DATABASE_URL` | ⬜ | `sqlite:///./data/SupplySense.db` | Database connection string (supports PostgreSQL via Supabase) |
+| `DATABASE_URL` | ⬜ | `sqlite:///./data/SupplySense.db` | Database connection string (supports PostgreSQL; `postgres://` URLs are auto-normalized) |
+| `CORS_ORIGINS` | ⬜ | — | Comma-separated frontend origins allowed in production (e.g. your Vercel URL) |
+| `CORS_ORIGIN_REGEX` | ⬜ | — | Optional regex to allow dynamic preview deploys (e.g. `https://.*\.vercel\.app`) |
 | `SERPER_API_KEY` | ⬜ | — | Live web search for disease/festival intelligence |
 | `OPENROUTER_API_KEY` | ⬜ | — | Cloud AI fallback provider (#2 in chain) |
 | `OLLAMA_BASE_URL` | ⬜ | `http://host.docker.internal:11434` | Local Ollama AI inference URL |
 | `OLLAMA_MODEL` | ⬜ | `gemma3:4b` | Ollama model name |
 | `OLLAMA_TIMEOUT` | ⬜ | `300` | Timeout in seconds for Ollama text generation |
 | `OLLAMA_VISION_TIMEOUT` | ⬜ | `600` | Timeout in seconds for Ollama vision/image calls |
-| `WHATSAPP_BOT_URL` | ⬜ | `http://localhost:3001` | WhatsApp bot sidecar URL |
 | `APP_NAME` | ⬜ | `SupplySense` | Application display name |
 | `APP_VERSION` | ⬜ | `1.0.0` | Application version string |
-| `DEBUG` | ⬜ | `true` | Enable debug logging and SQLAlchemy echo |
+| `DEBUG` | ⬜ | `true` | Enable debug logging and SQLAlchemy echo (set `false` in production) |
 
 > 💡 **Minimum setup**: Only `GEMINI_API_KEY` is required. All other services have graceful fallbacks.
+
+---
+
+## ☁️ Cloud Deployment
+
+SupplySense deploys to free-tier cloud hosting as two independent pieces:
+
+- **Frontend** (React + Vite) → **Vercel** (static hosting, `frontend/vercel.json` included)
+- **Backend** (FastAPI + Prophet) → **Render** (Docker web service, `render.yaml` blueprint included) + **Postgres**
+
+```
+┌──────────────┐     HTTPS /api      ┌─────────────────────┐
+│  Vercel      │ ──────────────────► │  Render (Docker)    │
+│  React SPA   │   VITE_API_BASE_URL │  FastAPI + Prophet  │
+└──────────────┘                     │         │           │
+                                      │         ▼           │
+                                      │   Render Postgres   │
+                                      └─────────────────────┘
+```
+
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for step-by-step instructions. Quick summary:
+
+1. **Backend** — Render → New → Blueprint → select repo (uses `render.yaml`). Provisions the Docker backend + free Postgres. After deploy, set `CORS_ORIGINS` to your frontend URL and add `GEMINI_API_KEY`.
+2. **Frontend** — Vercel → New Project → Root Directory `frontend`. Set `VITE_API_BASE_URL` to `https://<your-backend>.onrender.com/api`.
+
+> ⚠️ In the cloud, always use **Postgres** (Render's free disk is ephemeral — SQLite data is wiped on restart) and set a strong `SECRET_KEY` with `DEBUG=false`.
 
 ---
 
@@ -244,7 +258,7 @@ Create `backend/.env` using `.env.example` as a template. **Never commit real AP
 | **Embeddings** | ChromaDB | ≥0.4.0 | Product similarity embeddings for cold-start forecasting |
 | **Backend** | Python + FastAPI | 3.11 / 0.115 | Async REST API with auto-generated Swagger docs |
 | **ORM** | SQLAlchemy | 2.0 | Database abstraction (PostgreSQL, SQLite-compatible) |
-| **Database** | PostgreSQL (Supabase) | — | Cloud-hosted relational database (SQLite fallback for local dev) |
+| **Database** | PostgreSQL | — | Cloud-hosted relational database (SQLite fallback for local dev) |
 | **Scheduler** | APScheduler | ≥3.10 | Background jobs for alerts, anomaly scans, briefings |
 | **Caching** | cachetools | ≥5.3 | In-memory TTL cache for expensive queries |
 | **Frontend** | React + Vite | 19 / 8.0 | Component-based SPA with hot module replacement |
@@ -252,10 +266,9 @@ Create `backend/.env` using `.env.example` as a template. **Never commit real AP
 | **Animations** | anime.js + Lucide React | 4.3 / 1.8 | Micro-animations, shimmer effects, icon library |
 | **Routing** | React Router | 6.30 | Client-side routing with protected routes |
 | **i18n** | i18next + react-i18next | 26 / 17 | Multilingual UI (English, Hindi) |
-| **WhatsApp** | whatsapp-web.js + Express | 1.26 / 4.21 | Node.js sidecar for 2-way WhatsApp messaging |
 | **PDF Export** | ReportLab | 4.2 | Reorder list PDF generation |
 | **Auth** | python-jose + passlib | — | JWT token-based authentication |
-| **Deployment** | Docker Compose + Nginx | — | One-command full-stack containerised launch |
+| **Deployment** | Docker Compose + Nginx (local) · Vercel + Render (cloud) | — | One-command local launch; free-tier cloud hosting |
 
 ### Why These Choices
 
@@ -263,8 +276,7 @@ Create `backend/.env` using `.env.example` as a template. **Never commit real AP
 - **Gemini over GPT**: Free tier available, native multimodal vision for OCR, and multilingual generation in Indian languages without fine-tuning.
 - **3-provider fallback**: Gemini → OpenRouter → Ollama ensures AI is always available; rule-based logic provides a final safety net.
 - **ChromaDB for cold-start**: New products with zero sales history still get meaningful forecasts by leveraging sales patterns from similar products via embedding similarity.
-- **PostgreSQL (Supabase)**: Cloud-hosted for reliability; SQLAlchemy ORM makes it one config change to switch to any SQL database. SQLite is supported for fully offline local development.
-- **whatsapp-web.js over Business API**: Free, no business verification needed, and scan-to-connect in seconds — ideal for hackathon demos.
+- **PostgreSQL**: Reliable cloud-hosted relational store; SQLAlchemy ORM makes it one config change to switch to any SQL database. SQLite is supported for fully offline local development.
 
 ---
 
@@ -475,18 +487,6 @@ curl http://localhost:8000/api/ai-status
 }
 ```
 
-### WhatsApp Bot Commands
-
-Once the WhatsApp bot is connected (scan QR code at startup):
-
-| You Send | Bot Responds With |
-|:---|:---|
-| `REORDER` | Full AI reorder list with quantities, suppliers, urgency tiers |
-| `LIST` | Top 5 low-stock items with days-to-stockout |
-| `REPORT` | Weekly performance summary with forecast accuracy |
-| `STATUS` | System health check and stock overview |
-| `HELP` | All available commands |
-
 ---
 
 ## 🏗️ Architecture
@@ -497,7 +497,6 @@ Once the WhatsApp bot is connected (scan QR code at startup):
 graph TB
     subgraph "Client Layer"
         WEB["🖥️ React SPA<br/>(Vite + Plotly.js)"]
-        WA["📱 WhatsApp<br/>(whatsapp-web.js)"]
     end
 
     subgraph "Reverse Proxy"
@@ -506,7 +505,6 @@ graph TB
 
     subgraph "Application Layer"
         API["⚙️ FastAPI<br/>:8000"]
-        BOT["📱 WhatsApp Bot<br/>Node.js :3001"]
     end
 
     subgraph "AI / ML Services"
@@ -544,7 +542,6 @@ graph TB
     end
 
     WEB --> NGX --> API
-    WA --> BOT --> API
     NGX --> WEB
 
     API --> PROPHET
@@ -574,7 +571,7 @@ graph TB
     classDef external fill:#F59E0B,stroke:#D97706,color:#000
     classDef data fill:#1E293B,stroke:#334155,color:#F8FAFC
 
-    class API,BOT primary
+    class API primary
     class PROPHET,ANOMALY,OCR,INTEL,REORDER,EMBED ai
     class GEMINI,OLLAMA,OPENROUTER,SERPER external
     class DB,CHROMADB,LOOKUP data
@@ -585,8 +582,10 @@ graph TB
 ```
 supplysense/
 ├── README.md                     # This file
-├── .env.example                  # Environment variable template (no secrets)
-├── docker-compose.yml            # Development orchestration (4 services)
+├── DEPLOYMENT.md                 # Vercel + Render cloud deployment guide
+├── .env.example                  # Backend environment template (no secrets)
+├── render.yaml                   # Render blueprint (backend Docker + Postgres)
+├── docker-compose.yml            # Development orchestration (3 services)
 ├── docker-compose.prod.yml       # Production build variant
 ├── start.sh / stop.sh / logs.sh  # Helper scripts for Docker management
 ├── seed.sh                       # Quick-seed script
@@ -601,7 +600,7 @@ supplysense/
 │   ├── seed_data.py              # Demo data seeder (products + sales)
 │   ├── requirements.txt          # Python dependencies
 │   ├── Dockerfile                # Backend container image
-│   ├── routers/                  # API endpoint handlers (13 routers)
+│   ├── routers/                  # API endpoint handlers (12 routers)
 │   │   ├── auth.py               #   JWT login/register
 │   │   ├── inventory.py          #   Product CRUD + stock management + health analytics
 │   │   ├── upload.py             #   CSV/image upload + OCR + category inference
@@ -611,7 +610,6 @@ supplysense/
 │   │   ├── alerts.py             #   Alert feed management
 │   │   ├── sales.py              #   Sales recording with stock validation
 │   │   ├── settings.py           #   User preferences
-│   │   ├── whatsapp.py           #   WhatsApp webhook + bot control
 │   │   ├── translate.py          #   AI transliteration + DB cache
 │   │   └── expiry.py             #   Batch-level expiry tracking + AI disposal advice
 │   ├── models/                   # SQLAlchemy ORM models (13 models)
@@ -656,6 +654,8 @@ supplysense/
 │   ├── index.html                # HTML entry point
 │   ├── package.json              # Node.js dependencies
 │   ├── vite.config.js            # Vite dev server + proxy config
+│   ├── vercel.json               # Vercel build + SPA routing config
+│   ├── .env.example              # Frontend env template (VITE_API_BASE_URL)
 │   ├── Dockerfile                # Frontend container image
 │   └── src/
 │       ├── App.jsx               # Router + protected routes + error boundary
@@ -707,15 +707,6 @@ supplysense/
 │           ├── layout.css        #   Layout + responsive grid
 │           ├── components.css    #   Component-level styles
 │           └── animations.css    #   Micro-animations + transitions
-│
-├── whatsapp-bot/                 # Node.js WhatsApp sidecar
-│   ├── index.js                  # Express server + bot lifecycle
-│   ├── whatsapp-client.js        # whatsapp-web.js wrapper
-│   ├── message-handler.js        # Inbound command routing
-│   ├── message-templates.js      # Outbound message formatters
-│   ├── config.js                 # Bot configuration
-│   ├── package.json              # Node.js dependencies
-│   └── Dockerfile                # Bot container (with Chromium)
 │
 ├── shared/                       # Cross-service contracts (read-only)
 │   ├── api-contracts.md          # API endpoint specifications
@@ -860,10 +851,9 @@ The following are honest descriptions of what is **not fully implemented** or ha
 | Area | Limitation |
 |:---|:---|
 | **i18n coverage** | The UI offers 7 language options (Hindi, Tamil, Telugu, Marathi, Bengali, Gujarati), but only English and Hindi have complete translation files. Selecting other languages currently falls back to English. Product names can be transliterated to all 6 Indian languages via the AI translation API. |
-| **WhatsApp bot pairing** | Uses `whatsapp-web.js` which requires a running Chromium instance; the session may disconnect if the Docker container restarts. The QR code must be re-scanned after session expiry. |
 | **Forecast accuracy tracking** | MAPE is computed when sufficient history exists, but the "predicted vs actual" overlay chart on the forecasting page uses calculated data rather than stored historical predictions. |
 | **Multi-user support** | The system supports multiple users with JWT auth, but role-based access control (owner/staff/distributor) is not implemented. |
-| **Email notifications** | The settings page shows email notification preferences, but email delivery is not wired up — WhatsApp and in-app alerts are the only active channels. |
+| **Notification delivery** | The settings page shows email notification preferences, but external delivery (email/SMS) is not wired up — in-app alerts are the only active channel. |
 | **AI quota limits** | Gemini free tier has rate limits; the system uses `gemini-2.0-flash` with exponential backoff retries and falls back to OpenRouter → Ollama when quota is exhausted. |
 | **Test coverage** | The project does not currently include automated unit or integration tests. |
 
@@ -876,9 +866,9 @@ With more time, we would prioritise:
 1. **Complete multilingual coverage** — Full translation files for Tamil, Telugu, Marathi, Bengali, and Gujarati
 2. **Automated test suite** — pytest for backend services (especially forecast and anomaly logic), React Testing Library for frontend components
 3. **Multi-tenant architecture** — Role-based access for shop owners, distributors, and staff
-4. **WhatsApp Business API** — Replace whatsapp-web.js with the official Meta Business API for production reliability
+4. **Notification delivery** — Wire up email/SMS so alerts reach users outside the dashboard
 5. **Historical prediction tracking** — Store each generated forecast snapshot to compute true MAPE over time
-6. **Cloud deployment** — Docker-based deployment to AWS/GCP with CI/CD pipeline
+6. **CI/CD pipeline** — Automated build, test, and deploy to Vercel + Render on every push
 7. **Barcode scanning** — Camera-based product identification for faster stock updates
 8. **Supplier portal** — Direct integration for automatic order placement
 
@@ -893,9 +883,9 @@ With more time, we would prioritise:
 | **Anomaly detection** | Z-score analysis on forecast residuals (spike/drop/pattern) |
 | **Baseline comparison** | Naive "same as last period" dotted line overlay |
 | **Explainability** | AI-generated trend explanations: "Dengue season active (+25%)" |
-| **Non-expert usability** | WhatsApp-first, multilingual, mobile-first dark UI |
+| **Non-expert usability** | Multilingual, mobile-first dark UI |
 | **Real-world applicability** | Designed for 12M+ Indian small businesses |
-| **Technical innovation** | Handwriting OCR + disease intelligence + WhatsApp + embedding cold-start + expiry disposal AI |
+| **Technical innovation** | Handwriting OCR + disease intelligence + embedding cold-start + expiry disposal AI |
 
 ---
 
@@ -905,7 +895,7 @@ With more time, we would prioritise:
 |:---|:---|:---|:---|
 | 🏪 **Ramesh** | Kirana Store, Nagpur | Tracks 200 SKUs in a notebook | OCR → instant digital inventory |
 | 🏥 **Dr. Priya** | Pharmacy, Chennai | Misses dengue-season medicine spikes | Disease intelligence auto-boosts forecasts |
-| 📦 **Vikram** | Distributor, Delhi | Manages 50+ retailer orders | WhatsApp briefings + bulk reorder exports |
+| 📦 **Vikram** | Distributor, Delhi | Manages 50+ retailer orders | Dashboard briefings + bulk reorder exports |
 
 ---
 

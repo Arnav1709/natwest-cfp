@@ -18,7 +18,6 @@ class NotificationSettingsResponse(BaseModel):
     seasonal_advance_days: int = 14
     anomaly_alerts: bool = True
     channel_in_app: bool = True
-    channel_whatsapp: bool = True
     channel_email: bool = False
 
     class Config:
@@ -37,5 +36,4 @@ class NotificationSettingsUpdate(BaseModel):
     seasonal_advance_days: Optional[int] = None
     anomaly_alerts: Optional[bool] = None
     channel_in_app: Optional[bool] = None
-    channel_whatsapp: Optional[bool] = None
     channel_email: Optional[bool] = None

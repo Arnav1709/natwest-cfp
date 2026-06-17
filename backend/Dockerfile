@@ -36,5 +36,7 @@ RUN mkdir -p /app/data
 
 EXPOSE 8000
 
-# Default: dev mode with hot reload
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Production default: bind to the platform-provided $PORT (Render/Railway set this),
+# falling back to 8000 locally. No --reload in production.
+# (docker-compose overrides this CMD with a --reload dev command.)
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]

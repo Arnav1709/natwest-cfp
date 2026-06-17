@@ -22,7 +22,6 @@ class NotificationPreference(Base):
     seasonal_advance_days = Column(Integer, default=14)
     anomaly_alerts = Column(Boolean, default=True)
     channel_in_app = Column(Boolean, default=True)
-    channel_whatsapp = Column(Boolean, default=True)
     channel_email = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
 

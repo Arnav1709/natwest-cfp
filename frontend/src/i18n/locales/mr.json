@@ -24,8 +24,6 @@
     "feature_ocr_desc": "तुमच्या हस्तलिखित विक्री डेटाचा फोटो काढा.",
     "feature_disease": "रोग बुद्धिमत्ता",
     "feature_disease_desc": "फार्मसींसाठी: AI-चालित हंगामी रोग बुद्धिमत्ता.",
-    "feature_whatsapp": "WhatsApp प्रथम",
-    "feature_whatsapp_desc": "WhatsApp कमांडद्वारे इन्व्हेंटरी व्यवस्थापित करा.",
     "how_title": "4 पायऱ्यांत स्पष्टता",
     "step1": "डेटा अपलोड",
     "step2": "पडताळा",
@@ -122,8 +120,7 @@
   "settings": {
     "title": "सेटिंग्ज",
     "profile": "प्रोफाइल",
-    "notifications": "सूचना",
-    "whatsapp": "WhatsApp कनेक्ट"
+    "notifications": "सूचना"
   },
   "status": {
     "healthy": "निरोगी",

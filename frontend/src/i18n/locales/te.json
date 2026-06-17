@@ -24,8 +24,6 @@
     "feature_ocr_desc": "మీ చేతివ్రాత అమ్మకాల డేటా ఫోటో తీయండి. మా AI ఉత్పత్తి పేర్లు, పరిమాణాలు మరియు తేదీలను సేకరిస్తుంది.",
     "feature_disease": "వ్యాధి తెలివితేటలు",
     "feature_disease_desc": "ఫార్మసీల కోసం: AI-ఆధారిత కాలానుగుణ వ్యాధి తెలివితేటలు.",
-    "feature_whatsapp": "WhatsApp ముందు",
-    "feature_whatsapp_desc": "WhatsApp ఆదేశాల ద్వారా ఇన్వెంటరీ నిర్వహించండి.",
     "how_title": "4 దశల్లో స్పష్టత",
     "step1": "డేటా అప్‌లోడ్",
     "step2": "ధృవీకరించు",
@@ -122,8 +120,7 @@
   "settings": {
     "title": "సెట్టింగ్‌లు",
     "profile": "ప్రొఫైల్",
-    "notifications": "నోటిఫికేషన్లు",
-    "whatsapp": "WhatsApp కనెక్ట్"
+    "notifications": "నోటిఫికేషన్లు"
   },
   "status": {
     "healthy": "ఆరోగ్యం",

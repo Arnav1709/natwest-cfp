@@ -64,7 +64,6 @@ def list_alerts(
             title=a.title,
             message=a.message,
             dismissed=a.dismissed or False,
-            sent_whatsapp=a.sent_whatsapp or False,
             created_at=a.created_at,
         ))
 

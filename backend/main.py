@@ -21,7 +21,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(nam
 logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
 # Import all routers
-from routers import auth, upload, inventory, forecast, anomalies, reorder, alerts, settings as settings_router, whatsapp, sales, translate, expiry
+from routers import auth, upload, inventory, forecast, anomalies, reorder, alerts, settings as settings_router, sales, translate, expiry
 
 
 def _ensure_product_batches():
@@ -89,30 +89,31 @@ async def lifespan(app: FastAPI):
     init_db()
     logger.info("Database tables created/verified")
 
+    # Production safety check: warn loudly if the default JWT secret is still in use
+    if not settings.DEBUG and settings.is_default_secret:
+        logger.warning(
+            "SECURITY: SECRET_KEY is using the built-in default. "
+            "Set a strong SECRET_KEY env var in production!"
+        )
+
     # Auto-populate product_batches if empty
     _ensure_product_batches()
 
     # ── Start background scheduler for alert jobs ──
     from apscheduler.schedulers.background import BackgroundScheduler
     from services.alert_service import (
-        run_daily_briefing,
         run_anomaly_scan,
         run_seasonal_check,
-        run_weekly_summary,
     )
 
     scheduler = BackgroundScheduler()
-    # Daily briefing at 8:00 AM
-    scheduler.add_job(run_daily_briefing, "cron", hour=8, minute=0, id="daily_briefing")
     # Anomaly scan at 8:30 AM
     scheduler.add_job(run_anomaly_scan, "cron", hour=8, minute=30, id="anomaly_scan")
     # Seasonal check every Monday at 9:00 AM
     scheduler.add_job(run_seasonal_check, "cron", day_of_week="mon", hour=9, minute=0, id="seasonal_check")
-    # Weekly summary every Sunday at 7:00 PM
-    scheduler.add_job(run_weekly_summary, "cron", day_of_week="sun", hour=19, minute=0, id="weekly_summary")
 
     scheduler.start()
-    logger.info("Background scheduler started with 4 alert jobs")
+    logger.info("Background scheduler started with 2 alert jobs")
 
     yield
 
@@ -127,17 +128,21 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — allow frontend at localhost:5173
+# CORS — local dev origins are always allowed; production origins come
+# from the CORS_ORIGINS env var (comma-separated). CORS_ORIGIN_REGEX can
+# match dynamic preview URLs (e.g. Vercel preview deploys).
+_default_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://localhost:80",
+    "http://localhost",
+    "http://frontend:5173",   # Docker internal
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://localhost:80",
-        "http://localhost",
-        "http://frontend:5173",   # Docker internal
-    ],
+    allow_origins=_default_origins + settings.cors_origins_list,
+    allow_origin_regex=settings.CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -152,7 +157,6 @@ app.include_router(anomalies.router)
 app.include_router(reorder.router)
 app.include_router(alerts.router)
 app.include_router(settings_router.router)
-app.include_router(whatsapp.router)
 app.include_router(sales.router)
 app.include_router(translate.router)
 app.include_router(expiry.router)

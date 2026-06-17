@@ -24,8 +24,6 @@
     "feature_ocr_desc": "உங்கள் கையெழுத்து விற்பனை தரவின் புகைப்படம் எடுங்கள்.",
     "feature_disease": "நோய் நுண்ணறிவு",
     "feature_disease_desc": "மருந்தகங்களுக்கு: AI-இயக்கப்படும் காலநிலை நோய் நுண்ணறிவு.",
-    "feature_whatsapp": "WhatsApp முதலில்",
-    "feature_whatsapp_desc": "WhatsApp கட்டளைகள் மூலம் சரக்கு நிர்வகிக்கவும்.",
     "how_title": "4 படிகளில் தெளிவு",
     "step1": "தரவு பதிவேற்று",
     "step2": "சரிபார்",
@@ -122,8 +120,7 @@
   "settings": {
     "title": "அமைப்புகள்",
     "profile": "சுயவிவரம்",
-    "notifications": "அறிவிப்புகள்",
-    "whatsapp": "WhatsApp இணைப்பு"
+    "notifications": "அறிவிப்புகள்"
   },
   "status": {
     "healthy": "ஆரோக்கியமான",
