@@ -24,8 +24,6 @@
     "feature_ocr_desc": "તમારા હસ્તલિખિત વેચાણ ડેટાનો ફોટો લો.",
     "feature_disease": "રોગ બુદ્ધિમત્તા",
     "feature_disease_desc": "ફાર્મસીઓ માટે: AI-સંચાલિત મોસમી રોગ બુદ્ધિમત્તા.",
-    "feature_whatsapp": "WhatsApp પ્રથમ",
-    "feature_whatsapp_desc": "WhatsApp આદેશો દ્વારા ઇન્વેન્ટરી સંચાલિત કરો.",
     "how_title": "4 પગલામાં સ્પષ્ટતા",
     "step1": "ડેટા અપલોડ",
     "step2": "ચકાસો",
@@ -122,8 +120,7 @@
   "settings": {
     "title": "સેટિંગ્સ",
     "profile": "પ્રોફાઇલ",
-    "notifications": "સૂચનાઓ",
-    "whatsapp": "WhatsApp કનેક્ટ"
+    "notifications": "સૂચનાઓ"
   },
   "status": {
     "healthy": "સ્વસ્થ",

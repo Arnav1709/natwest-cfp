@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { QRCodeSVG } from 'qrcode.react';
-import { User, Bell, MessageCircle, Save, Globe, Smartphone, Mail, RefreshCw, CheckCircle2, AlertTriangle, Wifi, WifiOff, Loader2, QrCode, ChevronRight } from 'lucide-react';
+import { User, Bell, Save, Globe, Smartphone, Mail, CheckCircle2, ChevronRight } from 'lucide-react';
 import { useApi } from '../hooks/useApi';
-import { settingsApi, whatsappApi } from '../services/api';
+import { settingsApi } from '../services/api';
 import GlowCard from '../components/GlowCard';
 import ShimmerButton from '../components/ShimmerButton';
 
@@ -23,80 +22,9 @@ export default function Settings() {
     state: JSON.parse(localStorage.getItem('stocksense-shop') || '{}').state || 'Telangana',
   });
 
-  // ── WhatsApp state ──
-  const [waStatus, setWaStatus] = useState({ connected: false, phone: null, uptime: 0 });
-  const [waQR, setWaQR] = useState(null);
-  const [waState, setWaState] = useState('idle');
-  const [waError, setWaError] = useState('');
-  const pollRef = useRef(null);
-
-  const pollStatus = useCallback(async () => {
-    try {
-      const status = await whatsappApi.status();
-      setWaStatus(status);
-      if (status.connected) {
-        setWaState('connected');
-        setWaQR(null);
-        if (pollRef.current) {
-          clearInterval(pollRef.current);
-          pollRef.current = null;
-        }
-      }
-    } catch (e) {
-      console.warn('WhatsApp status poll failed:', e.message);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (activeTab === 'whatsapp') {
-      pollStatus();
-      pollRef.current = setInterval(pollStatus, 3000);
-    }
-    return () => {
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
-      }
-    };
-  }, [activeTab, pollStatus]);
-
-  const handleGenerateQR = async () => {
-    setWaState('loading');
-    setWaError('');
-    try {
-      const data = await whatsappApi.connect();
-      if (data.status === 'connected') {
-        setWaState('connected');
-        setWaQR(null);
-      } else if (data.status === 'bot_offline') {
-        setWaState('bot_offline');
-        setWaQR(null);
-      } else if (data.qr_code) {
-        setWaQR(data.qr_code);
-        setWaState('qr_ready');
-        if (!pollRef.current) {
-          pollRef.current = setInterval(pollStatus, 3000);
-        }
-      } else if (data.status === 'initializing') {
-        setWaState('loading');
-        setWaError('WhatsApp bot is starting up. Please wait a moment and try again.');
-        if (!pollRef.current) {
-          pollRef.current = setInterval(pollStatus, 3000);
-        }
-      } else {
-        setWaState('error');
-        setWaError('Could not get QR code. Please try again.');
-      }
-    } catch (e) {
-      setWaState('error');
-      setWaError(e.message || 'Failed to connect to WhatsApp service.');
-    }
-  };
-
   const tabs = [
     { key: 'profile',       label: t('settings.profile'),      icon: User },
     { key: 'notifications', label: t('settings.notifications'), icon: Bell },
-    { key: 'whatsapp',      label: t('settings.whatsapp'),      icon: MessageCircle },
   ];
 
   const toggleNotif = async (key) => {
@@ -108,14 +36,6 @@ export default function Settings() {
       console.error(e);
       setRawNotifs({ ...notifs, [key]: !newValue });
     }
-  };
-
-  const formatUptime = (seconds) => {
-    if (!seconds) return '';
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    if (h > 0) return `${h}h ${m}m`;
-    return `${m}m`;
   };
 
   return (
@@ -272,7 +192,6 @@ export default function Settings() {
             <div className="flex gap-3 flex-wrap">
               {[
                 { key: 'channel_in_app',    label: 'In-App',    icon: Smartphone, color: '#8B5CF6' },
-                { key: 'channel_whatsapp',  label: 'WhatsApp',  icon: MessageCircle, color: '#22C55E' },
                 { key: 'channel_email',     label: 'Email',     icon: Mail, color: '#3B82F6' },
               ].map(ch => {
                 const active = notifs[ch.key];
@@ -304,132 +223,6 @@ export default function Settings() {
             </div>
           </GlowCard>
         </div>
-      )}
-
-      {/* WhatsApp Tab */}
-      {activeTab === 'whatsapp' && (
-        <GlowCard className="p-8 text-center relative overflow-hidden" glowColor="#22C55E">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 -mt-20 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
-
-          {/* Connected State */}
-          {waState === 'connected' && (
-            <div className="relative z-10 space-y-4">
-              <div className="w-20 h-20 mx-auto bg-emerald-500/10 rounded-full flex items-center justify-center border-2 border-emerald-500/30 shadow-lg shadow-emerald-500/10">
-                <Wifi className="w-10 h-10 text-emerald-400" />
-              </div>
-              <h2 className="text-2xl font-bold text-emerald-400">WhatsApp Connected</h2>
-              <p className="text-slate-400 max-w-md mx-auto">
-                {waStatus.phone ? `Connected as ${waStatus.phone}` : 'Your WhatsApp is connected and ready.'}
-              </p>
-              {waStatus.uptime > 0 && (
-                <p className="text-xs text-slate-500 tabular-nums">Uptime: {formatUptime(waStatus.uptime)}</p>
-              )}
-              <div className="max-w-md mx-auto mt-6 p-5 bg-slate-900/80 rounded-xl border border-slate-700 text-left space-y-3">
-                <div className="font-bold text-sm text-white flex items-center gap-2 mb-3">
-                  <MessageCircle className="w-4 h-4 text-emerald-400" /> Available Commands
-                </div>
-                {[
-                  { cmd: 'REORDER', desc: 'Get AI reorder list' },
-                  { cmd: 'LIST',    desc: 'View inventory status' },
-                  { cmd: 'STATUS',  desc: 'Stock health summary' },
-                  { cmd: 'REPORT',  desc: 'Forecast report link' },
-                  { cmd: 'STOP',    desc: 'Pause notifications' },
-                  { cmd: 'HELP',    desc: 'Show all commands' },
-                ].map(c => (
-                  <div key={c.cmd} className="flex items-center gap-3 text-sm">
-                    <code className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold text-xs border border-emerald-500/20">
-                      {c.cmd}
-                    </code>
-                    <span className="text-slate-400">{c.desc}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* QR Ready State */}
-          {waState === 'qr_ready' && waQR && (
-            <div className="relative z-10 space-y-5">
-              <div className="w-16 h-16 mx-auto bg-blue-500/10 rounded-full flex items-center justify-center border border-blue-500/30">
-                <QrCode className="w-8 h-8 text-blue-400" />
-              </div>
-              <h2 className="text-2xl font-bold text-white">Scan QR Code</h2>
-              <p className="text-slate-400 max-w-md mx-auto text-sm">
-                Open WhatsApp → Linked Devices → Link a Device → Point camera at the QR code below.
-              </p>
-              <div className="w-72 h-72 mx-auto bg-white rounded-2xl p-4 shadow-2xl shadow-black/30">
-                <QRCodeSVG value={waQR} size={248} level="M" includeMargin={false} bgColor="#ffffff" fgColor="#000000" />
-              </div>
-              <div className="flex items-center justify-center gap-2 text-xs text-slate-500 font-medium">
-                <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                Waiting for scan... (checking every 3 seconds)
-              </div>
-              <button
-                onClick={handleGenerateQR}
-                className="flex items-center gap-2 mx-auto px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium border border-slate-700 transition-colors"
-                id="btn-refresh-qr"
-              >
-                <RefreshCw className="w-4 h-4" /> Refresh QR
-              </button>
-            </div>
-          )}
-
-          {/* Idle / Error State */}
-          {(waState === 'idle' || waState === 'error') && (
-            <div className="relative z-10 space-y-5">
-              <div className="w-20 h-20 mx-auto bg-slate-800 rounded-full flex items-center justify-center border border-slate-700">
-                <MessageCircle className="w-10 h-10 text-slate-500" />
-              </div>
-              <h2 className="text-2xl font-bold text-white">Connect WhatsApp</h2>
-              <p className="text-slate-400 max-w-lg mx-auto text-sm leading-relaxed">
-                Scan the QR code with WhatsApp to enable inventory management via chat. Get daily briefings, reorder alerts, and manage stock from your phone.
-              </p>
-              {waError && (
-                <div className="max-w-md mx-auto bg-red-500/10 border border-red-500/30 rounded-xl p-3 flex items-start gap-3 text-red-400 text-sm text-left">
-                  <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
-                  {waError}
-                </div>
-              )}
-              <ShimmerButton onClick={handleGenerateQR} id="btn-connect-whatsapp">
-                <span className="flex items-center gap-2"><QrCode className="w-5 h-5" /> Generate QR Code</span>
-              </ShimmerButton>
-              <p className="text-xs text-slate-600">WhatsApp Bot server must be running on port 3001</p>
-            </div>
-          )}
-
-          {/* Loading State */}
-          {waState === 'loading' && (
-            <div className="relative z-10 space-y-4">
-              <div className="w-20 h-20 mx-auto bg-blue-500/10 rounded-full flex items-center justify-center border border-blue-500/30">
-                <Loader2 className="w-10 h-10 text-blue-400 animate-spin" />
-              </div>
-              <h2 className="text-2xl font-bold text-white">Connecting...</h2>
-              <p className="text-slate-400">{waError || 'Fetching QR code from WhatsApp bot...'}</p>
-              <button
-                onClick={handleGenerateQR}
-                className="flex items-center gap-2 mx-auto px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium border border-slate-700 transition-colors"
-              >
-                <RefreshCw className="w-4 h-4" /> Retry
-              </button>
-            </div>
-          )}
-
-          {/* Bot Offline State */}
-          {waState === 'bot_offline' && (
-            <div className="relative z-10 space-y-4">
-              <div className="w-20 h-20 mx-auto bg-red-500/10 rounded-full flex items-center justify-center border border-red-500/30">
-                <WifiOff className="w-10 h-10 text-red-400" />
-              </div>
-              <h2 className="text-2xl font-bold text-red-400">WhatsApp Bot Offline</h2>
-              <p className="text-slate-400 max-w-lg mx-auto text-sm leading-relaxed">
-                The WhatsApp bot service is not running. Make sure the Docker container <code className="bg-slate-800 px-1.5 py-0.5 rounded text-xs text-white">stocksense-whatsapp</code> is up on port 3001.
-              </p>
-              <ShimmerButton onClick={handleGenerateQR} id="btn-retry-whatsapp">
-                <span className="flex items-center gap-2"><RefreshCw className="w-4 h-4" /> Retry Connection</span>
-              </ShimmerButton>
-            </div>
-          )}
-        </GlowCard>
       )}
     </div>
   );

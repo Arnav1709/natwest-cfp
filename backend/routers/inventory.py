@@ -491,7 +491,7 @@ def update_product(
         elif mv.type == "adjustment":
             product.current_stock = max(0, (product.current_stock or 0) + mv.quantity)
 
-        # Check for alerts — create in DB + send WhatsApp via alert_service
+        # Check for alerts — create in-app alert via alert_service
         if product.current_stock <= 0:
             create_and_notify(
                 db=db,
@@ -501,13 +501,6 @@ def update_product(
                 severity="critical",
                 title=f"OUT OF STOCK: {product.name}",
                 message=f"{product.name} is now out of stock. Immediate reorder recommended.",
-                whatsapp_template_data={
-                    "product_name": product.name,
-                    "last_qty": abs(mv.quantity),
-                    "reorder_qty": product.reorder_point or 0,
-                    "supplier_name": product.supplier_name or "N/A",
-                    "supplier_contact": product.supplier_contact or "N/A",
-                },
             )
         elif product.current_stock <= (product.reorder_point or 0):
             create_and_notify(
@@ -518,13 +511,6 @@ def update_product(
                 severity="warning",
                 title=f"Low Stock: {product.name}",
                 message=f"{product.name} is below reorder point ({product.reorder_point}). Current: {product.current_stock}.",
-                whatsapp_template_data={
-                    "product_name": product.name,
-                    "current_stock": product.current_stock,
-                    "reorder_point": product.reorder_point or 0,
-                    "days_remaining": "N/A",
-                    "reorder_qty": product.reorder_point or 0,
-                },
             )
 
     product.updated_at = datetime.utcnow()

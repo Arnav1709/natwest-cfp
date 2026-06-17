@@ -24,8 +24,6 @@
     "feature_ocr_desc": "আপনার হাতে লেখা বিক্রয় ডেটার ছবি তুলুন।",
     "feature_disease": "রোগ বুদ্ধিমত্তা",
     "feature_disease_desc": "ফার্মেসির জন্য: AI-চালিত মৌসুমী রোগ বুদ্ধিমত্তা।",
-    "feature_whatsapp": "WhatsApp প্রথম",
-    "feature_whatsapp_desc": "WhatsApp কমান্ডের মাধ্যমে ইনভেন্টরি পরিচালনা করুন।",
     "how_title": "৪ ধাপে স্বচ্ছতা",
     "step1": "ডেটা আপলোড",
     "step2": "যাচাই",
@@ -122,8 +120,7 @@
   "settings": {
     "title": "সেটিংস",
     "profile": "প্রোফাইল",
-    "notifications": "বিজ্ঞপ্তি",
-    "whatsapp": "WhatsApp সংযোগ"
+    "notifications": "বিজ্ঞপ্তি"
   },
   "status": {
     "healthy": "সুস্থ",

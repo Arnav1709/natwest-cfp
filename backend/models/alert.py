@@ -18,7 +18,6 @@ class Alert(Base):
     title = Column(Text, nullable=False)
     message = Column(Text, nullable=False)
     dismissed = Column(Boolean, default=False)
-    sent_whatsapp = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
 
     # Relationships

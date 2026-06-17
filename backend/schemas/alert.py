@@ -17,7 +17,6 @@ class AlertResponse(BaseModel):
     title: str
     message: str
     dismissed: bool = False
-    sent_whatsapp: bool = False
     created_at: Optional[datetime] = None
 
     class Config:
